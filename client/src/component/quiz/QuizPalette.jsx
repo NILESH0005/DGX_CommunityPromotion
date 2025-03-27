@@ -15,7 +15,6 @@ const QuizPalette = ({
     if (questionNumber === currentQuestion + 1) {
       return "bg-red-500 text-white ring-2 ring-offset-2 ring-red-500";
     }
-
     switch (status) {
       case "answered":
         return "bg-green-500 text-white";
@@ -27,10 +26,8 @@ const QuizPalette = ({
         return "bg-gray-200 text-gray-700";
     }
   };
-
   return (
     <div className="lg:col-span-1 bg-gray-100 rounded-md p-4">
-      {/* Timer */}
       <div className="mb-6">
         <div className="grid grid-cols-3 text-center">
           <div className="flex flex-col">
@@ -48,8 +45,6 @@ const QuizPalette = ({
         </div>
         <div className="mt-2 text-gray-700">user name</div>
       </div>
-
-      {/* Question Palette */}
       <div className="mb-6">
         <h3 className="text-gray-700 mb-2">Question Palette:</h3>
         <div className="grid grid-cols-5 gap-2">
@@ -69,8 +64,6 @@ const QuizPalette = ({
           )}
         </div>
       </div>
-
-      {/* Legend */}
       <div className="mb-6">
         <h3 className="text-gray-700 mb-2">Legend:</h3>
         <div className="space-y-2">

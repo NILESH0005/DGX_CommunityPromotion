@@ -13,25 +13,21 @@ export const blogpost_bulk = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const warningMessage = "Data is not in the right format";
-    logWarning(warningMessage); // Log the warning
+    logWarning(warningMessage); 
     res.status(400).json({ success, data: errors.array(), message: warningMessage });
     return;
   }
-
   try {
-    // Extract array of blog posts from request body
     const blogPosts = req.body;
     if (!Array.isArray(blogPosts)) {
       const warningMessage = "Request body should be an array of blog posts";
       logWarning(warningMessage);
       return res.status(400).json({ success: false, message: warningMessage });
     }
-
-    // Connect to the database
     connectToDatabase(async (err, conn) => {
       if (err) {
         const errorMessage = "Failed to connect to database";
-        logError(err); // Log the error
+        logError(err); 
         res.status(500).json({ success: false, data: err, message: errorMessage });
         return;
       }
@@ -80,7 +76,6 @@ export const blogpost_bulk = async (req, res) => {
 
           closeConnection();
 
-          // If any post failed, respond with a summary
           const failedPosts = blogPostResults.filter(result => !result.success);
           if (failedPosts.length > 0) {
             res.status(500).json({ success: false, data: blogPostResults, message: "Some posts failed" });
@@ -110,7 +105,6 @@ export const blogpost_bulk = async (req, res) => {
     return res.status(500).json({ success: false, data: {}, message: 'Something went wrong, please try again' });
   }
 };
-
 export const blogpost = async (req, res) => {
   let success = false;
   const userId = req.user.id;
@@ -121,12 +115,9 @@ export const blogpost = async (req, res) => {
     logWarning("Data is not in the right format");
     return res.status(400).json({ success, data: errors.array(), message: "Data is not in the right format" });
   }
-
   try {
     let { title, author, content, image, category, publishedDate } = req.body;
-
-    // Set default values for null checks
-    title = title ?? null;
+      title = title ?? null;
     content = content ?? null;
     image = image ?? null;
     category = category ?? null;

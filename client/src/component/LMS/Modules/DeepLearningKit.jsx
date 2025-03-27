@@ -473,10 +473,10 @@ const DeepLearningKit = () => {
 
               {selectedFileId && (
                 <div className="w-full max-w-7xl mt-6">
-                  <FeedbackForm
+                  {/* <FeedbackForm
                     fileId={selectedFileId}
                     onSubmit={handleFeedbackSubmit}
-                  />
+                  /> */}
                 </div>
               )}
             </div>

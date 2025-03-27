@@ -5,8 +5,6 @@ import QuizPalette from './QuizPalette';
 import ApiContext from '../../context/ApiContext';
 import Loader from '../LoadPage';
 import Swal from 'sweetalert2';
-import Loader from '../LoadPage';
-import Swal from 'sweetalert2';
 
 const Quiz = () => {
   const location = useLocation();
@@ -66,12 +64,12 @@ const Quiz = () => {
 
   useEffect(() => {
     if (userToken && quiz.QuizID && quiz.group_id) {
-    if (quiz.QuizID && quiz.group_id) {
-      fetchQuizQuestions();
-    } else {
-      setLoading(false);
-    }
-  }, [quiz, userToken]);
+      if (quiz.QuizID && quiz.group_id) {
+        fetchQuizQuestions();
+      } else {
+        setLoading(false);
+      }
+    }}, [quiz, userToken]);
 
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -180,7 +178,7 @@ const Quiz = () => {
     const interval = setInterval(() => {
       setTimer((prev) => {
         let { hours, minutes, seconds } = prev;
-        
+
         if (hours === 0 && minutes === 0 && seconds === 0) {
           clearInterval(interval);
           handleTimeUp();
@@ -198,11 +196,11 @@ const Quiz = () => {
         } else {
           seconds -= 1;
         }
-        
+
         return { hours, minutes, seconds };
       });
     }, 1000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -283,17 +281,19 @@ const Quiz = () => {
   const handleInstantResult = () => {
     const correct = questions.reduce((acc, question, index) => {
       if (selectedAnswers[index]?.isCorrect) {
-      if (selectedAnswers[index]?.isCorrect) {
-        return acc + 1;
-      }
-      return acc;
-    }, 0);
-    
+        if (selectedAnswers[index]?.isCorrect) {
+          return acc + 1;
+        }
+        return acc;
+      }}, 0);
+      
+
     Swal.fire({
       title: 'Instant Result',
       html: `You've answered <b>${correct}</b> out of <b>${questions.length}</b> questions correctly.`,
       icon: 'info'
     });
+
   };
 
   const handleQuizSubmit = async () => {
@@ -347,7 +347,7 @@ const Quiz = () => {
     if (!result.isConfirmed) {
       return;
     }
-  
+
     const swalInstance = Swal.fire({
       title: 'Submitting...',
       allowOutsideClick: false,
@@ -355,14 +355,14 @@ const Quiz = () => {
         Swal.showLoading();
       }
     });
-  
+
     const endpoint = "quiz/submitQuiz";
     const method = "POST";
     const headers = {
       'Content-Type': 'application/json',
       'auth-token': userToken
     };
-  
+
     const preparedAnswers = savedData.answers
       .filter(a => a !== null)
       .map(answer => ({
@@ -394,13 +394,13 @@ const Quiz = () => {
       if (!data.success) {
         throw new Error(data.message || "Submission failed");
       }
-  
+
       setSubmitSuccess(true);
       setFinalScore(data.data?.totalScore || 0);
       localStorage.removeItem(STORAGE_KEY);
-  
+
       await swalInstance.close();
-      
+
       // Navigate to QuizResult with all necessary data
       navigate('/quiz-result', {
         state: {
@@ -415,13 +415,13 @@ const Quiz = () => {
           timeTaken: `${timer.hours}h ${timer.minutes}m ${timer.seconds}s`
         }
       });
-  
+
     } catch (error) {
       console.error("Quiz submission error:", error);
       setSubmitError(error.message);
-      
+
       await swalInstance.close();
-      
+
       Swal.fire({
         icon: 'error',
         title: 'Submission Failed',
@@ -507,20 +507,20 @@ const Quiz = () => {
 
             <div className="flex justify-between p-4">
               <div className="flex gap-2">
-                <button 
-                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded" 
+                <button
+                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
                   onClick={handleMarkForReview}
                 >
                   Mark for Review & Next
                 </button>
-                <button 
-                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded" 
+                <button
+                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
                   onClick={handleClearResponse}
                 >
                   Clear Response
                 </button>
-                <button 
-                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded" 
+                <button
+                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
                   onClick={handleInstantResult}
                 >
                   Instant Result

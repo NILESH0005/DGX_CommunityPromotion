@@ -8,13 +8,12 @@ const QuizResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { quiz, score, totalQuestions, answers, correctAnswers, timeTaken } = location.state || {};
-  
+
   const [showResult, setShowResult] = useState(false);
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight
   });
-  const percentage = Math.round((score / totalQuestions) * 100);
 
   useEffect(() => {
     const handleResize = () => {
@@ -56,12 +55,14 @@ const QuizResult = () => {
   const displayTotalQuestions = totalQuestions || 1;
   const displayCorrectAnswers = correctAnswers || 0;
   const displayTimeTaken = timeTaken || "0m 0s";
+  const percentage = Math.round((displayCorrectAnswers / totalQuestions) * 100);
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       {percentage >= 80 && (
-        <Confetti 
-          width={windowSize.width} 
+        <Confetti
+          width={windowSize.width}
           height={windowSize.height}
           recycle={false}
           numberOfPieces={500}
@@ -103,7 +104,7 @@ const QuizResult = () => {
                 </div>
                 <h3 className="font-semibold text-gray-700">Score</h3>
                 <p className="text-2xl font-bold text-gray-800">
-                  {displayScore} / {displayTotalQuestions}
+                  {displayCorrectAnswers} / {displayTotalQuestions}
                 </p>
               </div>
 

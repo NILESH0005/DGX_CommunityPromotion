@@ -969,8 +969,6 @@ export const submitQuiz = async (req, res) => {
                       marks, AuthAdd, AddOnDt, editOnDt, delStatus
                   ) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), 0)
                   `;
-
-          // For each selected option (handles multiple correct answers)
           for (const option of answer.options) {
             await queryAsync(conn, insertQuery, [
               user.UserID,
