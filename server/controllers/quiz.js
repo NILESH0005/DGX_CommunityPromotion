@@ -679,7 +679,6 @@ export const createQuizQuestionMapping = async (req, res) => {
               throw new Error(`Question ID ${questionId} not found or doesn't belong to quiz's group`);
             }
 
-            // 4. Insert the mapping with quiz name and quiz ID
             const insertMappingQuery = `
               INSERT INTO QuizMapping 
               (quizGroupID, QuestionsID, QuestionName, negativeMarks, totalMarks, AuthAdd, AddOnDt, delStatus, quizId)

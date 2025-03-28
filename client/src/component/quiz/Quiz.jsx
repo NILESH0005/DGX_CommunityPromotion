@@ -315,8 +315,6 @@ const Quiz = () => {
       });
       return;
     }
-
-    // Calculate total score locally
     const localCalculation = questions.reduce((acc, question, index) => {
       const answer = savedData.answers[index];
       if (answer) {
@@ -401,7 +399,6 @@ const Quiz = () => {
 
       await swalInstance.close();
 
-      // Navigate to QuizResult with all necessary data
       navigate('/quiz-result', {
         state: {
           quiz: quiz,
@@ -519,12 +516,12 @@ const Quiz = () => {
                 >
                   Clear Response
                 </button>
-                <button
+                {/* <button
                   className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
                   onClick={handleInstantResult}
                 >
                   Instant Result
-                </button>
+                </button> */}
               </div>
               <button
                 className="px-4 py-2 bg-blue-700 text-white rounded"

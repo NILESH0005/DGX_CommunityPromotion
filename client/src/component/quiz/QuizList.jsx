@@ -159,12 +159,12 @@ const QuizList = () => {
                             Test your knowledge, earn points, and compete with others to become the top performer!
                         </p>
                         <div className="mt-10 flex items-center justify-center gap-x-6">
-                            <a
+                            {/* <a
                                 className="rounded-md bg-DGXgreen px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-lime-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-600"
                                 onClick={scrollToQuizzes}
                             >
                                 Start a Quiz
-                            </a>
+                            </a> */}
                         </div>
                     </div>
                 </div>
