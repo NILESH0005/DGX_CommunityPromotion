@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Users from "./Components/Users";
 import Discussions from "./Components/Discussions";
 import Events from "./Components/Events";
@@ -25,11 +25,30 @@ import {
   FaEnvelope,
   FaAngleDown,
   FaAngleUp,
+  FaBars,
+  FaTimes
 } from "react-icons/fa";
 
 const AdminDashboard = (props) => {
-  const [activeComp, setActiveComp] = useState("users"); // Default to users
+  const [activeComp, setActiveComp] = useState("users");
   const [quizMenuOpen, setQuizMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const getComp = (comp) => {
     switch (comp) {
@@ -60,19 +79,37 @@ const AdminDashboard = (props) => {
     }
   };
 
+  const handleMenuItemClick = (comp) => {
+    setActiveComp(comp);
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen grid grid-cols-12">
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Mobile Header */}
+      <div className="md:hidden bg-black text-white p-4 flex justify-between items-center">
+        <div className="text-2xl font-bold">Admin Dashboard</div>
+        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
+          {sidebarOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+        </button>
+      </div>
+
       {/* Sidebar */}
-      <div className="col-span-2 bg-black text-white">
-        <div className="p-4 text-3xl font-bold">Admin Dashboard</div>
-        <nav>
+      <div 
+        className={`${sidebarOpen ? 'block' : 'hidden'} md:block bg-black text-white w-full md:w-64 flex-shrink-0 transition-all duration-300 ease-in-out`}
+        style={{ height: isMobile ? 'calc(100vh - 60px)' : '100vh' }}
+      >
+        <div className="p-4 text-2xl md:text-3xl font-bold hidden md:block">Admin Dashboard</div>
+        <nav className="overflow-y-auto h-full">
           <ul>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-xl ${
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
                   activeComp === "users" ? "bg-gray-700 text-yellow-300" : ""
                 }`}
-                onClick={() => setActiveComp("users")}
+                onClick={() => handleMenuItemClick("users")}
               >
                 <FaUsers className="mr-4" />
                 Users
@@ -80,12 +117,12 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-xl ${
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
                   activeComp === "discussions"
                     ? "bg-gray-700 text-yellow-300"
                     : ""
                 }`}
-                onClick={() => setActiveComp("discussions")}
+                onClick={() => handleMenuItemClick("discussions")}
               >
                 <FaComments className="mr-4" />
                 Discussions
@@ -93,10 +130,10 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-xl ${
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
                   activeComp === "events" ? "bg-gray-700 text-yellow-300" : ""
                 }`}
-                onClick={() => setActiveComp("events")}
+                onClick={() => handleMenuItemClick("events")}
               >
                 <FaCalendarAlt className="mr-4" />
                 Events
@@ -104,12 +141,12 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-xl ${
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
                   activeComp === "blog_manager"
                     ? "bg-gray-700 text-yellow-300"
                     : ""
                 }`}
-                onClick={() => setActiveComp("blog_manager")}
+                onClick={() => handleMenuItemClick("blog_manager")}
               >
                 <FaBlog className="mr-4" />
                 Blogs
@@ -118,7 +155,7 @@ const AdminDashboard = (props) => {
             {/* Quiz Section */}
             <li>
               <div
-                className="py-3 px-4 cursor-pointer flex items-center text-xl"
+                className="py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl"
                 onClick={() => setQuizMenuOpen(!quizMenuOpen)}
               >
                 <FaBrain className="mr-4" />
@@ -134,12 +171,12 @@ const AdminDashboard = (props) => {
               <ul className="ml-6">
                 <li>
                   <div
-                    className={`py-2 px-4 cursor-pointer flex items-center text-lg ${
+                    className={`py-2 px-4 cursor-pointer flex items-center text-base md:text-lg ${
                       activeComp === "quizpanel"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
                     }`}
-                    onClick={() => setActiveComp("quizpanel")}
+                    onClick={() => handleMenuItemClick("quizpanel")}
                   >
                     <FaQuestionCircle className="mr-4" />
                     Quiz Panel
@@ -147,12 +184,12 @@ const AdminDashboard = (props) => {
                 </li>
                 <li>
                   <div
-                    className={`py-2 px-4 cursor-pointer flex items-center text-lg ${
+                    className={`py-2 px-4 cursor-pointer flex items-center text-base md:text-lg ${
                       activeComp === "quiz_bank"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
                     }`}
-                    onClick={() => setActiveComp("quiz_bank")}
+                    onClick={() => handleMenuItemClick("quiz_bank")}
                   >
                     <FaList className="mr-4" />
                     Question Bank
@@ -160,12 +197,12 @@ const AdminDashboard = (props) => {
                 </li>
                 <li>
                   <div
-                    className={`py-2 px-4 cursor-pointer flex items-center text-lg ${
+                    className={`py-2 px-4 cursor-pointer flex items-center text-base md:text-lg ${
                       activeComp === "quiz_mapping"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
                     }`}
-                    onClick={() => setActiveComp("quiz_mapping")}
+                    onClick={() => handleMenuItemClick("quiz_mapping")}
                   >
                     <FaChartPie className="mr-4" />
                     Quiz Mapping
@@ -173,12 +210,12 @@ const AdminDashboard = (props) => {
                 </li>
                 <li>
                   <div
-                    className={`py-2 px-4 cursor-pointer flex items-center text-lg ${
+                    className={`py-2 px-4 cursor-pointer flex items-center text-base md:text-lg ${
                       activeComp === "quiz_settings"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
                     }`}
-                    onClick={() => setActiveComp("quiz_settings")}
+                    onClick={() => handleMenuItemClick("quiz_settings")}
                   >
                     <FaCog className="mr-4" />
                     Quiz Settings
@@ -189,12 +226,12 @@ const AdminDashboard = (props) => {
 
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-xl ${
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
                   activeComp === "guidelines"
                     ? "bg-gray-700 text-yellow-300"
                     : ""
                 }`}
-                onClick={() => setActiveComp("guidelines")}
+                onClick={() => handleMenuItemClick("guidelines")}
               >
                 <FaBook className="mr-4" />
                 Guidelines
@@ -202,10 +239,10 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-xl ${
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
                   activeComp === "Home" ? "bg-gray-700 text-yellow-300" : ""
                 }`}
-                onClick={() => setActiveComp("Home")}
+                onClick={() => handleMenuItemClick("Home")}
               >
                 <FaHome className="mr-4" />
                 Home page
@@ -213,10 +250,10 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-xl ${
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
                   activeComp === "contact" ? "bg-gray-700 text-yellow-300" : ""
                 }`}
-                onClick={() => setActiveComp("contact")}
+                onClick={() => handleMenuItemClick("contact")}
               >
                 <FaEnvelope className="mr-4" />
                 Contact Us
@@ -227,7 +264,9 @@ const AdminDashboard = (props) => {
       </div>
 
       {/* Main Content */}
-      <div className="col-span-10 p-4">{getComp(activeComp)}</div>
+      <div className="flex-1 p-4 overflow-x-auto">
+        {getComp(activeComp)}
+      </div>
     </div>
   );
 };

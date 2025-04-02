@@ -115,14 +115,14 @@ const QuizPanel = () => {
         >
           Create Quiz
         </button>
-        <button
+        {/* <button
           style={activeComponent === 'UpcomingQuiz' ? activeButtonStyle : inactiveButtonStyle}
           onClick={() => setActiveComponent('UpcomingQuiz')}
           onMouseOver={(e) => e.target.style.backgroundColor = hoverStyle.backgroundColor}
           onMouseOut={(e) => e.target.style.backgroundColor = activeComponent === 'UpcomingQuiz' ? activeButtonStyle.backgroundColor : inactiveButtonStyle.backgroundColor}
         >
           Upcoming Quiz
-        </button>
+        </button> */}
       </div>
       {renderComponent()}
     </div>

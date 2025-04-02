@@ -1,16 +1,24 @@
 import React, { useState, useEffect, useContext } from "react";
 import ApiContext from "../../../context/ApiContext";
 import Swal from "sweetalert2";
-import LoadPage from "../../../component/LoadPage"; // Import the LoadPage component
+import LoadPage from "../../../component/LoadPage";
+import ViewQuizModal from "./ViewQuizModal";
+import EditQuizModal from "./EditQuizModal";
 
 const QuizTable = () => {
   const { fetchData, userToken } = useContext(ApiContext);
   const [quizzes, setQuizzes] = useState([]);
+  const [filteredQuizzes, setFilteredQuizzes] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [quizLevels, setQuizLevels] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [quizStats, setQuizStats] = useState({});
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const fetchQuizLevels = async () => {
     const endpoint = `dropdown/getDropdownValues?category=quizLevel`;
@@ -19,7 +27,7 @@ const QuizTable = () => {
       "Content-Type": "application/json",
       "auth-token": userToken,
     };
-  
+
     try {
       const data = await fetchData(endpoint, method, headers);
       if (data.success) {
@@ -43,7 +51,6 @@ const QuizTable = () => {
 
     try {
       const data = await fetchData(endpoint, method, headers);
-      console.log("Fetched quiz categories:", data);
       if (data.success) {
         const sortedCategories = data.data.sort((a, b) =>
           a.group_name.localeCompare(b.group_name)
@@ -55,6 +62,24 @@ const QuizTable = () => {
     } catch (error) {
       console.error("Error fetching quiz categories:", error);
       Swal.fire("Error", "Error fetching quiz categories.", "error");
+    }
+  };
+
+  const fetchQuizStatistics = async () => {
+    try {
+      const endpoint = "quiz/getQuizStatistics";
+      const method = "GET";
+      const headers = {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      };
+
+      const data = await fetchData(endpoint, method, headers);
+      if (data.success) {
+        setQuizStats(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching quiz statistics:", error);
     }
   };
 
@@ -70,9 +95,9 @@ const QuizTable = () => {
 
     try {
       const data = await fetchData(endpoint, method, body, headers);
-      console.log("data is:", data);
       if (data.success) {
         setQuizzes(data.data.quizzes);
+        setFilteredQuizzes(data.data.quizzes);
       } else {
         setError(data.message || "Failed to fetch quizzes");
       }
@@ -84,26 +109,39 @@ const QuizTable = () => {
     }
   };
 
+  useEffect(() => {
+    const results = quizzes.filter((quiz) => {
+      return (
+        quiz.QuizName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getCategoryName(quiz.QuizCategory)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        getLevelName(quiz.QuizLevel)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        quiz.QuizVisibility.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        quiz.QuizDuration.toString().includes(searchTerm) ||
+        (quiz.NegativeMarking ? "yes" : "no").includes(searchTerm.toLowerCase())
+      );
+    });
+    setFilteredQuizzes(results);
+  }, [searchTerm, quizzes, categories, quizLevels]);
+
   const formatDateTime = (dateString) => {
     if (!dateString) return "N/A";
-    
-    // Create date object from the string
     const date = new Date(dateString);
-    
-    // Subtract 5 hours and 30 minutes (for timezone adjustment)
-    const adjustedDate = new Date(date.getTime() - (5 * 60 * 60 * 1000) - (30 * 60 * 1000));
-    
-    // Format the adjusted date
+    const adjustedDate = new Date(
+      date.getTime() - 5 * 60 * 60 * 1000 - 30 * 60 * 1000
+    );
     const options = {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
     };
-    
-    return adjustedDate.toLocaleString('en-US', options);
+    return adjustedDate.toLocaleString("en-US", options);
   };
 
   const handleDelete = async (quizId) => {
@@ -124,46 +162,92 @@ const QuizTable = () => {
             "Content-Type": "application/json",
             "auth-token": userToken,
           };
-          const body = { QuizID: quizId }; 
-          console.log("Request body:", body);
+          const body = { QuizID: quizId };
 
           const data = await fetchData(endpoint, method, body, headers);
-          console.log("API response:", data);
-
           if (data.success) {
-            setQuizzes((prevQuizzes) =>
-              prevQuizzes.filter((quiz) => quiz.QuizID !== quizId)
+            setQuizzes((prev) => prev.filter((quiz) => quiz.QuizID !== quizId));
+            setFilteredQuizzes((prev) =>
+              prev.filter((quiz) => quiz.QuizID !== quizId)
             );
-
-            Swal.fire({
-              title: "Deleted!",
-              text: "The quiz has been deleted.",
-              icon: "success",
-            });
+            Swal.fire("Deleted!", "The quiz has been deleted.", "success");
           } else {
-            Swal.fire({
-              title: "Error",
-              text: data.message || "Failed to delete the quiz.",
-              icon: "error",
-            });
+            Swal.fire(
+              "Error",
+              data.message || "Failed to delete the quiz.",
+              "error"
+            );
           }
         } catch (error) {
           console.error("Error deleting quiz:", error);
-          Swal.fire({
-            title: "Error",
-            text: "Something went wrong, please try again.",
-            icon: "error",
-          });
+          Swal.fire(
+            "Error",
+            "Something went wrong, please try again.",
+            "error"
+          );
         }
       }
     });
+  };
+
+  const handleView = (quiz) => {
+    setSelectedQuiz(quiz);
+    setShowViewModal(true);
+  };
+
+  const handleEdit = (quiz) => {
+    setSelectedQuiz(quiz);
+    setShowEditModal(true);
+  };
+
+  // Add this function to your QuizTable component
+  const handleCloseModal = (isUpdated, updatedQuizData) => {
+    setShowViewModal(false);
+    setShowEditModal(false);
+    setSelectedQuiz(null);
+
+    if (isUpdated && updatedQuizData) {
+      // Update the quizzes state
+      setQuizzes((prevQuizzes) =>
+        prevQuizzes.map((quiz) =>
+          quiz.QuizID === updatedQuizData.QuizID
+            ? {
+                ...quiz,
+                ...updatedQuizData,
+                // Preserve any additional fields that weren't in the form
+                QuizCategoryName: getCategoryName(updatedQuizData.QuizCategory),
+                QuizLevelName: getLevelName(updatedQuizData.QuizLevel),
+              }
+            : quiz
+        )
+      );
+
+      // Update filtered quizzes as well
+      setFilteredQuizzes((prevFilteredQuizzes) =>
+        prevFilteredQuizzes.map((quiz) =>
+          quiz.QuizID === updatedQuizData.QuizID
+            ? {
+                ...quiz,
+                ...updatedQuizData,
+                QuizCategoryName: getCategoryName(updatedQuizData.QuizCategory),
+                QuizLevelName: getLevelName(updatedQuizData.QuizLevel),
+              }
+            : quiz
+        )
+      );
+    }
   };
 
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        await Promise.all([fetchQuizzes(), fetchQuizCategories(), fetchQuizLevels()]);
+        await Promise.all([
+          fetchQuizzes(),
+          fetchQuizCategories(),
+          fetchQuizLevels(),
+          fetchQuizStatistics(),
+        ]);
         setIsDataLoaded(true);
       } catch (error) {
         setError("Failed to fetch data. Please try again.");
@@ -178,16 +262,27 @@ const QuizTable = () => {
 
   const getLevelName = (levelId) => {
     if (!quizLevels.length) return "Loading...";
-    const levelIdNumber = typeof levelId === 'string' ? parseInt(levelId, 10) : levelId;
+    const levelIdNumber =
+      typeof levelId === "string" ? parseInt(levelId, 10) : levelId;
     const level = quizLevels.find((lvl) => lvl.idCode === levelIdNumber);
     return level ? level.ddValue : "N/A";
   };
 
   const getCategoryName = (groupId) => {
     if (!categories.length) return "Loading...";
-    const groupIdNumber = typeof groupId === 'string' ? parseInt(groupId, 10) : groupId;
+    const groupIdNumber =
+      typeof groupId === "string" ? parseInt(groupId, 10) : groupId;
     const category = categories.find((cat) => cat.group_id === groupIdNumber);
     return category ? category.group_name : "N/A";
+  };
+
+  const getQuizStats = (quizId) => {
+    const stats = quizStats[quizId] || {
+      uniqueParticipants: 0,
+      totalAttempts: 0,
+      totalMarks: 0,
+    };
+    return stats;
   };
 
   if (loading) {
@@ -207,54 +302,148 @@ const QuizTable = () => {
       <div className="flex justify-between items-center mb-4">
         <input
           type="text"
-          placeholder="Search quizzes..."
+          placeholder="Search by name, category, level, etc..."
           className="p-2 border rounded w-1/2"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-      {quizzes.length > 0 ? (
-        <table className="w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-DGXgreen">
-              <th className="border p-2">#</th>
-              <th className="border p-2">Quiz Category</th>
-              <th className="border p-2">Quiz Name</th>
-              <th className="border p-2">Level</th>
-              <th className="border p-2">Duration</th>
-              <th className="border p-2">Negative Marking</th>
-              <th className="border p-2">Start Date & Time</th>
-              <th className="border p-2">End Date & Time</th>
-              <th className="border p-2">Visibility</th>
-              <th className="border p-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {quizzes.map((quiz, index) => {
-              return (
-                <tr key={quiz.QuizID} className="text-center">
-                  <td className="border p-2">{index + 1}</td>
-                  <td className="border p-2"> {getCategoryName(quiz.QuizCategory)}</td>
-                  <td className="border p-2">{quiz.QuizName}</td>
-                  <td className="border p-2">{getLevelName(quiz.QuizLevel)}</td>
-                  <td className="border p-2">{quiz.QuizDuration} mins</td>
-                  <td className="border p-2">{quiz.NegativeMarking ? "Yes" : "No"}</td>
-                  <td className="border p-2">{formatDateTime(quiz.StartDateAndTime)}</td>
-                  <td className="border p-2">{formatDateTime(quiz.EndDateTime)}</td>
-                  <td className="border p-2">{quiz.QuizVisibility}</td>
-                  <td className="border p-2">
-                    <button
-                      onClick={() => handleDelete(quiz.QuizID)}
-                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
-                    >
-                      Delete
-                    </button>
-                  </td>
+      {filteredQuizzes.length > 0 ? (
+        <div className="overflow-hidden rounded-lg border border-gray-300">
+          <div className="overflow-auto" style={{ maxHeight: "600px" }}>
+            <table className="w-full">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-DGXgreen">
+                  <th className="p-2 border text-center w-12">#</th>
+                  <th className="p-2 border text-center min-w-[150px]">
+                    Quiz Category
+                  </th>
+                  <th className="p-2 border text-center min-w-[150px]">
+                    Quiz Name
+                  </th>
+                  <th className="p-2 border text-center min-w-[100px]">
+                    Level
+                  </th>
+                  <th className="p-2 border text-center min-w-[80px]">
+                    Duration
+                  </th>
+                  <th className="p-2 border text-center min-w-[120px]">
+                    Negative Marking
+                  </th>
+                  <th className="p-2 border text-center min-w-[180px]">
+                    Start Date & Time
+                  </th>
+                  <th className="p-2 border text-center min-w-[180px]">
+                    End Date & Time
+                  </th>
+                  <th className="p-2 border text-center min-w-[100px]">
+                    Visibility
+                  </th>
+                  <th className="p-2 border text-center min-w-[120px]">
+                    Unique Participants
+                  </th>
+                  <th className="p-2 border text-center min-w-[80px]">
+                    Attempts
+                  </th>
+                  <th className="p-2 border text-center min-w-[100px]">
+                    Total Marks
+                  </th>
+                  <th className="p-2 border text-center min-w-[180px]">
+                    Actions
+                  </th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {filteredQuizzes.map((quiz, index) => {
+                  const stats = getQuizStats(quiz.QuizID);
+                  return (
+                    <tr key={quiz.QuizID} className="hover:bg-gray-50">
+                      <td className="p-2 border text-center w-12">
+                        {index + 1}
+                      </td>
+                      <td className="p-2 border text-center min-w-[150px]">
+                        {getCategoryName(quiz.QuizCategory)}
+                      </td>
+                      <td className="p-2 border text-center min-w-[150px]">
+                        {quiz.QuizName}
+                      </td>
+                      <td className="p-2 border text-center min-w-[100px]">
+                        {getLevelName(quiz.QuizLevel)}
+                      </td>
+                      <td className="p-2 border text-center min-w-[80px]">
+                        {quiz.QuizDuration} mins
+                      </td>
+                      <td className="p-2 border text-center min-w-[120px]">
+                        {quiz.NegativeMarking ? "Yes" : "No"}
+                      </td>
+                      <td className="p-2 border text-center min-w-[180px]">
+                        {formatDateTime(quiz.StartDateAndTime)}
+                      </td>
+                      <td className="p-2 border text-center min-w-[180px]">
+                        {formatDateTime(quiz.EndDateTime)}
+                      </td>
+                      <td className="p-2 border text-center min-w-[100px]">
+                        {quiz.QuizVisibility}
+                      </td>
+                      <td className="p-2 border text-center min-w-[120px]">
+                        {stats.uniqueParticipants}
+                      </td>
+                      <td className="p-2 border text-center min-w-[80px]">
+                        {stats.totalAttempts}
+                      </td>
+                      <td className="p-2 border text-center min-w-[100px]">
+                        {stats.totalMarks}
+                      </td>
+                      <td className="p-2 border text-center min-w-[180px] space-x-1">
+                        <button
+                          onClick={() => handleView(quiz)}
+                          className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition text-sm"
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleEdit(quiz)}
+                          className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(quiz.QuizID)}
+                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition text-sm"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
-        <p className="text-center text-gray-500">No quizzes found.</p>
+        <p className="text-center text-gray-500">
+          {searchTerm ? "No quizzes match your search" : "No quizzes found"}
+        </p>
+      )}
+
+      
+      {showViewModal && selectedQuiz && (
+        <ViewQuizModal
+          quiz={selectedQuiz}
+          onClose={handleCloseModal}
+          getCategoryName={getCategoryName}
+          getLevelName={getLevelName}
+          formatDateTime={formatDateTime}
+        />
+      )}
+      {showEditModal && selectedQuiz && (
+        <EditQuizModal
+          quiz={selectedQuiz}
+          onClose={handleCloseModal}
+          categories={categories}
+          quizLevels={quizLevels}
+        />
       )}
     </div>
   );

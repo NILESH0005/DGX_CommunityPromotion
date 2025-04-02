@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm";
 
 const AiRoboticsKit = () => {
@@ -33,10 +33,9 @@ const AiRoboticsKit = () => {
                 },
                 { 
                     id: 13, 
-                    title: "Quiz Questions and Answers", 
-                    path: "quiz-qa", 
-                    fileId: "1XKH8W55_OT1G8Exn6grbG44q5Z89B9i9/", 
-                    type: "pdf" 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         },
@@ -61,10 +60,9 @@ const AiRoboticsKit = () => {
                 },
                 { 
                     id: 23, 
-                    title: "Quiz Questions and Answers", 
-                    path: "quiz-qa", 
-                    fileId: "1ZsvED56_Z69yjVROt1DzLwnoFZibHBEp", 
-                    type: "pdf" 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         },
@@ -89,10 +87,9 @@ const AiRoboticsKit = () => {
                 },
                 { 
                     id: 33, 
-                    title: "Quiz Questions and Answers", 
-                    path: "quiz-qa", 
-                    fileId: "YOUR_GOOGLE_DRIVE_FILE_ID_FOR_MOD3_QUIZ", 
-                    type: "pdf" 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         },
@@ -117,10 +114,9 @@ const AiRoboticsKit = () => {
                 },
                 { 
                     id: 43, 
-                    title: "Quiz Questions and Answers", 
-                    path: "quiz-qa", 
-                    fileId: "1sl3esCZx2Smm-QC_lDYfk5U6bmkTy9hw", 
-                    type: "pdf" 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         },
@@ -213,8 +209,9 @@ const AiRoboticsKit = () => {
                     {subcategories.map((sub) => (
                         <li key={sub.id}>
                             <div
-                                className={`hover:bg-gray-700 hover:text-white p-2 rounded cursor-pointer ${subcategory === sub.path ? "bg-gray-700 text-white" : ""
-                                    }`}
+                                className={`flex items-center justify-between hover:bg-gray-700 hover:text-white p-2 rounded cursor-pointer ${
+                                    subcategory === sub.path ? "bg-gray-700 text-white" : ""
+                                }`}
                                 onClick={() => {
                                     if (sub.nested) {
                                         toggleNestedSubcategories(sub.id);
@@ -223,19 +220,44 @@ const AiRoboticsKit = () => {
                                     }
                                 }}
                             >
-                                {sub.title}
+                                <span>{sub.title}</span>
+                                {sub.nested && (
+                                    <span className="text-xs">
+                                        {expandedSubcategory === sub.id ? '▼' : '▶'}
+                                    </span>
+                                )}
                             </div>
-                            {/* Nested subcategories */}
                             {sub.nested && expandedSubcategory === sub.id && (
                                 <ul className="pl-4 mt-2 space-y-2">
                                     {sub.nested.map((nestedSub) => (
                                         <li
                                             key={nestedSub.id}
-                                            className={`hover:bg-gray-700 hover:text-white p-2 rounded cursor-pointer ${subcategory === nestedSub.path ? "bg-gray-700 text-white" : ""
-                                                }`}
-                                            onClick={() => handleSubcategoryClick(nestedSub.path, nestedSub.fileId, nestedSub.type)}
+                                            className={`p-2 rounded flex items-center ${
+                                                subcategory === nestedSub.path ? "bg-gray-700 text-white" : ""
+                                            }`}
                                         >
-                                            {nestedSub.title}
+                                            {nestedSub.type === "link" ? (
+                                                <Link 
+                                                    to="/QuizList"
+                                                    className="flex items-center text-blue-300 hover:text-blue-100 hover:underline w-full"
+                                                >
+                                                    <span className="mr-2">📝</span>
+                                                    <span>{nestedSub.title}</span>
+                                                </Link>
+                                            ) : (
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedFileId(nestedSub.fileId);
+                                                        setSelectedFileType(nestedSub.type);
+                                                    }}
+                                                    className="flex items-center text-blue-300 hover:text-blue-100 hover:underline w-full"
+                                                >
+                                                    <span className="mr-2">
+                                                        {nestedSub.type === "ppt" ? "📊" : "📄"}
+                                                    </span>
+                                                    <span>{nestedSub.title}</span>
+                                                </button>
+                                            )}
                                         </li>
                                     ))}
                                 </ul>

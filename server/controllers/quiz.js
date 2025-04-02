@@ -27,6 +27,7 @@ export const createQuiz = async (req, res) => {
       endTime,
       type,
       quizVisibility,
+      quizImage
     } = req.body;
 
     console.log("Request Body:", req.body);
@@ -38,6 +39,7 @@ export const createQuiz = async (req, res) => {
     let startDateAndTime = `${startDate} ${startTime}`;
     let endDateTime = `${endDate} ${endTime}`;
 
+    // Set default values for null checks
     category = category ?? null;
     name = name ?? null;
     level = level ?? null;
@@ -47,6 +49,7 @@ export const createQuiz = async (req, res) => {
     endDateTime = endDateTime ?? null;
     type = type ?? null;
     quizVisibility = quizVisibility ?? "Public";
+    quizImage = quizImage ?? null;
 
     connectToDatabase(async (err, conn) => {
       if (err) {
@@ -70,11 +73,11 @@ export const createQuiz = async (req, res) => {
         const authDel = null;
         const authLstEdit = null;
 
-        // Insert quiz data
+        // Insert quiz data with image
         const quizQuery = `
           INSERT INTO QuizDetails 
-          (QuizCategory, QuizName, QuizLevel, QuizDuration, NegativeMarking, StartDateAndTime, EndDateTime, QuizVisibility, AuthAdd, AuthDel, AuthLstEdit, AddOnDt, delStatus) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 0);
+          (QuizCategory, QuizName, QuizLevel, QuizDuration, NegativeMarking, StartDateAndTime, EndDateTime, QuizVisibility, QuizImage, AuthAdd, AuthDel, AuthLstEdit, AddOnDt, delStatus) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 0);
         `;
         console.log("Executing query: ", quizQuery);
 
@@ -87,6 +90,7 @@ export const createQuiz = async (req, res) => {
           startDateAndTime,
           endDateTime,
           quizVisibility,
+          quizImage,
           authAdd,
           authDel,
           authLstEdit,
@@ -113,7 +117,7 @@ export const createQuiz = async (req, res) => {
     });
   } catch (error) {
     logError("Unexpected Error:", error.stack || JSON.stringify(error));
-    console.error("Error Details:", error); // This will log to your console
+    console.error("Error Details:", error);
     return res.status(500).json({ success: false, message: "Unexpected Error, check logs" });
   }
 };
@@ -1011,3 +1015,129 @@ export const submitQuiz = async (req, res) => {
       });
   }
 };
+
+export const updateQuiz = async (req, res) => {
+  console.log("Incoming quiz update request:", req.body);
+  let success = false;
+  const userId = req.user.id;
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      success, 
+      errors: errors.array(), 
+      message: "Invalid data format" 
+    });
+  }
+
+  try {
+    const {
+      QuizID,
+      QuizCategory,
+      QuizName,
+      QuizLevel,
+      QuizDuration,
+      NegativeMarking,
+      StartDateAndTime,
+      EndDateTime,
+      QuizVisibility,
+      AuthLstEdit
+    } = req.body;
+
+    if (!QuizID) {
+      return res.status(400).json({
+        success: false,
+        message: "QuizID is required"
+      });
+    }
+
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        console.error("Database connection error:", err);
+        return res.status(500).json({ 
+          success: false, 
+          message: "Database connection failed" 
+        });
+      }
+
+      try {
+        // Remove transaction since we're doing a single update
+        const checkQuizQuery = `
+          SELECT QuizID FROM QuizDetails 
+          WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
+        `;
+        const quizRows = await queryAsync(conn, checkQuizQuery, [QuizID]);
+        
+        if (quizRows.length === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: "Quiz not found or has been deleted" 
+          });
+        }
+
+        // Update quiz details
+        const updateQuery = `
+          UPDATE QuizDetails 
+          SET 
+            QuizCategory = ?,
+            QuizName = ?,
+            QuizLevel = ?,
+            QuizDuration = ?,
+            NegativeMarking = ?,
+            StartDateAndTime = CONVERT(datetime, ?),
+            EndDateTime = CONVERT(datetime, ?),
+            QuizVisibility = ?,
+            AuthLstEdit = ?,
+            editOnDt = GETDATE()
+          WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
+        `;
+
+        const updateParams = [
+          QuizCategory,
+          QuizName,
+          QuizLevel,
+          QuizDuration,
+          NegativeMarking,
+          new Date(StartDateAndTime).toISOString(),
+          new Date(EndDateTime).toISOString(),
+          QuizVisibility,
+          AuthLstEdit,
+          QuizID
+        ];
+
+        const result = await queryAsync(conn, updateQuery, updateParams);
+
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: "No quiz was updated. Quiz may not exist or data was identical." 
+          });
+        }
+
+        closeConnection();
+        
+        return res.status(200).json({ 
+          success: true,
+          message: "Quiz updated successfully",
+          quizId: QuizID
+        });
+
+      } catch (queryErr) {
+        closeConnection();
+        console.error("Database query error:", queryErr);
+        return res.status(500).json({ 
+          success: false, 
+          message: "Failed to update quiz",
+          error: queryErr.message 
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Server error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Internal server error" 
+    });
+  }
+};
+

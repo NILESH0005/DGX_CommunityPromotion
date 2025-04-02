@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm";
 
 const GenAiKit = () => {
@@ -58,6 +58,12 @@ const GenAiKit = () => {
                     path: "lecture-slides", 
                     fileId: "1jzDvRk5-BYGI4Kd7lNmM0zyVnDpRoA2R", 
                     type: "ipynb" 
+                },
+                { 
+                    id: 17, 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         },
@@ -72,6 +78,12 @@ const GenAiKit = () => {
                     path: "dli-courses", 
                     fileId: "1BngleGOQ9u1GIGX0yialYZtTPV1UuNn6", 
                     type: "pdf" 
+                },
+                { 
+                    id: 32, 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         },
@@ -86,6 +98,12 @@ const GenAiKit = () => {
                     path: "dli-courses", 
                     fileId: "1uZN0ZNADa0MwpxP9gYp6nFclSg8Lj4mo", 
                     type: "pdf" 
+                },
+                { 
+                    id: 42, 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         },
@@ -156,6 +174,12 @@ const GenAiKit = () => {
                     path: "lecture-slides", 
                     fileId: "1byEUFn57_60wq8i6f1mpRYkB-G_NEWGV", 
                     type: "ppt" 
+                },
+                { 
+                    id: 70, 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         },
@@ -170,6 +194,12 @@ const GenAiKit = () => {
                     path: "dli-courses", 
                     fileId: "1oNQkQ2mKl9dm6OiNc1zBRx-EbURPL4wI", 
                     type: "pdf" 
+                },
+                { 
+                    id: 72, 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         },
@@ -269,6 +299,12 @@ const GenAiKit = () => {
                     fileId: "YOUR_GOOGLE_DRIVE_FILE_ID_FOR_MOD8_LECTURES2", 
                     type: "ppt" 
                 },
+                { 
+                    id: 94, 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
+                }
             ],
         },
         {
@@ -282,6 +318,12 @@ const GenAiKit = () => {
                     path: "dli-courses", 
                     fileId: "YOUR_GOOGLE_DRIVE_FILE_ID_FOR_MOD9_DLI", 
                     type: "pdf" 
+                },
+                { 
+                    id: 93, 
+                    title: "Assessment", 
+                    path: "/QuizList", 
+                    type: "link" 
                 }
             ],
         }
@@ -364,8 +406,9 @@ const GenAiKit = () => {
                     {subcategories.map((sub) => (
                         <li key={sub.id}>
                             <div
-                                className={`hover:bg-gray-700 hover:text-white p-2 rounded cursor-pointer ${subcategory === sub.path ? "bg-gray-700 text-white" : ""
-                                    }`}
+                                className={`flex items-center justify-between hover:bg-gray-700 hover:text-white p-2 rounded cursor-pointer ${
+                                    subcategory === sub.path ? "bg-gray-700 text-white" : ""
+                                }`}
                                 onClick={() => {
                                     if (sub.nested) {
                                         toggleNestedSubcategories(sub.id);
@@ -374,19 +417,47 @@ const GenAiKit = () => {
                                     }
                                 }}
                             >
-                                {sub.title}
+                                <span>{sub.title}</span>
+                                {sub.nested && (
+                                    <span className="text-xs">
+                                        {expandedSubcategory === sub.id ? '▼' : '▶'}
+                                    </span>
+                                )}
                             </div>
-                            {/* Nested subcategories */}
                             {sub.nested && expandedSubcategory === sub.id && (
                                 <ul className="pl-4 mt-2 space-y-2">
                                     {sub.nested.map((nestedSub) => (
                                         <li
                                             key={nestedSub.id}
-                                            className={`hover:bg-gray-700 hover:text-white p-2 rounded cursor-pointer ${subcategory === nestedSub.path ? "bg-gray-700 text-white" : ""
-                                                }`}
-                                            onClick={() => handleSubcategoryClick(nestedSub.path, nestedSub.fileId, nestedSub.type)}
+                                            className={`p-2 rounded flex items-center ${
+                                                subcategory === nestedSub.path ? "bg-gray-700 text-white" : ""
+                                            }`}
                                         >
-                                            {nestedSub.title}
+                                            {nestedSub.type === "link" ? (
+                                                <Link 
+                                                    to="/QuizList"
+                                                    className="flex items-center text-blue-300 hover:text-blue-100 hover:underline w-full"
+                                                >
+                                                    <span className="mr-2">📝</span>
+                                                    <span>{nestedSub.title}</span>
+                                                </Link>
+                                            ) : (
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedFileId(nestedSub.fileId);
+                                                        setSelectedFileType(nestedSub.type);
+                                                    }}
+                                                    className="flex items-center text-blue-300 hover:text-blue-100 hover:underline w-full"
+                                                >
+                                                    <span className="mr-2">
+                                                        {nestedSub.type === "ppt" ? "📊" : 
+                                                         nestedSub.type === "pdf" ? "📄" :
+                                                         nestedSub.type === "ipynb" ? "📓" :
+                                                         nestedSub.type === "csv" ? "📋" : "📁"}
+                                                    </span>
+                                                    <span>{nestedSub.title}</span>
+                                                </button>
+                                            )}
                                         </li>
                                     ))}
                                 </ul>
