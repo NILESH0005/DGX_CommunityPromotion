@@ -65,7 +65,10 @@ export const getQuizDropdown = async (req, res) => {
             }
 
             try {
-                const query = `SELECT QuizID, QuizName, NegativeMarking, QuizDuration, QuizLevel, StartDateAndTime, EndDateTime  FROM QuizDetails where EndDateTime > GETDATE()`;
+                const query = `SELECT qd.QuizID, QuizName, NegativeMarking, QuizDuration, QuizLevel,  StartDateAndTime, EndDateTime,count(QuestionsID) Questioncount FROM QuizDetails qd
+                left join  QuizMapping qm on  qm.quizId=qd.QuizID
+                where qd.delstatus=0 and ISNULL(qm.delstatus, 0)=0 and EndDateTime > GETDATE()
+                group by qd.QuizID, QuizName, NegativeMarking, QuizDuration, QuizLevel,  StartDateAndTime, EndDateTime`;
                 const results = await queryAsync(conn, query);
 
                 if (results.length === 0) {

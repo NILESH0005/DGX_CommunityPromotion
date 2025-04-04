@@ -52,27 +52,13 @@ const QuizMapping = () => {
     setLoading(prev => ({ ...prev, quizzes: true }));
     try {
       const data = await fetchData(`dropdown/getQuizDropdown`, "GET");
+      console.log("dropddddooowwnn count", data);
       if (data.success) {
-        // Fetch question counts for each quiz
-        const quizzesWithCounts = await Promise.all(
-          data.data.map(async quiz => {
-            try {
-              const questionsData = await fetchData(`quiz/getQuizQuestions`, "POST", {
-                QuizID: quiz.QuizID
-              }, {
-                "Content-Type": "application/json",
-                "auth-token": userToken,
-              });
-              const count = questionsData.success ? questionsData.data?.questions?.length || 0 : 0;
-              return { ...quiz, questionCount: count };
-            } catch (error) {
-              console.error(`Failed to get questions for quiz ${quiz.QuizID}`, error);
-              return { ...quiz, questionCount: 0 };
-            }
-          })
-        );
-
-        setQuizzes(quizzesWithCounts.sort((a, b) => a.QuizName > b.QuizName ? 1 : -1));
+        // Use Questioncount from API if available, otherwise default to 0
+        setQuizzes(data.data.map(quiz => ({
+          ...quiz,
+          questionCount: quiz.Questioncount || 0 // Use the API's Questioncount
+        })).sort((a, b) => a.QuizName > b.QuizName ? 1 : -1));
       }
     } catch (error) {
       console.error("Failed to fetch quizzes", error);
@@ -180,6 +166,16 @@ const QuizMapping = () => {
             correct_answer: correctAnswer
           };
         });
+
+        setQuizzes(prev => prev.map(quiz => {
+          if (quiz.QuizID.toString() === selectedQuiz) {
+            return {
+              ...quiz,
+              questionCount: questions.length // Update with the fresh count
+            };
+          }
+          return quiz;
+        }));
 
         setMappedQuestions(formattedQuestions);
       } else {
@@ -335,6 +331,11 @@ const QuizMapping = () => {
         const response = await fetchData(endpoint, method, body, headers);
 
         if (response.success) {
+          setQuizzes(prev => prev.map(quiz =>
+            quiz.QuizID.toString() === selectedQuiz
+              ? { ...quiz, questionCount: (quiz.questionCount || 0) + mappingData.length }
+              : quiz
+          ));
           Swal.fire({
             icon: 'success',
             title: 'Success',
@@ -399,6 +400,11 @@ const QuizMapping = () => {
         const response = await fetchData(endpoint, method, body, headers);
 
         if (response.success) {
+          setQuizzes(prev => prev.map(quiz =>
+            quiz.QuizID.toString() === selectedQuiz
+              ? { ...quiz, questionCount: Math.max(0, (quiz.questionCount || 0) - selectedMappedQuestions.length) }
+              : quiz
+          ));
           Swal.fire({
             icon: 'success',
             title: 'Success',
@@ -466,10 +472,10 @@ const QuizMapping = () => {
     setSelectedQuiz(quizId);
     setSelectedGroup("");
     setSelectedLevel("");
-    setMappedQuestions([]); // Clear immediately
+    setMappedQuestions([]);
     setSelectedQuestions([]);
     setSelectedMappedQuestions([]);
-    setQuestions([]); // Clear available questions
+    setQuestions([]);
   };
 
   return (
@@ -479,19 +485,26 @@ const QuizMapping = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="block font-semibold text-gray-700 mb-2">Quiz Name:</label>
-            <select
-              className="w-full p-2 border rounded-md"
-              onChange={handleQuizChange}
-              value={selectedQuiz}
-              disabled={loading.quizzes}
-            >
-              <option value="">-- Select Quiz Name --</option>
-              {quizzes.map(quiz => (
-                <option key={quiz.QuizID} value={quiz.QuizID}>
-                  {quiz.QuizName} ({quiz.questionCount || 0} questions)
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                className="w-full p-2 pl-3 pr-8 border rounded-md text-gray-800 bg-white appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={handleQuizChange}
+                value={selectedQuiz}
+                disabled={loading.quizzes}
+              >
+                <option value="">-- Select Quiz Name --</option>
+                {quizzes.map(quiz => (
+                  <option key={quiz.QuizID} value={quiz.QuizID}>
+                    {quiz.QuizName} • {quiz.questionCount} {quiz.questionCount === 1 ? 'Question' : 'Questions'}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </div>
           <div>
             <label className="block font-semibold text-gray-700 mb-2">Question Group:</label>
