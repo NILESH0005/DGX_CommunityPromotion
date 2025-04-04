@@ -2,6 +2,7 @@ import express from "express";
 import { fetchUser } from '../middleware/fetchUser.js';
 import { createQuiz, getQuizzes, deleteQuiz, createQuestion, getQuestion, deleteQuestion, getQuestionsByGroup, createQuizQuestionMapping, getUserQuizCategory, getQuizQuestions, submitQuiz, updateQuiz } from "../controllers/quiz.js";
 
+
 const router = express.Router();
 
 router.post('/createQuiz', fetchUser, createQuiz)
@@ -16,7 +17,6 @@ router.get('/getUserQuizCategory', fetchUser, getUserQuizCategory)
 router.post('/getQuizQuestions', fetchUser, getQuizQuestions)
 router.post('/submitQuiz', fetchUser, submitQuiz)
 router.post('/updateQuiz', fetchUser, updateQuiz)
-
 
 
 

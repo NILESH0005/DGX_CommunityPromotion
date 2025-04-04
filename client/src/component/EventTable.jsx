@@ -8,12 +8,12 @@ import ApiContext from '../context/ApiContext.jsx';
 import EventForm from './eventAndWorkshop/EventForm.jsx';
 import DetailsEventModal from './eventAndWorkshop/DetailsEventModal.jsx';
 import LoadPage from './LoadPage.jsx';
+import Swal from 'sweetalert2';
 
 const EventTable = (props) => {
-
   const [selectedEvent, setSelectedEvent] = useState(null);
   const { fetchData, userToken } = useContext(ApiContext);
-  const [isTokenLoading, setIsTokenLoading] = useState(true); // New state for token loading
+  const [isTokenLoading, setIsTokenLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -21,10 +21,25 @@ const EventTable = (props) => {
   const [statusFilter, setStatusFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [dropdownData, setDropdownData] = useState({
     categoryOptions: [],
     companyCategoryOptions: []
   });
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    const options = {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    };
+    return date.toLocaleString("en-US", options);
+  };
 
   useEffect(() => {
     const fetchDropdownValues = async (category) => {
@@ -56,51 +71,15 @@ const EventTable = (props) => {
     fetchCategories();
   }, []);
 
-  const validateDates = () => {
-    const { start, end } = newEvent;
-    if (!start || !end) {
-      Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select both start and end dates and times.' });
-      return false;
-    }
-
-    const startDateTime = new Date(start);
-    const endDateTime = new Date(end);
-    const currentDateTime = new Date();
-
-    if (startDateTime < currentDateTime) {
-      Swal.fire({ icon: 'error', title: 'Invalid Start Date/Time', text: 'Start time cannot be in the past.' });
-      return false;
-    }
-
-    if ((endDateTime - startDateTime) / (1000 * 60) < 30) {
-      Swal.fire({ icon: 'error', title: 'Invalid End Date/Time', text: 'End time must be at least 30 minutes after the start time.' });
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!validateDates()) return;
-
-    console.log('Event Data Submitted:', newEvent);
-  };
-
-
-
   useEffect(() => {
-    // Check if userToken is available
     if (userToken) {
-      setIsTokenLoading(false); // Token is available, stop token loading
-      fetchEvents(); // Fetch events only when the token is available
+      setIsTokenLoading(false);
+      fetchEvents();
     } else {
-      // If no token, stop loading after a short delay (simulating token check)
       const timeoutId = setTimeout(() => {
         setIsTokenLoading(false);
-      }, 1000); // Adjust the delay as needed
-
-      return () => clearTimeout(timeoutId); // Cleanup timeout
+      }, 1000);
+      return () => clearTimeout(timeoutId);
     }
   }, [userToken]);
 
@@ -109,12 +88,11 @@ const EventTable = (props) => {
     const method = "GET";
     const headers = {
       "Content-Type": "application/json",
-      "auth-token": userToken, // Include the token in the headers
+      "auth-token": userToken,
     };
 
     try {
       const result = await fetchData(endpoint, method, {}, headers);
-      console.log("event result:", result);
       if (result.success && Array.isArray(result.data)) {
         props.setEvents(result.data);
       } else {
@@ -129,43 +107,19 @@ const EventTable = (props) => {
     }
   };
 
-
-  const updateEvents = (newEvent) => {
-    props.setEvents((prevEvents) => [newEvent, ...prevEvents]);
-  };
-
-  const [newEvent, setNewEvent] = useState({
-    title: '',
-    start: '',
-    end: '',
-    categoryId: dropdownData.categoryOptions[0]?.idCode || '',
-    companyCategoryId: dropdownData.companyCategoryOptions[0]?.idCode || '',
-    poster: '',
-    venue: '',
-    description: '',
-    host: '',
-    registerLink: '',
-  });
-
   const filteredEvents = props.events.filter((event) => {
     const matchesStatus = statusFilter === "" || event.Status === statusFilter;
     const matchesCategory = selectedCategory === "" || event.EventType === selectedCategory;
-    return matchesStatus && matchesCategory;
+    const matchesSearch = 
+      event.EventTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.UserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.Venue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.Status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      formatDateTime(event.StartDate).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      formatDateTime(event.EndDate).toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesStatus && matchesCategory && matchesSearch;
   });
-
-  const handleEventUpdate = (updatedEvent) => {
-    props.setEvents((prevEvents) =>
-      prevEvents.map((event) =>
-        event.EventID === updatedEvent.EventID ? updatedEvent : event
-      )
-    );
-  };
-
-  const handleEventDelete = (eventId) => {
-    props.setEvents((prevEvents) =>
-      prevEvents.filter((event) => event.EventID !== eventId)
-    );
-  };
 
   const getStatusClass = (status) => {
     switch (status) {
@@ -180,138 +134,108 @@ const EventTable = (props) => {
     }
   };
 
-  const fileInputRef = useRef(null);
-
-  // const handleCloseModal = () => {
-  //   resetForm();
-  //   setIsModalOpen(false);
-  // };
-
-  const resetForm = () => {
-    setNewEvent({
-      title: '',
-      start: '',
-      end: '',
-      category: 'Select one',
-      companyCategory: 'Select one',
-      poster: null,
-      venue: '',
-      description: '',
-      host: '',
-      registerLink: '',
-    });
-    setErrors({});
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  if (isTokenLoading) {
-    return <div><LoadPage /></div>;
+  if (isTokenLoading || loading) {
+    return <LoadPage />;
   }
 
   return (
-    <div className="container overflow-y-auto max-h-[80vh]">
-      <div>
-        <h1 className='flex justify-center items-center font-bold text-3xl mb-10'>Events and Workshops Calendar</h1>
-        <p className="mt-1 flex text-md justify-center items-center font-normal text-gray-500 dark:text-gray-400">Browse and manage discussions in the DGX community.</p>
-      </div>
-
-      <div className="flex justify-between mb-4 pt-4">
-        <div className="flex items-center">
-          <label className="mr-2 text-lg font-medium">Filter by Status:</label>
+    <div className="mt-6 p-4 bg-white rounded-lg shadow">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+        <input
+          type="text"
+          placeholder="Search by title, creator, venue, etc..."
+          className="p-2 border rounded w-full sm:w-1/2"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <select
             className="border px-3 py-2 rounded-lg"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="">All</option>
+            <option value="">All Status</option>
             <option value="Pending">Pending</option>
             <option value="Approved">Approved</option>
             <option value="Rejected">Rejected</option>
           </select>
-        </div>
-
-        <div className="flex items-center">
-          <label className="mr-2 text-lg font-medium">Filter by Event Type:</label>
           <select
             className="border px-3 py-2 rounded-lg"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
-            <option value="">All</option>
+            <option value="">All Types</option>
             {dropdownData.categoryOptions.map((option) => (
               <option key={option.idCode} value={option.ddValue}>
                 {option.ddValue}
               </option>
             ))}
           </select>
+          <button
+            className="px-4 py-2 bg-DGXblue text-white font-semibold rounded-lg"
+            onClick={() => setShowForm(!showForm)}
+          >
+            {showForm ? 'Show Table' : 'Add Event'}
+          </button>
         </div>
-        <button
-          className="bg-DGXgreen text-white px-4 py-2 rounded-lg"
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? 'Show Table' : 'Add Event'}
-        </button>
       </div>
+
       {showForm ? (
-        <EventForm updateEvents={updateEvents} setEvents={props.setEvents} />
-      ) : (
-        <div className="event-table flex items-center justify-center">
-          <table className="table-fixed border bottom-2 w-full mt-4">
-            <thead className='bg-DGXgreen text-white'>
-              <tr>
-                <th className="border px-4 py-2">#</th>
-                <th className="border px-4 py-2">Title</th>
-                <th className="border px-4 py-2">Created By</th>
-                <th className="border px-4 py-2">Start Date</th>
-                <th className="border px-4 py-2">End Date</th>
-                <th className="border px-4 py-2">Status</th>
-                <th className="border px-4 py-2">Venue</th>
-                <th className="border px-4 py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEvents.map((event, index) => (
-                <tr className={`text-center ${getStatusClass(event.Status)}`} key={index}>
-                  <td className="border">{index + 1}</td>
-                  <td className="border px-4 py-2 w-2/6">
-                    {event.EventTitle && event.EventTitle.length > 50
-                      ? `${event.EventTitle.slice(0, 50)}...`
-                      : event.EventTitle}
-                  </td>
-                  <td className="border px-4 py-2">{event.UserName}</td>
-                  <td className="border px-4 py-2">
-                    <div>{moment.utc(event.StartDate).format("MMMM D, YYYY")}</div>
-                    <div>{moment.utc(event.StartDate).format("h:mm A")}</div>
-                  </td>
-                  <td className="border px-4 py-2">
-                    <div>{moment.utc(event.EndDate).format("MMMM D, YYYY")}</div>
-                    <div>{moment.utc(event.EndDate).format("h:mm A")}</div>
-                  </td>
-                  <td className="border px-4 py-2">{event.Status}</td>
-                  <td className="border px-4 py-2">{event.Venue}</td>
-                  <td className="border px-4 py-2">
-                    <button
-                      className='font-medium text-DGXblue bg-DGXblue text-white px-6 py-1 rounded-lg'
-                      onClick={() => setSelectedEvent(event)}
-                    >
-                      View
-                    </button>
-                  </td>
+        <EventForm updateEvents={props.setEvents} setEvents={props.setEvents} />
+      ) : filteredEvents.length > 0 ? (
+        <div className="overflow-hidden rounded-lg border border-gray-300">
+          <div className="overflow-auto" style={{ maxHeight: "600px" }}>
+            <table className="w-full">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-DGXgreen text-white">
+                  <th className="p-2 border text-center w-12">#</th>
+                  <th className="p-2 border text-center min-w-[150px]">Title</th>
+                  <th className="p-2 border text-center min-w-[120px]">Created By</th>
+                  <th className="p-2 border text-center min-w-[180px]">Start Date & Time</th>
+                  <th className="p-2 border text-center min-w-[180px]">End Date & Time</th>
+                  <th className="p-2 border text-center min-w-[100px]">Status</th>
+                  <th className="p-2 border text-center min-w-[120px]">Venue</th>
+                  <th className="p-2 border text-center min-w-[100px]">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredEvents.map((event, index) => (
+                  <tr key={event.EventID} className={`hover:bg-gray-50 ${getStatusClass(event.Status)}`}>
+                    <td className="p-2 border text-center">{index + 1}</td>
+                    <td className="p-2 border text-center font-medium">
+                      {event.EventTitle}
+                    </td>
+                    <td className="p-2 border text-center">{event.UserName}</td>
+                    <td className="p-2 border text-center">{formatDateTime(event.StartDate)}</td>
+                    <td className="p-2 border text-center">{formatDateTime(event.EndDate)}</td>
+                    <td className="p-2 border text-center">{event.Status}</td>
+                    <td className="p-2 border text-center">{event.Venue}</td>
+                    <td className="p-2 border text-center">
+                      <button
+                        onClick={() => setSelectedEvent(event)}
+                        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition text-sm"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+      ) : (
+        <p className="text-center text-gray-500">
+          {searchTerm ? "No events match your search" : "No events found"}
+        </p>
       )}
 
       {selectedEvent && (
         <DetailsEventModal
           selectedEvent={selectedEvent}
           onClose={() => setSelectedEvent(null)}
-          onEventUpdate={handleEventUpdate}
-          onEventDelete={handleEventDelete}
+          onEventUpdate={props.setEvents}
+          onEventDelete={props.setEvents}
         />
       )}
     </div>

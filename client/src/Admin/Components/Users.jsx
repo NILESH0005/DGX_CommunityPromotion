@@ -6,6 +6,8 @@ import Swal from 'sweetalert2';
 const AdminUsers = () => {
   const { fetchData, userToken } = useContext(ApiContext);
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -26,7 +28,23 @@ const AdminUsers = () => {
     fetchUsers();
   }, []);
 
+  // Filter users based on search term
+  useEffect(() => {
+    const results = users.filter((user) => {
+      return (
+        user.Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.EmailId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.CollegeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.Designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.MobileNumber.toString().includes(searchTerm) ||
+        user.Category.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+    setFilteredUsers(results);
+  }, [searchTerm, users]);
+
   const fetchUsers = async () => {
+    setLoading(true);
     const endpoint = "user/users";
     const method = "GET";
     const headers = {
@@ -38,6 +56,7 @@ const AdminUsers = () => {
       const result = await fetchData(endpoint, method, {}, headers);
       if (result.success) {
         setUsers(result.data);
+        setFilteredUsers(result.data);
       } else {
         setError(result.message || 'Failed to fetch user data');
       }
@@ -95,7 +114,6 @@ const AdminUsers = () => {
   };
 
   const handleSubmit = () => {
-    handleAddUser();
     const errors = {};
     if (!newUser.Name) errors.Name = "Name is required";
     if (!newUser.EmailId || !validateEmail(newUser.EmailId)) errors.EmailId = "Enter a valid email address";
@@ -107,7 +125,7 @@ const AdminUsers = () => {
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-   
+    handleAddUser();
   };
 
   const handleAddUser = async () => {
@@ -190,13 +208,19 @@ const AdminUsers = () => {
     }
   };
 
-  if (loading) return <div><LoadPage /></div>;
-  if (error) return <div><LoadPage /></div>;
+  if (loading) return <LoadPage />;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
-    <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+    <div className="mt-6 p-4 bg-white rounded-lg shadow">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Admin - Manage Users</h2>
+        <input
+          type="text"
+          placeholder="Search by name, email, college, etc..."
+          className="p-2 border rounded w-1/2"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
         <button
           onClick={() => setShowAddUserModal(true)}
           className="px-4 py-2 bg-DGXblue text-white font-semibold rounded-lg"
@@ -204,49 +228,56 @@ const AdminUsers = () => {
           Add User
         </button>
       </div>
-      <table className="w-full text-sm text-left rtl:text-right text-gray-500">
-        <caption className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white dark:text-white">
-          Admin - Manage Users
-          <p className="mt-1 text-sm font-normal text-gray-500">Browse and manage DGX community users.</p>
-        </caption>
-        <thead className="text-xs text-gray-700 uppercase bg-DGXgreen text-white">
-          <tr>
-            <th scope="col" className="border px-6 py-3">#</th>
-            <th scope="col" className="border px-6 py-3">Name</th>
-            <th scope="col" className="border px-6 py-3">Email</th>
-            <th scope="col" className="border px-6 py-3">College Name</th>
-            <th scope="col" className="border px-6 py-3">Designation</th>
-            <th scope="col" className="border px-6 py-3">Mobile Number</th>
-            <th scope="col" className="border px-6 py-3">Category</th>
-            <th scope="col" className="border px-6 py-3">Action</th>
-          </tr> 
-        </thead>
-        <tbody>
-          {users.map((user, index) => (
-            <tr key={user.UserID} className="bg-white border-b">
-              <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{index + 1}</th>
-              <td className="border px-6 py-4">{user.Name}</td>
-              <td className="border px-6 py-4">{user.EmailId}</td>
-              <td className="border px-6 py-4">{user.CollegeName}</td>
-              <td className="border px-6 py-4">{user.Designation}</td>
-              <td className="border px-6 py-4">{user.MobileNumber}</td>
-              <td className="border px-6 py-4">{user.Category}</td>
-              <td className="border px-6 py-4 text-right">
-                <button
-                  onClick={() => handleDeleteUser(user.UserID)}
-                  className="bg-red-500 text-white px-4 py-1 rounded-lg"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      
+      {filteredUsers.length > 0 ? (
+        <div className="overflow-hidden rounded-lg border border-gray-300">
+          <div className="overflow-auto" style={{ maxHeight: "600px" }}>
+            <table className="w-full">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-DGXgreen text-white">
+                  <th className="p-2 border text-center w-12">#</th>
+                  <th className="p-2 border text-center min-w-[150px]">Name</th>
+                  <th className="p-2 border text-center min-w-[200px]">Email</th>
+                  <th className="p-2 border text-center min-w-[150px]">College Name</th>
+                  <th className="p-2 border text-center min-w-[120px]">Designation</th>
+                  <th className="p-2 border text-center min-w-[120px]">Mobile Number</th>
+                  <th className="p-2 border text-center min-w-[100px]">Category</th>
+                  <th className="p-2 border text-center min-w-[120px]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user, index) => (
+                  <tr key={user.UserID} className="hover:bg-gray-50">
+                    <td className="p-2 border text-center w-12">{index + 1}</td>
+                    <td className="p-2 border text-center min-w-[150px]">{user.Name}</td>
+                    <td className="p-2 border text-center min-w-[200px]">{user.EmailId}</td>
+                    <td className="p-2 border text-center min-w-[150px]">{user.CollegeName}</td>
+                    <td className="p-2 border text-center min-w-[120px]">{user.Designation}</td>
+                    <td className="p-2 border text-center min-w-[120px]">{user.MobileNumber}</td>
+                    <td className="p-2 border text-center min-w-[100px]">{user.Category}</td>
+                    <td className="p-2 border text-center min-w-[120px]">
+                      <button
+                        onClick={() => handleDeleteUser(user.UserID)}
+                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition text-sm"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <p className="text-center text-gray-500">
+          {searchTerm ? "No users match your search" : "No users found"}
+        </p>
+      )}
 
       {/* Modal for adding user */}
       {showAddUserModal && (
-        <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
             <h3 className="text-xl font-semibold mb-4">Add New User</h3>
             <form>
@@ -257,7 +288,8 @@ const AdminUsers = () => {
                   name="Name"
                   value={newUser.Name}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-md ${formErrors.Name ? 'border-red-500' : ''}`}/>
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-md ${formErrors.Name ? 'border-red-500' : ''}`}
+                />
                 {formErrors.Name && <p className="text-red-500 text-sm">{formErrors.Name}</p>}
               </div>
 
@@ -268,7 +300,8 @@ const AdminUsers = () => {
                   name="EmailId"
                   value={newUser.EmailId}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-2 border border-gray-300 rounded-md ${formErrors.EmailId ? 'border-red-500' : ''}`}/>
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-md ${formErrors.EmailId ? 'border-red-500' : ''}`}
+                />
                 {formErrors.EmailId && <p className="text-red-500 text-sm">{formErrors.EmailId}</p>}
               </div>
 
@@ -326,14 +359,14 @@ const AdminUsers = () => {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md"
+                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="px-4 py-2 bg-DGXblue text-white rounded-md"
+                  className="px-4 py-2 bg-DGXblue text-white rounded-md hover:bg-blue-600 transition"
                 >
                   Add User
                 </button>

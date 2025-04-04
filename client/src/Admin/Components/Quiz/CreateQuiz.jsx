@@ -1,19 +1,16 @@
 import React, { useState, useEffect, useContext } from "react";
-import { FaCalendarAlt, FaClock, FaCheckCircle } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
+import { FaCalendarAlt, FaCheckCircle } from "react-icons/fa";
 import ApiContext from "../../../context/ApiContext";
-import { compressImage } from "../../../utils/compressImage.js";
+import Swal from "sweetalert2";
 
-const CreateQuiz = ({ navigateToQuizTable }) => {
-  const navigate = useNavigate();
+const createQuiz = ({ navigateToQuizTable }) => {
   const { userToken, fetchData } = useContext(ApiContext);
   const [categories, setCategories] = useState([]);
   const [quizLevels, setQuizLevels] = useState([]);
   const [quizData, setQuizData] = useState({
     category: "",
     name: "",
-    level: "Medium",
+    level: "",
     duration: 30,
     negativeMarking: false,
     startDate: "",
@@ -39,7 +36,6 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
 
       try {
         const data = await fetchData(endpoint, method, headers);
-        console.log("Fetched quiz categories:", data);
         if (data.success) {
           const sortedCategories = data.data.sort((a, b) =>
             a.group_name.localeCompare(b.group_name)
@@ -64,7 +60,6 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
 
       try {
         const data = await fetchData(endpoint, method, headers);
-        console.log("Fetched quiz levels:", data);
         if (data.success) {
           setQuizLevels(data.data);
         } else {
@@ -99,22 +94,40 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
     let error = "";
     switch (name) {
       case "category":
-        if (!value.trim()) error = "Quiz category is required.";
+        if (!value) error = "Please select a quiz category";
         break;
       case "name":
-        if (!value.trim()) error = "Quiz name is required.";
+        if (!value.trim()) error = "Quiz name is required";
+        else if (value.trim().length > 100) error = "Quiz name must be less than 100 characters";
+        break;
+      case "level":
+        if (!value) error = "Please select a quiz level";
+        break;
+      case "duration":
+        if (value < 5 || value > 180) error = "Duration must be between 5 and 180 minutes";
         break;
       case "startDate":
-        if (!value) error = "Start date is required.";
+        if (!value) error = "Start date is required";
         break;
       case "startTime":
-        if (!value) error = "Start time is required.";
+        if (!value) error = "Start time is required";
         break;
       case "endDate":
-        if (!value) error = "End date is required.";
+        if (!value) error = "End date is required";
+        else if (quizData.startDate && value < quizData.startDate) {
+          error = "End date cannot be before start date";
+        }
         break;
       case "endTime":
-        if (!value) error = "End time is required.";
+        if (!value) error = "End time is required";
+        else if (quizData.startDate && quizData.endDate && quizData.startTime) {
+          if (quizData.startDate === quizData.endDate && value <= quizData.startTime) {
+            error = "End time must be after start time";
+          }
+        }
+        break;
+      case "quizImage":
+        if (!value) error = "Please upload a quiz banner image";
         break;
       default:
         break;
@@ -125,116 +138,123 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     const fieldValue = type === "checkbox" ? checked : value;
+    
     setQuizData((prev) => ({ ...prev, [name]: fieldValue }));
-    const error = validateField(name, fieldValue);
-    setErrors((prev) => ({ ...prev, [name]: error }));
+    
+    // Validate field on change if form has been submitted or if clearing an error
+    if (isSubmitted || errors[name]) {
+      const error = validateField(name, fieldValue);
+      setErrors((prev) => ({ ...prev, [name]: error }));
+    }
   };
 
   const getMinEndTime = () => {
     if (!quizData.startDate || !quizData.startTime) return "";
-
-    const startDateTime = new Date(
-      `${quizData.startDate}T${quizData.startTime}`
-    );
+    
+    const startDateTime = new Date(`${quizData.startDate}T${quizData.startTime}`);
     const minEndDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
-
+    
     const hours = String(minEndDateTime.getHours()).padStart(2, "0");
     const minutes = String(minEndDateTime.getMinutes()).padStart(2, "0");
-
+    
     return `${hours}:${minutes}`;
   };
 
   const validateDates = () => {
     const { startDate, startTime, endDate, endTime } = quizData;
 
-    // Check if all fields are filled
     if (!startDate || !endDate || !startTime || !endTime) {
-      Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "Please select both date and time for start and end.",
-      });
       return false;
     }
 
     const startDateTime = new Date(`${startDate}T${startTime}`);
     const endDateTime = new Date(`${endDate}T${endTime}`);
     const currentDateTime = new Date();
+
     if (startDateTime < currentDateTime) {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid Start Date/Time",
-        text: "Start date and time cannot be before the current date and time.",
-      });
       return false;
     }
 
     const timeDifference = (endDateTime - startDateTime) / (1000 * 60);
     if (timeDifference < 30) {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid End Date/Time",
-        text: "End date and time must be at least 30 minutes after the start date and time.",
-      });
       return false;
     }
 
     return true;
   };
 
-  const handleCreateQuiz = async () => {
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    // Validate all required fields
+    Object.keys(quizData).forEach(field => {
+      if (field === "negativeMarking") return; // Skip checkbox
+      
+      const error = validateField(field, quizData[field]);
+      if (error) {
+        newErrors[field] = error;
+        isValid = false;
+      }
+    });
+
+    // Validate dates
+    if (!validateDates()) {
+      if (!quizData.startDate) newErrors.startDate = "Start date is required";
+      if (!quizData.startTime) newErrors.startTime = "Start time is required";
+      if (!quizData.endDate) newErrors.endDate = "End date is required";
+      if (!quizData.endTime) newErrors.endTime = "End time is required";
+      
+      if (quizData.startDate && quizData.startTime && quizData.endDate && quizData.endTime) {
+        const startDateTime = new Date(`${quizData.startDate}T${quizData.startTime}`);
+        const currentDateTime = new Date();
+        
+        if (startDateTime < currentDateTime) {
+          newErrors.startDate = "Cannot be in the past";
+          newErrors.startTime = "Cannot be in the past";
+        }
+        
+        const endDateTime = new Date(`${quizData.endDate}T${quizData.endTime}`);
+        const timeDifference = (endDateTime - startDateTime) / (1000 * 60);
+        if (timeDifference < 30) {
+          newErrors.endTime = "Must be at least 30 minutes after start";
+        }
+      }
+      
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handlecreateQuiz = async (e) => {
+    e.preventDefault();
     setIsSubmitted(true);
-
-    const requiredFields = [
-      "name",
-      "startDate",
-      "startTime",
-      "endDate",
-      "endTime",
-    ];
-    const emptyFields = requiredFields.filter(
-      (field) => !quizData[field].trim()
-    );
-
-    if (emptyFields.length > 0) {
-      const newErrors = {};
-      emptyFields.forEach((field) => {
-        newErrors[field] = `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } is required.`;
-      });
-      setErrors(newErrors);
-
+  
+    if (!validateForm()) {
       Swal.fire({
         icon: "error",
-        title: "Oops...",
-        text: "Please fill in all required fields.",
+        title: "Validation Error",
+        text: "Please correct the errors in the form before submitting.",
       });
       return;
     }
-
-    if (!validateDates()) return;
-
+  
     Swal.fire({
-      title: "Are you sure?",
-      text: "Do you want to create this quiz?",
+      title: "Confirm Quiz Creation",
+      text: "Are you sure you want to create this quiz?",
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
       cancelButtonColor: "#d33",
-      confirmButtonText: "Yes",
+      confirmButtonText: "Yes, create it!",
     }).then(async (result) => {
       if (result.isConfirmed) {
         setLoading(true);
-
-        const endpoint = "quiz/createQuiz";
-        const method = "POST";
-        const headers = {
-          "Content-Type": "application/json",
-          "auth-token": userToken,
-        };
-
-        const body = {
+  
+        // Convert to JSON instead of FormData
+        const payload = {
           category: quizData.category,
           name: quizData.name,
           level: quizData.level,
@@ -245,86 +265,89 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
           endDate: quizData.endDate,
           endTime: quizData.endTime,
           type: quizData.type,
-          quizImage: quizData.quizImage,
+          quizVisibility: quizData.type, // Assuming type is the same as visibility
+          quizImage: quizData.quizImage ? quizData.quizImage.name : "default.png" // Just send the filename
         };
-
+  
         try {
-          const data = await fetchData(endpoint, method, body, headers);
+          const endpoint = "quiz/createQuiz";
+          const method = "POST";
+          const headers = {
+            "Content-Type": "application/json",
+            "auth-token": userToken,
+          };
+  
+          const data = await fetchData(endpoint, method, payload, headers);
           setLoading(false);
-
-          if (data.success) {
-            navigateToQuizTable();
+  
+          if (data && data.success) {
             Swal.fire({
-              title: "Quiz Created!",
-              text: "Your quiz has been successfully created.",
+              title: "Success!",
+              text: "Quiz has been created successfully.",
               icon: "success",
+            }).then(() => {
+              navigateToQuizTable();
             });
           } else {
-            Swal.fire("Error", `Error: ${data.message}`, "error");
+            Swal.fire("Error", data?.message || "Failed to create quiz", "error");
           }
         } catch (error) {
           console.error("Error:", error);
           setLoading(false);
-          Swal.fire(
-            "Error",
-            "Something went wrong, please try again.",
-            "error"
-          );
+          Swal.fire("Error", "An error occurred while creating the quiz", "error");
         }
       }
     });
   };
 
-  const minEndTime = getMinEndTime();
-
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+      setErrors(prev => ({ ...prev, quizImage: "Please upload a quiz banner image" }));
+      return;
+    }
 
     // Check file type
-    const validTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/svg+xml",
-    ];
-    if (!validTypes.includes(file.type)) {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid File Type",
-        text: "Please upload an image in JPEG, JPG, PNG, or SVG format.",
-      });
+    const allowedFormats = ["image/jpeg", "image/png", "image/svg+xml"];
+    if (!allowedFormats.includes(file.type)) {
+      setErrors(prev => ({
+        ...prev,
+        quizImage: "Only JPEG, PNG, and SVG files are allowed",
+      }));
       return;
     }
 
-    // Check file size (50KB = 50 * 1024 bytes)
-    if (file.size > 50 * 1024) {
-      Swal.fire({
-        icon: "error",
-        title: "File Too Large",
-        text: "Maximum image size is 50KB. Please choose a smaller file.",
-      });
+    // Check file size (50KB)
+    const maxSize = 50 * 1024; // 50KB in bytes
+    if (file.size > maxSize) {
+      setErrors(prev => ({
+        ...prev,
+        quizImage: `Image size (${(file.size / 1024).toFixed(2)}KB) exceeds 50KB limit`,
+      }));
       return;
     }
 
-    try {
-      const compressedFile = await compressImage(file);
-      setQuizData((prev) => ({ ...prev, quizImage: compressedFile }));
+    // Clear any previous errors
+    setErrors(prev => ({ ...prev, quizImage: "" }));
+    
+    // Use the original file directly
+    setQuizData(prev => ({ ...prev, quizImage: file }));
 
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(compressedFile);
-    } catch (error) {
-      Swal.fire("Error", "Failed to compress image.", "error");
-    }
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
+
   const removeImage = () => {
-    setQuizData((prev) => ({ ...prev, quizImage: null }));
+    setQuizData(prev => ({ ...prev, quizImage: null }));
     setImagePreview(null);
+    setErrors(prev => ({ ...prev, quizImage: "Please upload a quiz banner image" }));
   };
+
+  const minEndTime = getMinEndTime();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -332,21 +355,19 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
         <h2 className="text-3xl font-bold text-center text-DGXblue mb-6">
           Create a New Quiz
         </h2>
-        <form className="space-y-6">
+        <form onSubmit={handlecreateQuiz} className="space-y-6">
+          {/* Quiz Category Dropdown with Validation */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">
-              Quiz Category
+              Quiz Category *
             </label>
             <select
               name="category"
               value={quizData.category}
               onChange={handleChange}
               className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                isSubmitted && errors.category
-                  ? "border-red-500"
-                  : "border-gray-300"
+                errors.category ? "border-red-500" : "border-gray-300"
               }`}
-              required
             >
               <option value="">Select Quiz Category</option>
               {categories.map((cat) => (
@@ -355,41 +376,44 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
                 </option>
               ))}
             </select>
-            {isSubmitted && errors.category && (
+            {errors.category && (
               <p className="text-red-500 text-sm mt-1">{errors.category}</p>
             )}
           </div>
+
+          {/* Quiz Name */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">
-              Quiz Name
+              Quiz Name *
             </label>
             <input
               type="text"
               name="name"
               value={quizData.name}
               onChange={handleChange}
+              maxLength={100}
               className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                isSubmitted && errors.name
-                  ? "border-red-500"
-                  : "border-gray-300"
+                errors.name ? "border-red-500" : "border-gray-300"
               }`}
               placeholder="Enter quiz name"
-              required
             />
-            {isSubmitted && errors.name && (
+            {errors.name && (
               <p className="text-red-500 text-sm mt-1">{errors.name}</p>
             )}
           </div>
 
+          {/* Quiz Level Dropdown with Validation */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">
-              Select Quiz Level
+              Quiz Level *
             </label>
             <select
               name="level"
               value={quizData.level}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                errors.level ? "border-red-500" : "border-gray-300"
+              }`}
             >
               <option value="">Select Quiz Level</option>
               {quizLevels.map((level) => (
@@ -398,8 +422,12 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
                 </option>
               ))}
             </select>
+            {errors.level && (
+              <p className="text-red-500 text-sm mt-1">{errors.level}</p>
+            )}
           </div>
 
+          {/* Quiz Duration */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">
               Quiz Duration (minutes): {quizData.duration}
@@ -411,10 +439,14 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
               max="180"
               value={quizData.duration}
               onChange={handleChange}
-              className="w-full"
+              className={`w-full ${errors.duration ? "border-red-500" : ""}`}
             />
+            {errors.duration && (
+              <p className="text-red-500 text-sm mt-1">{errors.duration}</p>
+            )}
           </div>
 
+          {/* Negative Marking */}
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -428,9 +460,10 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
             </label>
           </div>
 
+          {/* Start Date & Time */}
           <div>
             <label className="block text-gray-700 font-medium mb-2 flex items-center gap-2">
-              <FaCalendarAlt /> Start Date & Time
+              <FaCalendarAlt /> Start Date & Time *
             </label>
             <div className="flex gap-4">
               <input
@@ -440,11 +473,8 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
                 value={quizData.startDate}
                 onChange={handleChange}
                 className={`w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  isSubmitted && errors.startDate
-                    ? "border-red-500"
-                    : "border-gray-300"
+                  errors.startDate ? "border-red-500" : "border-gray-300"
                 }`}
-                required
               />
               <input
                 type="time"
@@ -453,24 +483,22 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
                 value={quizData.startTime}
                 onChange={handleChange}
                 className={`w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  isSubmitted && errors.startTime
-                    ? "border-red-500"
-                    : "border-gray-300"
+                  errors.startTime ? "border-red-500" : "border-gray-300"
                 }`}
-                required
               />
             </div>
-            {isSubmitted && errors.startDate && (
+            {errors.startDate && (
               <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
             )}
-            {isSubmitted && errors.startTime && (
+            {errors.startTime && (
               <p className="text-red-500 text-sm mt-1">{errors.startTime}</p>
             )}
           </div>
 
+          {/* End Date & Time */}
           <div>
             <label className="block text-gray-700 font-medium mb-2 flex items-center gap-2">
-              <FaCalendarAlt /> End Date & Time
+              <FaCalendarAlt /> End Date & Time *
             </label>
             <div className="flex gap-4">
               <input
@@ -480,11 +508,8 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
                 value={quizData.endDate}
                 onChange={handleChange}
                 className={`w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  isSubmitted && errors.endDate
-                    ? "border-red-500"
-                    : "border-gray-300"
+                  errors.endDate ? "border-red-500" : "border-gray-300"
                 }`}
-                required
               />
               <input
                 type="time"
@@ -493,24 +518,22 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
                 value={quizData.endTime}
                 onChange={handleChange}
                 className={`w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  isSubmitted && errors.endTime
-                    ? "border-red-500"
-                    : "border-gray-300"
+                  errors.endTime ? "border-red-500" : "border-gray-300"
                 }`}
-                required
               />
             </div>
-            {isSubmitted && errors.endDate && (
+            {errors.endDate && (
               <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>
             )}
-            {isSubmitted && errors.endTime && (
+            {errors.endTime && (
               <p className="text-red-500 text-sm mt-1">{errors.endTime}</p>
             )}
           </div>
 
+          {/* Quiz Type */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">
-              Select Quiz Type
+              Quiz Type
             </label>
             <select
               name="type"
@@ -523,20 +546,25 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
             </select>
           </div>
 
-          {/* Add this new image upload field above the Create Quiz button */}
-          <div>
+          {/* Quiz Banner Image */}
+          <div className="mb-4 relative pt-10">
             <label className="block text-gray-700 font-medium mb-2">
-              Quiz Banner
+              Upload Quiz Banner *
             </label>
-            <p className="text-sm text-gray-500 mb-2">
-              Supported formats: JPEG, JPG, PNG, SVG. Max size: 50KB.
-            </p>
+            <div className="text-xs text-gray-500 mb-2">
+              <span>Max size: 50KB | Formats: .jpeg, .png, .svg</span>
+            </div>
             <input
               type="file"
-              accept=".jpeg,.jpg,.png,.svg"
+              accept="image/jpeg, image/png, image/svg+xml"
               onChange={handleImageChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className={`border w-full p-2 ${
+                errors.quizImage ? "border-red-500" : "border-gray-300"
+              }`}
             />
+            {errors.quizImage && (
+              <p className="text-red-500 text-sm mt-1">{errors.quizImage}</p>
+            )}
 
             {imagePreview && (
               <div className="mt-4">
@@ -575,9 +603,9 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
             )}
           </div>
 
+          {/* Submit Button */}
           <button
-            type="button"
-            onClick={handleCreateQuiz}
+            type="submit"
             className="w-full bg-DGXblue text-white p-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center"
             disabled={loading}
           >
@@ -595,4 +623,4 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
   );
 };
 
-export default CreateQuiz;
+export default createQuiz;

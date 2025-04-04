@@ -9,6 +9,7 @@ const BlogTable = ({ blogs, userToken }) => {
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [blogData, setBlogData] = useState(blogs); 
+  const [searchTerm, setSearchTerm] = useState("");
   const { user } = useContext(ApiContext);
 
   const updateBlogState = (blogId, newStatus) => {
@@ -38,7 +39,6 @@ const BlogTable = ({ blogs, userToken }) => {
     }
   };
   
-
   const openModal = (blog) => {
     setSelectedBlog(blog);
     setIsModalOpen(true);
@@ -52,74 +52,89 @@ const BlogTable = ({ blogs, userToken }) => {
   const filteredBlogs = blogData.filter((blog) => {
     const matchesStatus = statusFilter === "" || blog.Status?.toLowerCase() === statusFilter.toLowerCase();
     const matchesCategory = categoryFilter === "" || blog.category?.toLowerCase() === categoryFilter.toLowerCase();
-    return matchesStatus && matchesCategory;
+    const matchesSearch = blog.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         blog.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         blog.UserName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         blog.Status?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesCategory && matchesSearch;
   });
 
-  console.log("Filtered blogs are:", filteredBlogs);
-
   return (
-    <div>
-      <div className="flex justify-start mb-4 space-x-4">
-        <div className="flex items-center">
-          <label className="mr-2 text-lg font-medium">Filter by Status:</label>
-          <select
-            className="border px-3 py-2 rounded-lg"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-          </select>
+    <div className="mt-6 p-4 bg-white rounded-lg shadow">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center">
+            <label className="mr-2 text-sm font-medium">Filter by Status:</label>
+            <select
+              className="border px-3 py-2 rounded-lg text-sm"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
         </div>
+        <input
+          type="text"
+          placeholder="Search by title, category, name, etc..."
+          className="p-2 border rounded text-sm w-1/2"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
-      <table className="min-w-full table-auto border-collapse">
-        <thead>
-          <tr className="bg-DGXgreen text-white">
-            <th className="border px-4 py-2">#</th>
-            <th className="border px-4 py-2">Title</th>
-            <th className="border px-4 py-2">Category</th>
-            <th className="border px-4 py-2">Name</th>
-            <th className="border px-4 py-2">Published Date</th>
-            <th className="border px-4 py-2">Status</th>
-            <th className="border px-4 py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredBlogs.length > 0 ? (
-            filteredBlogs.map((blog, index) => (
-              <tr key={index} className={`text-center ${getStatusClass(blog.Status)}`}>
-                <td className="border px-4 py-2">{index + 1}</td>
-                <td className="border px-4 py-2">{blog.title}</td>
-                <td className="border px-4 py-2">{blog.category}</td>
-                <td className="border px-4 py-2">{blog.UserName}</td>
-                <td className="border px-4 py-2">
-                  {moment.utc(blog.publishedDate).format("MMMM D, YYYY h:mm A")}
-                </td>
-                <td className="border px-4 py-2">{
-                 blog.Status || "Pending"
-                }</td>
-                <td className="border px-4 py-2">
-                  <button
-                    className="bg-DGXblue text-white px-4 py-1 rounded-lg"
-                    onClick={() => openModal(blog)}
-                  >
-                    View
-                  </button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="7" className="text-center py-4">
-                No record found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      {filteredBlogs.length > 0 ? (
+        <div className="overflow-hidden rounded-lg border border-gray-300">
+          <div className="overflow-auto" style={{ maxHeight: "600px" }}>
+            <table className="w-full">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-DGXgreen text-white">
+                  <th className="p-2 border text-center w-12">#</th>
+                  <th className="p-2 border text-center min-w-[150px]">Title</th>
+                  <th className="p-2 border text-center min-w-[120px]">Category</th>
+                  <th className="p-2 border text-center min-w-[150px]">Name</th>
+                  <th className="p-2 border text-center min-w-[180px]">Published Date</th>
+                  <th className="p-2 border text-center min-w-[120px]">Status</th>
+                  <th className="p-2 border text-center min-w-[120px]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBlogs.map((blog, index) => (
+                  <tr key={index} className={`hover:bg-gray-50 ${getStatusClass(blog.Status)}`}>
+                    <td className="p-2 border text-center w-12">{index + 1}</td>
+                    <td className="p-2 border text-center min-w-[150px]">{blog.title}</td>
+                    <td className="p-2 border text-center min-w-[120px]">{blog.category}</td>
+                    <td className="p-2 border text-center min-w-[150px]">{blog.UserName}</td>
+                    <td className="p-2 border text-center min-w-[180px]">
+                      {moment.utc(blog.publishedDate).format("MMMM D, YYYY h:mm A")}
+                    </td>
+                    <td className="p-2 border text-center min-w-[120px]">
+                      {blog.Status || "Pending"}
+                    </td>
+                    <td className="p-2 border text-center min-w-[120px]">
+                      <button
+                        className="bg-DGXblue text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition"
+                        onClick={() => openModal(blog)}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <p className="text-center text-gray-500 py-4">
+          {searchTerm || statusFilter || categoryFilter 
+            ? "No blogs match your search/filters" 
+            : "No blogs found"}
+        </p>
+      )}
 
       {isModalOpen && selectedBlog && (
         <BlogModal

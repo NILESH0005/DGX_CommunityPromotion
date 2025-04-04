@@ -8,11 +8,12 @@ export const createQuiz = async (req, res) => {
 
   console.log("User ID:", userId);
 
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    logWarning("Data is not in the right format");
-    return res.status(400).json({ success, data: errors.array(), message: "Data is not in the right format" });
-  }
+  // Remove validation middleware check since we're handling validation manually
+  // const errors = validationResult(req);
+  // if (!errors.isEmpty()) {
+  //   logWarning("Data is not in the right format");
+  //   return res.status(400).json({ success, data: errors.array(), message: "Data is not in the right format" });
+  // }
 
   try {
     let {
@@ -32,6 +33,7 @@ export const createQuiz = async (req, res) => {
 
     console.log("Request Body:", req.body);
 
+    // Manual validation
     if (!name || !startDate || !startTime || !endDate || !endTime) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
@@ -798,25 +800,17 @@ export const getQuizQuestions = async (req, res) => {
   }
 
   try {
-    const { quizGroupID, QuizID } = req.body; // Changed from QuizName to QuizID
+    const { QuizID } = req.body;
 
-    if (!quizGroupID || !QuizID) {
+    if (!QuizID) {
       return res.status(400).json({
         success: false,
         data: null,
-        message: "Both quizGroupID and QuizID are required"
+        message: "QuizID is required"
       });
     }
 
-    const groupId = parseInt(quizGroupID);
-    const quizId = parseInt(QuizID); // Parse QuizID as integer
-    if (isNaN(groupId)) {
-      return res.status(400).json({
-        success: false,
-        data: null,
-        message: "quizGroupID must be a valid number"
-      });
-    }
+    const quizId = parseInt(QuizID);
     if (isNaN(quizId)) {
       return res.status(400).json({
         success: false,
@@ -835,51 +829,41 @@ export const getQuizQuestions = async (req, res) => {
       }
 
       try {
-        // const query = `
-        //   SELECT 
-        //     quizGroupID,
-        //     QuizMapping.quizId,
-        //     QuestionsID,
-        //     question_text,
-        //     Questions.image,
-        //     QuestionOptions.id,
-        //     QuestionOptions.is_correct,
-        //     QuestionOptions.option_text,
-        //     QuestionOptions.image,
-        //     QuizDetails.QuizName,
-        //     QuestionOptions.is_correct
-        //     totalMarks,
-        //     negativeMarks,
-        //     QuizDuration
-        //   FROM QuizMapping
-        //   LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
-        //   LEFT JOIN QuestionOptions ON QuizMapping.QuestionsID = QuestionOptions.question_id
-        //   LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
-        //   LEFT JOIN QuestionOptions on QuizMapping.QuestionsID = QuestionOptions.question_id
-        //   WHERE quizGroupID = ? AND QuizMapping.quizId = ?
-        // `;
+        const query = `
+          SELECT 
+            qm.idCode,
+            qm.quizGroupID,
+            qm.quizId,
+            qm.QuestionsID,
+            q.question_text AS QuestionTxt,
+            qm.negativeMarks,
+            qm.totalMarks,
+            qm.AuthAdd,
+            qm.AddOnDt,
+            qm.delStatus,
+            qd.QuizName,
+            qd.QuizDuration,
+            q.image AS question_image,
+            (
+              SELECT STRING_AGG(
+                CONCAT(
+                  '{"id":"', qo.id, 
+                  '","is_correct":"', qo.is_correct, 
+                  '","option_text":"', qo.option_text, 
+                  '","image":"', ISNULL(qo.image, ''), '"}'
+                ), ','
+              ) 
+              FROM QuestionOptions qo 
+              WHERE qo.question_id = q.id
+            ) AS options_json
+          FROM QuizMapping qm
+          LEFT JOIN Questions q ON qm.QuestionsID = q.id
+          LEFT JOIN QuizDetails qd ON qm.quizId = qd.QuizID
+          WHERE qm.quizId = ? AND qm.delStatus = 0
+          ORDER BY qm.idCode
+        `;
 
-        const query = `SELECT 
-    qm.quizGroupID,
-    qm.quizId,
-    qm.QuestionsID,
-    q.question_text,
-    q.image AS question_image,
-    qo.id AS option_id,
-    qo.is_correct,
-    qo.option_text,
-    qo.image AS option_image,
-    qd.QuizName,
-    qm.totalMarks,
-    qm.negativeMarks,
-    qd.QuizDuration
-FROM QuizMapping qm
-LEFT JOIN Questions q ON qm.QuestionsID = q.id
-LEFT JOIN QuestionOptions qo ON qm.QuestionsID = qo.question_id
-LEFT JOIN QuizDetails qd ON qm.quizId = qd.QuizID
-WHERE qm.quizGroupID = ? AND qm.quizId = ?;`;
-
-        const questions = await queryAsync(conn, query, [groupId, quizId]);
+        const questions = await queryAsync(conn, query, [quizId]);
 
         if (!questions || questions.length === 0) {
           closeConnection();
@@ -890,11 +874,22 @@ WHERE qm.quizGroupID = ? AND qm.quizId = ?;`;
           });
         }
 
+        // Parse options JSON string into array
+        const formattedQuestions = questions.map(q => ({
+          ...q,
+          options: q.options_json ? JSON.parse(`[${q.options_json}]`) : []
+        }));
+
         success = true;
         closeConnection();
         return res.status(200).json({
           success,
-          data: { questions },
+          data: { 
+            quizId,
+            quizName: questions[0]?.QuizName || '',
+            quizDuration: questions[0]?.QuizDuration || 0,
+            questions: formattedQuestions 
+          },
           message: "Quiz questions fetched successfully"
         });
       } catch (queryErr) {

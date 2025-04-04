@@ -79,7 +79,7 @@ function App() {
 
   const [blogs, setBlogs] = useState([]);
   const [events, setEvents] = useState([]); 
-
+  
 
 
   return (

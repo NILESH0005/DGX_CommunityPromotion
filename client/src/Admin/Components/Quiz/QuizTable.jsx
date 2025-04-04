@@ -141,7 +141,38 @@ const QuizTable = () => {
       minute: "2-digit",
       hour12: true,
     };
-    return adjustedDate.toLocaleString("en-US", options);
+    return adjustedDate.toLocaleString("en-US", options).replace(" at ", " ");
+  };
+
+  const handleCopy = (quiz) => {
+    const textToCopy = `Quiz Name: ${quiz.QuizName}\n` +
+      `Category: ${getCategoryName(quiz.QuizCategory)}\n` +
+      `Level: ${getLevelName(quiz.QuizLevel)}\n` +
+      `Duration: ${quiz.QuizDuration} mins\n` +
+      `Negative Marking: ${quiz.NegativeMarking ? "Yes" : "No"}\n` +
+      `Start Date: ${formatDateTime(quiz.StartDateAndTime)}\n` +
+      `End Date: ${formatDateTime(quiz.EndDateTime)}\n` +
+      `Visibility: ${quiz.QuizVisibility}`;
+    
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Copied!',
+          text: 'Quiz details copied to clipboard',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      })
+      .catch(() => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to copy quiz details',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      });
   };
 
   const handleDelete = async (quizId) => {
@@ -200,21 +231,18 @@ const QuizTable = () => {
     setShowEditModal(true);
   };
 
-  // Add this function to your QuizTable component
   const handleCloseModal = (isUpdated, updatedQuizData) => {
     setShowViewModal(false);
     setShowEditModal(false);
     setSelectedQuiz(null);
 
     if (isUpdated && updatedQuizData) {
-      // Update the quizzes state
       setQuizzes((prevQuizzes) =>
         prevQuizzes.map((quiz) =>
           quiz.QuizID === updatedQuizData.QuizID
             ? {
                 ...quiz,
                 ...updatedQuizData,
-                // Preserve any additional fields that weren't in the form
                 QuizCategoryName: getCategoryName(updatedQuizData.QuizCategory),
                 QuizLevelName: getLevelName(updatedQuizData.QuizLevel),
               }
@@ -222,7 +250,6 @@ const QuizTable = () => {
         )
       );
 
-      // Update filtered quizzes as well
       setFilteredQuizzes((prevFilteredQuizzes) =>
         prevFilteredQuizzes.map((quiz) =>
           quiz.QuizID === updatedQuizData.QuizID
@@ -281,6 +308,7 @@ const QuizTable = () => {
       uniqueParticipants: 0,
       totalAttempts: 0,
       totalMarks: 0,
+      questionMappedCount: 0,
     };
     return stats;
   };
@@ -339,6 +367,9 @@ const QuizTable = () => {
                   <th className="p-2 border text-center min-w-[100px]">
                     Visibility
                   </th>
+                  <th className="p-2 border text-center min-w-[80px]">
+                    Question Mapped Count
+                  </th>
                   <th className="p-2 border text-center min-w-[120px]">
                     Unique Participants
                   </th>
@@ -385,6 +416,9 @@ const QuizTable = () => {
                       <td className="p-2 border text-center min-w-[100px]">
                         {quiz.QuizVisibility}
                       </td>
+                      <td className="p-2 border text-center min-w-[100px]">
+                        {stats.questionMappedCount || 0}
+                      </td>
                       <td className="p-2 border text-center min-w-[120px]">
                         {stats.uniqueParticipants}
                       </td>
@@ -413,6 +447,12 @@ const QuizTable = () => {
                         >
                           Delete
                         </button>
+                        <button
+                          onClick={() => handleCopy(quiz)}
+                          className="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600 transition text-sm"
+                        >
+                          Copy
+                        </button>
                       </td>
                     </tr>
                   );
@@ -427,7 +467,6 @@ const QuizTable = () => {
         </p>
       )}
 
-      
       {showViewModal && selectedQuiz && (
         <ViewQuizModal
           quiz={selectedQuiz}

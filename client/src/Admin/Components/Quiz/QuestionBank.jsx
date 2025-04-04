@@ -13,7 +13,6 @@ const QuizBank = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch questions data
   const fetchQuestions = async () => {
     setLoading(true);
     const endpoint = "quiz/getQuestion";
@@ -48,10 +47,9 @@ const QuizBank = () => {
     }
   };
 
-  // Handle delete functionality
   const handleDelete = async (questionId) => {
     if (!questionId) {
-      console.error("Question ID is undefined."); // Debugging
+      console.error("Question ID is undefined.");
       Swal.fire("Error", "Question ID is missing.", "error");
       return;
     }
@@ -62,16 +60,11 @@ const QuizBank = () => {
       "Content-Type": "application/json",
       "auth-token": userToken,
     };
-    const body = { id: questionId }; // Ensure the key is `id` as expected by the backend
-
-    console.log("Delete request payload:", { endpoint, method, headers, body }); // Debugging
+    const body = { id: questionId };
 
     try {
       const data = await fetchData(endpoint, method, body, headers);
-      console.log("Delete API response:", data); // Debugging
-
       if (data?.success) {
-        // Remove the deleted question from the state
         setFinalQuestions((prevQuestions) =>
           prevQuestions.filter((q) => q.id !== questionId)
         );
@@ -80,7 +73,7 @@ const QuizBank = () => {
         Swal.fire("Error", data?.message || "Failed to delete the question.", "error");
       }
     } catch (error) {
-      console.error("Error deleting question:", error); // Debugging
+      console.error("Error deleting question:", error);
       Swal.fire("Error", "Something went wrong, please try again.", "error");
     }
   };
@@ -88,11 +81,6 @@ const QuizBank = () => {
   useEffect(() => {
     fetchQuestions();
   }, []);
-
-  // Debugging: Log finalQuestions to verify the data
-  useEffect(() => {
-    console.log("Final Questions:", finalQuestions);
-  }, [finalQuestions]);
 
   const groups = ["All", ...new Set(finalQuestions.map((q) => q.group))];
 
@@ -104,7 +92,7 @@ const QuizBank = () => {
   });
 
   if (showQuizQuestions) {
-    return <QuizQuestions questions={finalQuestions} />;
+    return <QuizQuestions onBackToBank={() => setShowQuizQuestions(false)} />;
   }
 
   if (loading) {
@@ -122,7 +110,7 @@ const QuizBank = () => {
           onClick={() => setShowQuizQuestions(true)}
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
         >
-          Edit Quiz
+          Create Question
         </button>
       </div>
 
@@ -172,10 +160,7 @@ const QuizBank = () => {
                 <td className="border p-2">{q.count}</td>
                 <td className="border p-2 flex justify-center">
                   <button
-                    onClick={() => {
-                      console.log("Deleting question with ID:", q.id); // Debugging
-                      handleDelete(q.id);
-                    }}
+                    onClick={() => handleDelete(q.id)}
                     className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
                   >
                     Delete

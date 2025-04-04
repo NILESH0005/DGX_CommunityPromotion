@@ -8,23 +8,19 @@ import { FaCalendarAlt } from "react-icons/fa";
 const Events = (props) => {
   const { fetchData } = useContext(ApiContext);
   const [showTable, setShowTable] = useState(() => {
-    return sessionStorage.getItem("showTable") === "true"; // Restore state from sessionStorage
+    return sessionStorage.getItem("showTable") === "true";
   });
 
-  // Fetch event data
   const fetchEventData = async () => {
     const endpoint = "eventandworkshop/getEvent";
     const eventData = await fetchData(endpoint);
     props.setEvents(eventData.data || []);
-    console.log("Event data:", eventData.data);
   };
 
-  // Fetch data on mount & when showTable changes
   useEffect(() => {
     fetchEventData();
-  }, [showTable]); // Refresh data when toggling view
+  }, [showTable]);
 
-  // Preserve scroll position after refresh
   useEffect(() => {
     const scrollPosition = sessionStorage.getItem("scrollPosition");
     if (scrollPosition) {
@@ -32,11 +28,10 @@ const Events = (props) => {
     }
 
     return () => {
-      sessionStorage.setItem("scrollPosition", window.scrollY); // Save scroll position before unmount
+      sessionStorage.setItem("scrollPosition", window.scrollY);
     };
   }, []);
 
-  // Handle toggle & update sessionStorage
   const handleToggleView = () => {
     const newShowTable = !showTable;
     sessionStorage.setItem("showTable", newShowTable);
@@ -44,22 +39,31 @@ const Events = (props) => {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 w-full"> 
       {/* Toggle Button */}
       <button
         onClick={handleToggleView}
-        className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
+        className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition mb-4"
       >
         {showTable ? "Show Calendar" : "Show Table"}
-        {showTable ? <FaCalendarAlt className="size-5" /> : <MdTableChart className="size-5" />}
+        {showTable ? (
+          <FaCalendarAlt className="size-5" />
+        ) : (
+          <MdTableChart className="size-5" />
+        )}
       </button>
 
       {/* Display Event Table or Calendar */}
-      <div className="mt-4">
+      <div className="w-full"> 
         {showTable ? (
-          <EventTable events={props.events} setEvents={props.setEvents} />
+          <div className="w-full bg-white rounded-lg shadow"> 
+            <EventTable events={props.events} setEvents={props.setEvents} />
+          </div>
         ) : (
-          <GeneralUserCalendar events={props.events} setEvents={props.setEvents} />
+          <GeneralUserCalendar
+            events={props.events}
+            setEvents={props.setEvents}
+          />
         )}
       </div>
     </div>
