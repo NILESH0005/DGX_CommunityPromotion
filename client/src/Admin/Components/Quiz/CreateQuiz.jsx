@@ -177,83 +177,83 @@ const CreateQuiz = ({ navigateToQuizTable }) => {
     return true;
   };
 
-  const handleCreateQuiz = async () => {
-    setIsSubmitted(true);
+    const handleCreateQuiz = async () => {
+      setIsSubmitted(true);
 
-    const requiredFields = ["name", "startDate", "startTime", "endDate", "endTime"];
-    const emptyFields = requiredFields.filter(field => !quizData[field].trim());
+      const requiredFields = ["name", "startDate", "startTime", "endDate", "endTime"];
+      const emptyFields = requiredFields.filter(field => !quizData[field].trim());
 
-    if (emptyFields.length > 0) {
-      const newErrors = {};
-      emptyFields.forEach(field => {
-        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required.`;
-      });
-      setErrors(newErrors);
+      if (emptyFields.length > 0) {
+        const newErrors = {};
+        emptyFields.forEach(field => {
+          newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required.`;
+        });
+        setErrors(newErrors);
+
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: "Please fill in all required fields.",
+        });
+        return;
+      }
+
+      if (!validateDates()) return;
 
       Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "Please fill in all required fields.",
-      });
-      return;
-    }
+        title: "Are you sure?",
+        text: "Do you want to create this quiz?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          setLoading(true);
 
-    if (!validateDates()) return;
+          const endpoint = "quiz/createQuiz";
+          const method = "POST";
+          const headers = {
+            "Content-Type": "application/json",
+            "auth-token": userToken,
+          };
 
-    Swal.fire({
-      title: "Are you sure?",
-      text: "Do you want to create this quiz?",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        setLoading(true);
+          const body = {
+            category: quizData.category,
+            name: quizData.name,
+            level: quizData.level,
+            duration: quizData.duration,
+            negativeMarking: quizData.negativeMarking,
+            startDate: quizData.startDate,
+            startTime: quizData.startTime,
+            endDate: quizData.endDate,
+            endTime: quizData.endTime,
+            type: quizData.type,
+          };
 
-        const endpoint = "quiz/createQuiz";
-        const method = "POST";
-        const headers = {
-          "Content-Type": "application/json",
-          "auth-token": userToken,
-        };
+          try {
+            const data = await fetchData(endpoint, method, body, headers);
+            setLoading(false);
 
-        const body = {
-          category: quizData.category,
-          name: quizData.name,
-          level: quizData.level,
-          duration: quizData.duration,
-          negativeMarking: quizData.negativeMarking,
-          startDate: quizData.startDate,
-          startTime: quizData.startTime,
-          endDate: quizData.endDate,
-          endTime: quizData.endTime,
-          type: quizData.type,
-        };
-
-        try {
-          const data = await fetchData(endpoint, method, body, headers);
-          setLoading(false);
-
-          if (data.success) {
-            navigateToQuizTable();
-            Swal.fire({
-              title: "Quiz Created!",
-              text: "Your quiz has been successfully created.",
-              icon: "success",
-            });
-          } else {
-            Swal.fire("Error", `Error: ${data.message}`, "error");
+            if (data.success) {
+              navigateToQuizTable();
+              Swal.fire({
+                title: "Quiz Created!",
+                text: "Your quiz has been successfully created.",
+                icon: "success",
+              });
+            } else {
+              Swal.fire("Error", `Error: ${data.message}`, "error");
+            }
+          } catch (error) {
+            console.error("Error:", error);
+            setLoading(false);
+            Swal.fire("Error", "Something went wrong, please try again.", "error");
           }
-        } catch (error) {
-          console.error("Error:", error);
-          setLoading(false);
-          Swal.fire("Error", "Something went wrong, please try again.", "error");
         }
-      }
-    });
-  };
+      });
+    };
 
   const minEndTime = getMinEndTime();
 

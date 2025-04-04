@@ -21,7 +21,7 @@ const QuizQuestions = ({ setActiveComp }) => {
 
   useEffect(() => {
     const fetchQuizCategories = async () => {
-      const endpoint = `dropdown/getQuizGroupDropdown`;
+      const endpoint = `dropdown/getQuestionGroupDropdown`;
       const method = "GET";
       const headers = {
         "Content-Type": "application/json",

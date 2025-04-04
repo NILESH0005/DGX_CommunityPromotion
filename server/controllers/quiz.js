@@ -397,14 +397,14 @@ export const deleteQuestion = async (req, res) => {
   }
 };
 
-export const getQuestionsByGroup = async (req, res) => {
+export const getQuestionsByGroupAndLevel = async (req, res) => {
   let success = false;
-  const groupId = req.query.groupId || req.body.groupId;
+  const { group_id, level_id } = req.body;
 
-  if (!groupId) {
+  if (!group_id || !level_id) {
     return res.status(400).json({
       success,
-      message: "Group ID is required"
+      message: "Group ID and Level ID are required"
     });
   }
 
@@ -418,56 +418,53 @@ export const getQuestionsByGroup = async (req, res) => {
       }
 
       try {
-        // Get quizzes
-        const quizzesQuery = `SELECT QuizID as quiz_id, QuizName as quiz_name, QuizLevel as quiz_level
-                             FROM QuizDetails 
-                             WHERE ISNULL(delStatus, 0) = 0
-                             AND (QuizCategory = ? OR QuizCategory = CAST(? AS NVARCHAR(50)))`;
+        const levelQuery = `SELECT ddValue FROM tblDDReferences WHERE idCode = ? AND ddCategory = 'questionLevel'`;
+        const [levelResult] = await queryAsync(conn, levelQuery, [level_id]);
 
-        // Get not mapped questions
-        const notMappedQuery = `SELECT id as question_id, question_text, group_id 
-                               FROM Questions 
-                               WHERE ISNULL(delStatus, 0) = 0
-                               AND group_id = ?
-                               AND id NOT IN (SELECT QuestionsID FROM QuizMapping WHERE quizGroupID = ?)`;
+        if (!levelResult) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid level ID"
+          });
+        }
 
-        // Get mapped questions with marks and quiz info
-        // In your API endpoint:
-        const mappedQuery = `SELECT 
-  q.id as question_id,
-  q.question_text,
-  qm.totalMarks,
-  qm.negativeMarks,
-  qm.QuestionName as quiz_name,
-  qm.quizGroupID as quiz_id
-FROM Questions q
-INNER JOIN QuizMapping qm ON q.id = qm.QuestionsID
-LEFT JOIN QuizDetails qd ON qm.quizGroupID = qd.QuizID
-WHERE q.group_id = ?`;
+        const levelName = levelResult.ddValue;
+        const allQuestionsQuery = `SELECT  
+          Questions.id as question_id,  
+          Questions.question_text, 
+          Questions.Ques_level as level, 
+          Questions.group_id, 
+          QuizMapping.quizGroupID as mapped_quiz_id,
+          QuizMapping.totalMarks, 
+          QuizMapping.negativeMarks, 
+	  tblDDReferences.ddValue AS question_level,
+	            QuestionOptions.option_text,
+				          QuestionOptions.is_correct,
+          QuizDetails.QuizName as quiz_name 
+        FROM Questions 
+        LEFT JOIN QuizMapping ON Questions.id = QuizMapping.QuestionsID
+        LEFT JOIN QuizDetails ON QuizMapping.quizGroupID = QuizDetails.QuizID 
+	LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
+	        LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
 
-        const [quizzes, unmappedQuestions, mappedQuestions] = await Promise.all([
-          queryAsync(conn, quizzesQuery, [groupId, groupId.toString()]),
-          queryAsync(conn, notMappedQuery, [groupId, groupId]),
-          queryAsync(conn, mappedQuery, [groupId, groupId])
-        ]);
+        WHERE ISNULL(Questions.delStatus, 0) = 0 
+          AND Questions.group_id = ?
+          AND Questions.Ques_level = ?`;
+
+        const questions = await queryAsync(conn, allQuestionsQuery, [group_id, level_id]); // Changed levelName to level_id
 
         return res.status(200).json({
           success: true,
           data: {
-            questions: unmappedQuestions,
-            mappedQuestions: mappedQuestions.map(q => ({
-              question_id: q.id,
-              question_text: q.question_text || q.QuestionName, // Fallback to QuestionName if needed
-              group_id: q.group_id,
-              marks: q.totalMarks,
-              negative_marks: q.negativeMarks,
-              quiz_name: q.quiz_name,
-              quiz_id: q.quiz_id
-            })),
-            quizzes
+            questions: questions,
+            levelInfo: {
+              id: level_id,
+              name: levelName
+            }
           },
           message: "Data fetched successfully"
         });
+
       } catch (error) {
         console.error("Database error:", error);
         return res.status(500).json({
@@ -487,249 +484,96 @@ WHERE q.group_id = ?`;
   }
 };
 
-// export const createQuizQuestionMapping = async (req, res) => {
-//   let success = false;
-//   const userId = req.user?.id || req.headers['user-id'];
-//   console.log("User ID:", userId);
-
-//   const { quiz_id, questions, created_by } = req.body;
-
-//   // Validate required fields
-//   if (!quiz_id || !questions || !Array.isArray(questions) || questions.length === 0 || !created_by) {
-//     const warningMessage = "Missing required fields: quiz_id, questions array, or created_by";
-//     console.error(warningMessage);
-//     logWarning(warningMessage);
-//     return res.status(400).json({
-//       success,
-//       message: warningMessage
-//     });
-//   }
-
-//   try {
-//     connectToDatabase(async (err, conn) => {
-//       if (err) {
-//         const errorMessage = "Failed to connect to database";
-//         logError(err);
-//         return res.status(500).json({
-//           success: false,
-//           message: errorMessage
-//         });
-//       }
-
-//       try {
-//         // 1. First get the quiz's category/group ID and name
-//         const getQuizQuery = `SELECT QuizCategory, QuizName FROM QuizDetails WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0`;
-//         const quizResult = await queryAsync(conn, getQuizQuery, [parseInt(quiz_id)]);
-
-//         if (!quizResult || quizResult.length === 0) {
-//           closeConnection();
-//           return res.status(404).json({
-//             success: false,
-//             message: "Quiz not found"
-//           });
-//         }
-
-//         const quizGroupID = quizResult[0].QuizCategory;
-//         const quizName = quizResult[0].QuizName;
-
-//         // 2. Begin transaction
-//         await queryAsync(conn, "BEGIN TRANSACTION");
-
-//         try {
-//           for (const question of questions) {
-//             const questionId = parseInt(question.question_id);
-//             const marks = parseFloat(question.marks) || 1;
-//             const negativeMarks = parseFloat(question.negative_marks) || 0;
-
-//             // 3. Validate question exists and belongs to the same group
-//             const validateQuestionQuery = `
-//               SELECT id FROM Questions 
-//               WHERE id = ? AND group_id = ? AND ISNULL(delStatus, 0) = 0
-//             `;
-//             const questionExists = await queryAsync(conn, validateQuestionQuery, [
-//               questionId,
-//               parseInt(quizGroupID)
-//             ]);
-
-//             if (!questionExists || questionExists.length === 0) {
-//               throw new Error(`Question ID ${questionId} not found or doesn't belong to quiz's group`);
-//             }
-
-//             // 4. Insert the mapping with quiz name
-//             const insertMappingQuery = `
-//               INSERT INTO QuizMapping 
-//               (quizGroupID, QuestionsID, QuestionName, negativeMarks, totalMarks, AuthAdd, AddOnDt, delStatus)
-//               VALUES (?, ?, ?, ?, ?, ?, GETDATE(), 0)
-//             `;
-
-//             await queryAsync(conn, insertMappingQuery, [
-//               parseInt(quizGroupID),
-//               questionId,
-//               quizName, // Using the quiz name here
-//               negativeMarks,
-//               marks,
-//               userId.toString()
-//             ]);
-//           }
-
-//           // 5. Commit transaction
-//           await queryAsync(conn, "COMMIT TRANSACTION");
-
-//           success = true;
-//           closeConnection();
-
-//           const infoMessage = "Question mappings created successfully";
-//           logInfo(infoMessage);
-
-//           return res.status(200).json({
-//             success,
-//             message: infoMessage
-//           });
-
-//         } catch (queryErr) {
-//           // 6. Rollback on error
-//           await queryAsync(conn, "ROLLBACK TRANSACTION");
-//           throw queryErr;
-//         }
-
-//       } catch (queryErr) {
-//         logError(queryErr);
-//         closeConnection();
-//         return res.status(500).json({
-//           success: false,
-//           message: queryErr.message || "Failed to create question mappings"
-//         });
-//       }
-//     });
-//   } catch (error) {
-//     logError(error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal server error"
-//     });
-//   }
-// };
-
-
 export const createQuizQuestionMapping = async (req, res) => {
   let success = false;
-  const userId = req.user?.id || req.headers['user-id'];
+  const userId = req.user.id; // Get user ID from authenticated request
   console.log("User ID:", userId);
 
-  const { quiz_id, questions, created_by } = req.body;
-
-  // Validate required fields
-  if (!quiz_id || !questions || !Array.isArray(questions) || questions.length === 0 || !created_by) {
-    const warningMessage = "Missing required fields: quiz_id, questions array, or created_by";
-    console.error(warningMessage);
-    logWarning(warningMessage);
-    return res.status(400).json({
-      success,
-      message: warningMessage
-    });
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success, data: errors.array(), message: "Data is not in the right format" });
   }
 
   try {
+    const { mappings } = req.body;
+
+    if (!mappings || !Array.isArray(mappings)) {
+      return res.status(400).json({ success: false, message: 'Invalid mapping data' });
+    }
+
     connectToDatabase(async (err, conn) => {
       if (err) {
-        const errorMessage = "Failed to connect to database";
-        logError(err);
-        return res.status(500).json({
-          success: false,
-          message: errorMessage
-        });
+        console.error("Database connection error:", err);
+        return res.status(500).json({ success: false, message: 'Database connection failed' });
       }
 
       try {
-        // 1. First get the quiz's category/group ID and name
-        const getQuizQuery = `SELECT QuizCategory, QuizName FROM QuizDetails WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0`;
-        const quizResult = await queryAsync(conn, getQuizQuery, [parseInt(quiz_id)]);
+        const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+        console.log("User Rows:", userRows);
 
-        if (!quizResult || quizResult.length === 0) {
-          closeConnection();
-          return res.status(404).json({
-            success: false,
-            message: "Quiz not found"
-          });
+        if (userRows.length === 0) {
+          return res.status(400).json({ success: false, message: "User not found, please login first." });
         }
 
-        const quizGroupID = quizResult[0].QuizCategory;
-        const quizName = quizResult[0].QuizName;
-
-        // 2. Begin transaction
+        const user = userRows[0];
+        const authAdd = user.Name;
         await queryAsync(conn, "BEGIN TRANSACTION");
 
-        try {
-          for (const question of questions) {
-            const questionId = parseInt(question.question_id);
-            const marks = parseFloat(question.marks) || 1;
-            const negativeMarks = parseFloat(question.negative_marks) || 0;
+        const insertPromises = mappings.map(async (mapping) => {
+          const { quizGroupID, QuestionsID, QuestionName, negativeMarks, totalMarks, quizId, Ques_level } = mapping;
 
-            // 3. Validate question exists and belongs to the same group
-            const validateQuestionQuery = `
-              SELECT id FROM Questions 
-              WHERE id = ? AND group_id = ? AND ISNULL(delStatus, 0) = 0
-            `;
-            const questionExists = await queryAsync(conn, validateQuestionQuery, [
-              questionId,
-              parseInt(quizGroupID)
-            ]);
+          const params = [
+            parseInt(quizGroupID) || 0,
+            parseInt(quizId) || 0,
+            parseInt(QuestionsID) || 0,
+            String(QuestionName || '').substring(0, 500),
+            parseFloat(negativeMarks) || 0,
+            parseFloat(totalMarks) || 1,
+            parseInt(Ques_level) || 0,
+            authAdd,
+            0
+          ];
 
-            if (!questionExists || questionExists.length === 0) {
-              throw new Error(`Question ID ${questionId} not found or doesn't belong to quiz's group`);
-            }
+          return queryAsync(conn, `
+            INSERT INTO QuizMapping (
+              quizGroupID, quizId, QuestionsID, QuestionTxt,
+              negativeMarks, totalMarks, Ques_level, AuthAdd, AddOnDt, delStatus
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?)
+          `, params);
+        });
 
-            const insertMappingQuery = `
-              INSERT INTO QuizMapping 
-              (quizGroupID, QuestionsID, QuestionName, negativeMarks, totalMarks, AuthAdd, AddOnDt, delStatus, quizId)
-              VALUES (?, ?, ?, ?, ?, ?, GETDATE(), 0, ?)
-            `;
+        await Promise.all(insertPromises);
+        await queryAsync(conn, "COMMIT TRANSACTION");
 
-            await queryAsync(conn, insertMappingQuery, [
-              parseInt(quizGroupID),
-              questionId,
-              quizName,
-              negativeMarks,
-              marks,
-              userId.toString(),
-              parseInt(quiz_id)  // Add quizId here
-            ]);
-          }
-
-          // 5. Commit transaction
-          await queryAsync(conn, "COMMIT TRANSACTION");
-
-          success = true;
-          closeConnection();
-
-          const infoMessage = "Question mappings created successfully";
-          logInfo(infoMessage);
-
-          return res.status(200).json({
-            success,
-            message: infoMessage
-          });
-
-        } catch (queryErr) {
-          // 6. Rollback on error
-          await queryAsync(conn, "ROLLBACK TRANSACTION");
-          throw queryErr;
-        }
+        success = true;
+        return res.json({
+          success,
+          count: mappings.length,
+          message: 'Questions mapped successfully'
+        });
 
       } catch (queryErr) {
-        logError(queryErr);
-        closeConnection();
+        try {
+          await queryAsync(conn, "ROLLBACK TRANSACTION");
+        } catch (rollbackErr) {
+          console.error("Rollback error:", rollbackErr);
+        }
+        console.error("Query error:", queryErr);
         return res.status(500).json({
           success: false,
-          message: queryErr.message || "Failed to create question mappings"
+          message: 'Failed to map questions',
+          error: queryErr.message
         });
+      } finally {
+        closeConnection(conn);
       }
     });
   } catch (error) {
-    logError(error);
+    console.error("Server error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: 'Internal server error'
     });
   }
 };
@@ -793,25 +637,17 @@ export const getQuizQuestions = async (req, res) => {
   }
 
   try {
-    const { quizGroupID, QuizID } = req.body; // Changed from QuizName to QuizID
+    const { QuizID } = req.body;
 
-    if (!quizGroupID || !QuizID) {
+    if (!QuizID) {
       return res.status(400).json({
         success: false,
         data: null,
-        message: "Both quizGroupID and QuizID are required"
+        message: "QuizID is required"
       });
     }
 
-    const groupId = parseInt(quizGroupID);
-    const quizId = parseInt(QuizID); // Parse QuizID as integer
-    if (isNaN(groupId)) {
-      return res.status(400).json({
-        success: false,
-        data: null,
-        message: "quizGroupID must be a valid number"
-      });
-    }
+    const quizId = parseInt(QuizID);
     if (isNaN(quizId)) {
       return res.status(400).json({
         success: false,
@@ -822,6 +658,7 @@ export const getQuizQuestions = async (req, res) => {
 
     connectToDatabase(async (err, conn) => {
       if (err) {
+        console.error("Database connection error:", err);
         return res.status(500).json({
           success: false,
           data: null,
@@ -830,51 +667,32 @@ export const getQuizQuestions = async (req, res) => {
       }
 
       try {
-        // const query = `
-        //   SELECT 
-        //     quizGroupID,
-        //     QuizMapping.quizId,
-        //     QuestionsID,
-        //     question_text,
-        //     Questions.image,
-        //     QuestionOptions.id,
-        //     QuestionOptions.is_correct,
-        //     QuestionOptions.option_text,
-        //     QuestionOptions.image,
-        //     QuizDetails.QuizName,
-        //     QuestionOptions.is_correct
-        //     totalMarks,
-        //     negativeMarks,
-        //     QuizDuration
-        //   FROM QuizMapping
-        //   LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
-        //   LEFT JOIN QuestionOptions ON QuizMapping.QuestionsID = QuestionOptions.question_id
-        //   LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
-        //   LEFT JOIN QuestionOptions on QuizMapping.QuestionsID = QuestionOptions.question_id
-        //   WHERE quizGroupID = ? AND QuizMapping.quizId = ?
-        // `;
-
         const query = `SELECT 
-    qm.quizGroupID,
-    qm.quizId,
-    qm.QuestionsID,
-    q.question_text,
-    q.image AS question_image,
-    qo.id AS option_id,
-    qo.is_correct,
-    qo.option_text,
-    qo.image AS option_image,
-    qd.QuizName,
-    qm.totalMarks,
-    qm.negativeMarks,
-    qd.QuizDuration
-FROM QuizMapping qm
-LEFT JOIN Questions q ON qm.QuestionsID = q.id
-LEFT JOIN QuestionOptions qo ON qm.QuestionsID = qo.question_id
-LEFT JOIN QuizDetails qd ON qm.quizId = qd.QuizID
-WHERE qm.quizGroupID = ? AND qm.quizId = ?;`;
+          QuizMapping.idCode,
+          QuizMapping.quizGroupID,
+          QuizMapping.quizId,
+          QuizMapping.QuestionsID,
+          Questions.question_text AS QuestionTxt,
+          Questions.Ques_level,
+          QuizMapping.negativeMarks,
+          QuizMapping.totalMarks,
+          QuizMapping.AuthAdd,
+          QuizMapping.AddOnDt,
+          QuizMapping.delStatus,
+          QuizDetails.QuizName,
+          QuizDetails.QuizDuration,
+          tblDDReferences.ddValue AS question_level,
+          Questions.image AS question_image,
+          QuestionOptions.option_text,
+          QuestionOptions.is_correct
+        FROM QuizMapping
+        LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
+        LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
+        LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
+        LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
+        WHERE QuizMapping.quizId = ? AND QuizMapping.delStatus = 0`;
 
-        const questions = await queryAsync(conn, query, [groupId, quizId]);
+        const questions = await queryAsync(conn, query, [quizId]);
 
         if (!questions || questions.length === 0) {
           closeConnection();
@@ -885,16 +703,56 @@ WHERE qm.quizGroupID = ? AND qm.quizId = ?;`;
           });
         }
 
+        // Group questions by ID to remove duplicates
+        const questionMap = {};
+        questions.forEach(q => {
+          if (!questionMap[q.QuestionsID]) {
+            questionMap[q.QuestionsID] = {
+              idCode: q.idCode,
+              quizGroupID: q.quizGroupID,
+              quizId: q.quizId,
+              QuestionsID: q.QuestionsID,
+              QuestionTxt: q.QuestionTxt,
+              Ques_level: q.Ques_level,
+              negativeMarks: q.negativeMarks,
+              totalMarks: q.totalMarks,
+              AuthAdd: q.AuthAdd,
+              AddOnDt: q.AddOnDt,
+              delStatus: q.delStatus,
+              QuizName: q.QuizName,
+              QuizDuration: q.QuizDuration,
+              question_level: q.question_level,
+              question_image: q.question_image,
+              options: []
+            };
+          }
+
+          // Add option if it exists
+          if (q.option_text) {
+            questionMap[q.QuestionsID].options.push({
+              option_text: q.option_text,
+              is_correct: q.is_correct === 1
+            });
+          }
+        });
+
+        const formattedQuestions = Object.values(questionMap);
+
         success = true;
         closeConnection();
         return res.status(200).json({
           success,
-          data: { questions },
+          data: {
+            quizId,
+            quizName: questions[0]?.QuizName || '',
+            quizDuration: questions[0]?.QuizDuration || 0,
+            questions: formattedQuestions
+          },
           message: "Quiz questions fetched successfully"
         });
       } catch (queryErr) {
-        closeConnection();
         console.error("Query error:", queryErr);
+        closeConnection();
         return res.status(500).json({
           success: false,
           data: null,
@@ -1045,7 +903,7 @@ export const submitQuiz = async (req, res) => {
 
 //     try {
 //       // First get the numeric UserID from email
-//       const userQuery = `SELECT UserID FROM Community_User 
+//       const userQuery = `SELECT UserID FROM Community_User
 //                          WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
 //       const userRows = await queryAsync(conn, userQuery, [userEmail]);
 
@@ -1066,11 +924,11 @@ export const submitQuiz = async (req, res) => {
 //       `;
 
 //       const userScoreQuery = `
-//         SELECT 
+//         SELECT
 //           SUM(CAST(marks AS INT)) as totalScore,
 //           COUNT(CASE WHEN correctAns = 1 THEN 1 END) as correctAnswers,
 //           COUNT(questionID) as totalQuestions
-//         FROM quiz_score 
+//         FROM quiz_score
 //         WHERE userID = ? AND quizID = ? AND ISNULL(delStatus, 0) = 0
 //       `;
 
@@ -1112,3 +970,66 @@ export const submitQuiz = async (req, res) => {
 //     });
 //   }
 // };
+
+export const unmappQuestion = (req, res) => {
+  const { mappingIds } = req.body; 
+  const adminName = req.user?.id;
+
+  if (!mappingIds || (Array.isArray(mappingIds) && mappingIds.length === 0)) {
+    return res.status(400).json({
+      success: false,
+      message: "Mapping ID(s) are required"
+    });
+  }
+
+  const idsToUnmap = Array.isArray(mappingIds) ? mappingIds : [mappingIds];
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection error.",
+        });
+      }
+
+      try {
+        const updateQuery = `
+          UPDATE QuizMapping 
+          SET 
+            delStatus = 1, 
+            delOnDt = GETDATE(), 
+            AuthDel = ? 
+          WHERE 
+            idCode IN (?) AND (delStatus IS NULL OR delStatus = 0)
+        `;
+
+        // Execute the update without checking affected rows
+        await queryAsync(conn, updateQuery, [adminName, idsToUnmap]);
+        
+        // Always return success if the query executed without errors
+        return res.status(200).json({
+          success: true,
+          message: "Unmapping request processed successfully"
+        });
+
+      } catch (updateErr) {
+        logError(updateErr);
+        return res.status(500).json({
+          success: false,
+          message: "Error updating question unmapping.",
+          error: updateErr.message
+        });
+      } finally {
+        if (conn) closeConnection(conn);
+      }
+    });
+  } catch (error) {
+    logError(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

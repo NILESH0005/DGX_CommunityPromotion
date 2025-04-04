@@ -15,7 +15,7 @@ export const getDropdownValues = async (req, res) => {
         }
 
         connectToDatabase(async (err, conn) => {
-            
+
             if (err) {
                 console.error('Connection error:', err);
                 const errorMessage = "Failed to connect to database";
@@ -31,7 +31,7 @@ export const getDropdownValues = async (req, res) => {
                     infoMessage = `No data found for ${category} category`;
                     logInfo(infoMessage);
                     res.status(404).json({ success, message: infoMessage });
-                }else{
+                } else {
                     success = true;
                     infoMessage = "Dropdown values fetched successfully";
                     logInfo(infoMessage);
@@ -51,7 +51,7 @@ export const getDropdownValues = async (req, res) => {
     }
 };
 
-export const getQuizGroupDropdown = async (req, res) => {
+export const getQuizDropdown = async (req, res) => {
     let success = false;
     let infoMessage = '';
 
@@ -65,7 +65,7 @@ export const getQuizGroupDropdown = async (req, res) => {
             }
 
             try {
-                const query = `SELECT group_id, group_name FROM GroupMaster WHERE delStatus = 0`;
+                const query = `SELECT QuizID, QuizName, NegativeMarking, QuizDuration, QuizLevel, StartDateAndTime, EndDateTime  FROM QuizDetails where EndDateTime > GETDATE()`;
                 const results = await queryAsync(conn, query);
 
                 if (results.length === 0) {
@@ -93,6 +93,93 @@ export const getQuizGroupDropdown = async (req, res) => {
         return res.status(500).json({ success: false, data: {}, message: "Something went wrong, please try again" });
     }
 };
+
+export const getQuizGroupDropdown = async (req, res) => {
+    let success = false;
+    let infoMessage = '';
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                console.error('Connection error:', err);
+                const errorMessage = "Failed to connect to database";
+                logError(err);
+                return res.status(500).json({ success: false, data: err, message: errorMessage });
+            }
+
+            try {
+                const query = `SELECT group_id, group_name FROM GroupMaster WHERE delStatus = 0 AND group_category = 'quizGroup';`;
+                const results = await queryAsync(conn, query);
+
+                if (results.length === 0) {
+                    success = false;
+                    infoMessage = "No groups found";
+                    logInfo(infoMessage);
+                    return res.status(404).json({ success, message: infoMessage });
+                } else {
+                    success = true;
+                    infoMessage = "Group names fetched successfully";
+                    logInfo(infoMessage);
+                    return res.status(200).json({ success, data: results, message: infoMessage });
+                }
+
+                closeConnection();
+            } catch (queryErr) {
+                console.error('Query error:', queryErr);
+                logError(queryErr);
+                closeConnection();
+                return res.status(500).json({ success: false, data: queryErr, message: "Something went wrong, please try again" });
+            }
+        });
+    } catch (error) {
+        logError(error);
+        return res.status(500).json({ success: false, data: {}, message: "Something went wrong, please try again" });
+    }
+};
+
+export const getQuestionGroupDropdown = async (req, res) => {
+    let success = false;
+    let infoMessage = '';
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                console.error('Connection error:', err);
+                const errorMessage = "Failed to connect to database";
+                logError(err);
+                return res.status(500).json({ success: false, data: err, message: errorMessage });
+            }
+
+            try {
+                const query = `SELECT group_id, group_name FROM GroupMaster WHERE delStatus = 0 AND group_category = 'questionGroup';`;
+                const results = await queryAsync(conn, query);
+
+                if (results.length === 0) {
+                    success = false;
+                    infoMessage = "No groups found";
+                    logInfo(infoMessage);
+                    return res.status(404).json({ success, message: infoMessage });
+                } else {
+                    success = true;
+                    infoMessage = "Group names fetched successfully";
+                    logInfo(infoMessage);
+                    return res.status(200).json({ success, data: results, message: infoMessage });
+                }
+
+                closeConnection();
+            } catch (queryErr) {
+                console.error('Query error:', queryErr);
+                logError(queryErr);
+                closeConnection();
+                return res.status(500).json({ success: false, data: queryErr, message: "Something went wrong, please try again" });
+            }
+        });
+    } catch (error) {
+        logError(error);
+        return res.status(500).json({ success: false, data: {}, message: "Something went wrong, please try again" });
+    }
+};
+
 
 
 
