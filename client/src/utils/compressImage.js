@@ -10,7 +10,6 @@ export const compressImage = (file) => {
 
         imageCompression(file, options)
             .then((compressedFile) => {
-                // Convert compressed file to Base64
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     const base64String = reader.result.split(',')[1]; // Remove the data URL part
@@ -20,7 +19,6 @@ export const compressImage = (file) => {
                     // console.log(base64DataURL)
                 };
                 reader.onerror = (error) => reject(error);
-                // console.log(compressedFile)
                 reader.readAsDataURL(compressedFile); // Read as Data URL to get Base64
             })
             .catch((error) => {

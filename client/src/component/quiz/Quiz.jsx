@@ -64,11 +64,12 @@ const Quiz = () => {
 
   useEffect(() => {
     if (userToken && quiz.QuizID && quiz.group_id) {
-      fetchQuizQuestions();
-    } else {
-      setLoading(false);
-    }
-  }, [quiz, userToken]);
+      if (quiz.QuizID && quiz.group_id) {
+        fetchQuizQuestions();
+      } else {
+        setLoading(false);
+      }
+    }}, [quiz, userToken]);
 
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -177,7 +178,7 @@ const Quiz = () => {
     const interval = setInterval(() => {
       setTimer((prev) => {
         let { hours, minutes, seconds } = prev;
-        
+
         if (hours === 0 && minutes === 0 && seconds === 0) {
           clearInterval(interval);
           handleTimeUp();
@@ -195,11 +196,11 @@ const Quiz = () => {
         } else {
           seconds -= 1;
         }
-        
+
         return { hours, minutes, seconds };
       });
     }, 1000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -280,16 +281,19 @@ const Quiz = () => {
   const handleInstantResult = () => {
     const correct = questions.reduce((acc, question, index) => {
       if (selectedAnswers[index]?.isCorrect) {
-        return acc + 1;
-      }
-      return acc;
-    }, 0);
-    
+        if (selectedAnswers[index]?.isCorrect) {
+          return acc + 1;
+        }
+        return acc;
+      }}, 0);
+      
+
     Swal.fire({
       title: 'Instant Result',
       html: `You've answered <b>${correct}</b> out of <b>${questions.length}</b> questions correctly.`,
       icon: 'info'
     });
+
   };
 
   const handleQuizSubmit = async () => {
@@ -301,7 +305,7 @@ const Quiz = () => {
       });
       return;
     }
-  
+
     const savedData = loadSavedAnswers();
     if (!savedData) {
       Swal.fire({
@@ -311,21 +315,37 @@ const Quiz = () => {
       });
       return;
     }
-  
+    const localCalculation = questions.reduce((acc, question, index) => {
+      const answer = savedData.answers[index];
+      if (answer) {
+        if (answer.isCorrect) {
+          acc.correctAnswers++;
+          acc.totalScore += question.totalMarks;
+        } else {
+          acc.totalScore -= question.negativeMarks;
+        }
+      }
+      return acc;
+    }, { correctAnswers: 0, totalScore: 0 });
+
+    const totalPossibleMarks = questions.reduce((sum, question) => sum + question.totalMarks, 0);
+
     const result = await Swal.fire({
       title: 'Are you sure?',
-      text: "You won't be able to change your answers after submission!",
+      html: `
+        <p class="mt-4">You won't be able to change your answers after submission!</p>
+      `,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, submit it!'
+      confirmButtonText: 'Yes!'
     });
-  
+
     if (!result.isConfirmed) {
       return;
     }
-  
+
     const swalInstance = Swal.fire({
       title: 'Submitting...',
       allowOutsideClick: false,
@@ -333,14 +353,14 @@ const Quiz = () => {
         Swal.showLoading();
       }
     });
-  
+
     const endpoint = "quiz/submitQuiz";
     const method = "POST";
     const headers = {
       'Content-Type': 'application/json',
       'auth-token': userToken
     };
-  
+
     const preparedAnswers = savedData.answers
       .filter(a => a !== null)
       .map(answer => ({
@@ -356,30 +376,29 @@ const Quiz = () => {
         maxMarks: Number(answer.maxMarks),
         negativeMarks: Number(answer.negativeMarks)
       }));
-  
+
     const body = {
       quizId: Number(savedData.quizId),
       groupId: Number(savedData.groupId),
       answers: preparedAnswers
     };
-  
+
     try {
       setSubmitting(true);
       setSubmitError(null);
-  
+
       const data = await fetchData(endpoint, method, body, headers);
-  
+
       if (!data.success) {
         throw new Error(data.message || "Submission failed");
       }
-  
+
       setSubmitSuccess(true);
       setFinalScore(data.data?.totalScore || 0);
       localStorage.removeItem(STORAGE_KEY);
-  
+
       await swalInstance.close();
-      
-      // Navigate to QuizResult with all necessary data
+
       navigate('/quiz-result', {
         state: {
           quiz: quiz,
@@ -393,13 +412,13 @@ const Quiz = () => {
           timeTaken: `${timer.hours}h ${timer.minutes}m ${timer.seconds}s`
         }
       });
-  
+
     } catch (error) {
       console.error("Quiz submission error:", error);
       setSubmitError(error.message);
-      
+
       await swalInstance.close();
-      
+
       Swal.fire({
         icon: 'error',
         title: 'Submission Failed',
@@ -485,27 +504,27 @@ const Quiz = () => {
 
             <div className="flex justify-between p-4">
               <div className="flex gap-2">
-                <button 
-                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded" 
+                <button
+                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
                   onClick={handleMarkForReview}
                 >
                   Mark for Review & Next
                 </button>
-                <button 
-                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded" 
+                <button
+                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
                   onClick={handleClearResponse}
                 >
                   Clear Response
                 </button>
-                <button 
-                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded" 
+                {/* <button
+                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
                   onClick={handleInstantResult}
                 >
                   Instant Result
-                </button>
+                </button> */}
               </div>
-              <button 
-                className="px-4 py-2 bg-blue-700 text-white rounded" 
+              <button
+                className="px-4 py-2 bg-blue-700 text-white rounded"
                 onClick={handleSaveAndNext}
               >
                 {currentQuestion + 1 === questions.length ? 'Finish' : 'Save & Next'}

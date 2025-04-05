@@ -502,12 +502,12 @@ const GenAiKit = () => {
                         )}
                     </div>
                 )}
-                {selectedFileId && (
-                    <FeedbackForm
-                        fileId={selectedFileId}
-                        onSubmit={handleFeedbackSubmit}
-                    />
-                )}
+                {/* {selectedFileId && (
+                    // <FeedbackForm
+                    //     fileId={selectedFileId}
+                    //     onSubmit={handleFeedbackSubmit}
+                    // />
+                )} */}
             </div>
         </div>
     );

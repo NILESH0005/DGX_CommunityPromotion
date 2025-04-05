@@ -1,170 +1,254 @@
 import React, { useState, useEffect, useContext } from "react";
-import Swal from "sweetalert2";
 import ApiContext from "../../../context/ApiContext.jsx";
+import Swal from 'sweetalert2';
 
 const QuizMapping = () => {
-  const { userToken, fetchData, currentUser } = useContext(ApiContext);
-  const [quizGroups, setQuizGroups] = useState([]);
+  const { fetchData, userToken } = useContext(ApiContext);
   const [quizzes, setQuizzes] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [levels, setLevels] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [mappedQuestions, setMappedQuestions] = useState([]);
-  const [selectedGroup, setSelectedGroup] = useState("");
   const [selectedQuiz, setSelectedQuiz] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState("");
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [questionMarks, setQuestionMarks] = useState({});
+  const [selectedMappedQuestions, setSelectedMappedQuestions] = useState([]);
   const [loading, setLoading] = useState({
-    groups: false,
     quizzes: false,
+    groups: false,
+    levels: false,
     questions: false,
-    mappings: false
+    mapping: false,
+    mapped: false
   });
+  const [allMarksValue, setAllMarksValue] = useState(1);
+  const [allNegativeMarksValue, setAllNegativeMarksValue] = useState(0);
 
+  const handleSetAllMarks = () => {
+    const newMarks = { ...questionMarks };
+    selectedQuestions.forEach(questionId => {
+      newMarks[questionId] = {
+        ...newMarks[questionId],
+        marks: allMarksValue
+      };
+    });
+    setQuestionMarks(newMarks);
+  };
 
+  const handleSetAllNegativeMarks = () => {
+    const newMarks = { ...questionMarks };
+    selectedQuestions.forEach(questionId => {
+      newMarks[questionId] = {
+        ...newMarks[questionId],
+        negative: allNegativeMarksValue
+      };
+    });
+    setQuestionMarks(newMarks);
+  };
 
-  const fetchQuizGroups = async () => {
-    setLoading(prev => ({ ...prev, groups: true }));
+  const fetchQuizzes = async () => {
+    setLoading(prev => ({ ...prev, quizzes: true }));
     try {
-      const data = await fetchData(`dropdown/getQuizGroupDropdown`, "GET");
+      const data = await fetchData(`dropdown/getQuizDropdown`, "GET");
+      console.log("dropddddooowwnn count", data);
       if (data.success) {
-        setQuizGroups(data.data.sort((a, b) => a.group_name.localeCompare(b.group_name)));
+        // Use Questioncount from API if available, otherwise default to 0
+        setQuizzes(data.data.map(quiz => ({
+          ...quiz,
+          questionCount: quiz.Questioncount || 0 // Use the API's Questioncount
+        })).sort((a, b) => a.QuizName > b.QuizName ? 1 : -1));
       }
     } catch (error) {
-      Swal.fire("Error", "Failed to fetch quiz groups", "error");
+      console.error("Failed to fetch quizzes", error);
+    } finally {
+      setLoading(prev => ({ ...prev, quizzes: false }));
+    }
+  };
+
+  const fetchGroups = async () => {
+    setLoading(prev => ({ ...prev, groups: true }));
+    try {
+      const data = await fetchData(`dropdown/getQuestionGroupDropdown`, "GET");
+      if (data.success) {
+        const formattedGroups = data.data.map(group => ({
+          id: group.group_id,
+          name: group.group_name
+        }));
+        setGroups(formattedGroups.sort((a, b) => a.name > b.name ? 1 : -1));
+      }
+    } catch (error) {
+      console.error("Failed to fetch groups", error);
     } finally {
       setLoading(prev => ({ ...prev, groups: false }));
     }
   };
 
-  const fetchQuestions = async (groupId) => {
-    if (!groupId) {
-      setQuestions([]);
+  const fetchLevels = async () => {
+    setLoading(prev => ({ ...prev, levels: true }));
+    try {
+      const data = await fetchData(`dropdown/getDropdownValues?category=questionLevel`, "GET");
+      if (data.success) {
+        const formattedLevels = data.data.map(level => ({
+          id: level.idCode,
+          name: level.ddValue
+        }));
+        setLevels(formattedLevels);
+      }
+    } catch (error) {
+      console.error("Failed to fetch levels", error);
+    } finally {
+      setLoading(prev => ({ ...prev, levels: false }));
+    }
+  };
+
+  const fetchMappedQuestions = async () => {
+    console.log('fetchMappedQuestions called with quiz:', selectedQuiz);
+    if (!selectedQuiz) {
+      console.log('No quiz selected, clearing mapped questions');
       setMappedQuestions([]);
-      setQuizzes([]);
-      setQuestionMarks({});
       return;
     }
 
-    setLoading(prev => ({ ...prev, questions: true, quizzes: true }));
-
+    setLoading(prev => ({ ...prev, mapped: true }));
     try {
-      const response = await fetchData(
-        "quiz/getQuestionsByGroup",
-        "POST",
-        { groupId: parseInt(groupId) },
-        {
-          "Content-Type": "application/json",
-          "auth-token": userToken,
-        }
-      );
+      console.log('Making API call for quiz:', selectedQuiz);
+      const endpoint = `quiz/getQuizQuestions`;
+      const method = "POST";
+      const headers = {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      };
+      const body = {
+        QuizID: parseInt(selectedQuiz)
+      };
+      const data = await fetchData(endpoint, method, body, headers);
+      console.log('API response:', data);
 
-      if (response?.success) {
-        const fetchedQuestions = response.data.questions.map(question => ({
-          question_id: question.question_id,
-          question_text: question.question_text,
-          question_level: "N/A",
-          group_id: question.group_id,
+      if (data.success) {
+        const questions = data.data?.questions || [];
+        console.log('Received questions:', questions.length);
+
+        // Group questions by ID to remove duplicates
+        const questionMap = {};
+        questions.forEach(q => {
+          if (!questionMap[q.QuestionsID]) {
+            questionMap[q.QuestionsID] = {
+              mapping_id: q.idCode,
+              question_id: q.QuestionsID,
+              question_text: q.QuestionTxt,
+              totalMarks: q.totalMarks,
+              negativeMarks: q.negativeMarks,
+              quizGroupID: q.quizGroupID,
+              quizId: q.quizId,
+              Ques_level: q.Ques_level,
+              level_name: q.question_level || "N/A",
+              group_name: groups.find(g => g.id === q.quizGroupID)?.name || "N/A",
+              AuthAdd: q.AuthAdd,
+              AddOnDt: q.AddOnDt,
+              delStatus: q.delStatus,
+              options: [] // Initialize options array
+            };
+          }
+
+          // Add option if it exists
+          if (q.options) {
+            questionMap[q.QuestionsID].options = q.options;
+          }
+        });
+
+        // Convert to array and find correct answer for each question
+        const formattedQuestions = Object.values(questionMap).map(q => {
+          const correctAnswer = q.options.find(opt => opt.is_correct)?.text || "N/A";
+          return {
+            ...q,
+            correct_answer: correctAnswer
+          };
+        });
+
+        setQuizzes(prev => prev.map(quiz => {
+          if (quiz.QuizID.toString() === selectedQuiz) {
+            return {
+              ...quiz,
+              questionCount: questions.length // Update with the fresh count
+            };
+          }
+          return quiz;
         }));
 
-        setQuestions(fetchedQuestions);
-        if (response.data.mappedQuestions) {
-          setMappedQuestions(response.data.mappedQuestions.map(q => ({
-            question_id: q.id || q.question_id, // Handle both field names
-            question_text: q.question_text,
-            marks: q.marks || 0, // Default to 0 if not provided
-            negative_marks: q.negative_marks || 0, // Default to 0 if not provided
-            quiz_name: q.quiz_name || 'Unassigned',
-            quiz_id: q.quiz_id
-          })));
-        }
-        console.log("Mapped questions from API:", response.data.mappedQuestions);
+        setMappedQuestions(formattedQuestions);
+      } else {
+        console.log('API call unsuccessful');
+        setMappedQuestions([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch mapped questions", error);
+      setMappedQuestions([]);
+    } finally {
+      setLoading(prev => ({ ...prev, mapped: false }));
+    }
+  };
 
+  const fetchQuestions = async () => {
+    if (!selectedGroup || !selectedLevel || !selectedQuiz) {
+      return;
+    }
+    const groupId = parseInt(selectedGroup);
+    const levelId = parseInt(selectedLevel);
+
+    if (isNaN(groupId) || isNaN(levelId)) {
+      return;
+    }
+    setLoading(prev => ({ ...prev, questions: true }));
+    try {
+      const data = await fetchData(`quiz/getQuestionsByGroupAndLevel`, "POST", {
+        group_id: groupId,
+        level_id: levelId
+      }, {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      });
+
+      if (data.success) {
+        console.log("daaatttaa:", data)
+        const questions = data.data?.questions || [];
+        const questionMap = {};
+        questions.forEach(q => {
+          if (!questionMap[q.question_id]) {
+            questionMap[q.question_id] = {
+              question_id: q.question_id,
+              question_text: q.question_text,
+              options: []
+            };
+          }
+          if (q.option_text) {
+            questionMap[q.question_id].options.push({
+              text: q.option_text,
+              is_correct: q.is_correct === 1
+            });
+          }
+        });
+
+        const uniqueQuestions = Object.values(questionMap);
+        const unmappedQuestions = uniqueQuestions.filter(q =>
+          !mappedQuestions.some(mq => mq.question_id === q.question_id)
+        );
+
+        setQuestions(unmappedQuestions);
         const initialMarks = {};
-        fetchedQuestions.forEach(q => {
+        unmappedQuestions.forEach(q => {
           initialMarks[q.question_id] = {
-            marks: 1,
-            negative: 0
+            marks: questionMarks[q.question_id]?.marks || 1,
+            negative: questionMarks[q.question_id]?.negative || 0
           };
         });
         setQuestionMarks(initialMarks);
-
-        setQuizzes(response.data.quizzes.map(quiz => ({
-          quiz_id: quiz.quiz_id,
-          quiz_name: quiz.quiz_name,
-          quiz_level: quiz.quiz_level
-        })));
-
-      } else {
-        throw new Error(response?.message || "Failed to fetch data");
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
-      Swal.fire("Error", error.message, "error");
-      setQuestions([]);
-      setQuizzes([]);
-      setQuestionMarks({});
+      console.error("Error fetching questions:", error);
     } finally {
-      setLoading(prev => ({
-        ...prev,
-        questions: false,
-        quizzes: false
-      }));
-    }
-  };
-  useEffect(() => {
-    if (selectedGroup) {
-      setSelectedQuiz("");
-      setSelectedQuestions([]);
-      fetchQuestions(selectedGroup);
-    } else {
-      setQuestions([]);
-      setQuizzes([]);
-      setQuestionMarks({});
-    }
-  }, [selectedGroup]);
-
-  useEffect(() => {
-    fetchQuizGroups();
-  }, []);
-
-  const handleSubmitMapping = async () => {
-    if (!selectedQuiz || selectedQuestions.length === 0) {
-      Swal.fire("Warning", "Please select a quiz and at least one question", "warning");
-      return;
-    }
-
-    try {
-      setLoading(prev => ({ ...prev, mappings: true }));
-      const mappingData = selectedQuestions.map(questionId => ({
-        question_id: questionId,
-        marks: questionMarks[questionId]?.marks || 1,
-        negative_marks: questionMarks[questionId]?.negative || 0
-      }));
-      const response = await fetchData(
-        "quiz/createQuizQuestionMapping",
-        "POST",
-        {
-          quiz_id: parseInt(selectedQuiz),
-          questions: mappingData,
-          created_by: currentUser || "admin"
-        },
-        {
-          "Content-Type": "application/json",
-          "auth-token": userToken,
-          "user-id": currentUser || ""
-        }
-      );
-
-      if (response?.success) {
-        Swal.fire("Success", response.message || "Question mappings created successfully", "success");
-        setSelectedQuestions([]);
-      } else {
-        throw new Error(response?.message || "Failed to create mappings");
-      }
-    } catch (error) {
-      console.error("Error creating mappings:", error);
-      Swal.fire("Error", error.message || "Failed to create question mappings", "error");
-    } finally {
-      setLoading(prev => ({ ...prev, mappings: false }));
+      setLoading(prev => ({ ...prev, questions: false }));
     }
   };
 
@@ -189,156 +273,496 @@ const QuizMapping = () => {
     }));
   };
 
-  const filteredMappedQuestions = selectedQuiz
-    ? mappedQuestions.filter(q => q.quiz_id === parseInt(selectedQuiz))
-    : mappedQuestions;
+  const prepareMappingData = () => {
+    if (!selectedQuiz || selectedQuestions.length === 0) return null;
+    const currentDate = new Date();
+    const sqlServerDate = currentDate.toISOString().slice(0, 19).replace('T', ' ');
+
+    return selectedQuestions.map(questionId => ({
+      quizGroupID: parseInt(selectedGroup),
+      QuestionsID: questionId,
+      QuestionName: questions.find(q => q.question_id === questionId)?.question_text || '',
+      negativeMarks: questionMarks[questionId]?.negative || 0,
+      totalMarks: questionMarks[questionId]?.marks || 1,
+      AuthAdd: userToken,
+      AddOnDt: "",
+      delStatus: 0,
+      quizId: parseInt(selectedQuiz),
+      Ques_level: parseInt(selectedLevel)
+    }));
+  };
+
+  const handleMapQuestions = async () => {
+    const mappingData = prepareMappingData();
+
+    if (!mappingData || mappingData.length === 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No valid data to map',
+      });
+      return;
+    }
+
+    try {
+      const result = await Swal.fire({
+        title: 'Confirm Mapping',
+        text: `Are you sure you want to map ${mappingData.length} question(s) to this quiz?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes!'
+      });
+
+      if (result.isConfirmed) {
+        setLoading(prev => ({ ...prev, mapping: true }));
+
+        const endpoint = `quiz/createQuizQuestionMapping`;
+        const method = "POST";
+        const headers = {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        };
+        const body = {
+          mappings: mappingData
+        };
+
+        const response = await fetchData(endpoint, method, body, headers);
+
+        if (response.success) {
+          setQuizzes(prev => prev.map(quiz =>
+            quiz.QuizID.toString() === selectedQuiz
+              ? { ...quiz, questionCount: (quiz.questionCount || 0) + mappingData.length }
+              : quiz
+          ));
+          Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: 'Questions mapped successfully!',
+          });
+          setSelectedQuestions([]);
+          await fetchMappedQuestions();
+          setQuestions(prevQuestions =>
+            prevQuestions.filter(q =>
+              !mappingData.some(mapped => mapped.QuestionsID === q.question_id)
+            ));
+        } else {
+          throw new Error(response.message || 'Failed to map questions');
+        }
+      }
+    } catch (error) {
+      console.error("Mapping error:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'Failed to map questions',
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, mapping: false }));
+    }
+  };
+
+  const handleBulkRemoveMapping = async () => {
+    if (selectedMappedQuestions.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Selection',
+        text: 'Please select at least one question to unmap',
+      });
+      return;
+    }
+
+    try {
+      const result = await Swal.fire({
+        title: 'Confirm Removal',
+        text: `Are you sure you want to remove ${selectedMappedQuestions.length} question(s) from this quiz?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, remove them!'
+      });
+
+      if (result.isConfirmed) {
+        setLoading(prev => ({ ...prev, mapping: true }));
+
+        const endpoint = `quiz/unmappQuestion`;
+        const method = "POST";
+        const headers = {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        };
+        const body = {
+          mappingIds: selectedMappedQuestions
+        };
+
+        const response = await fetchData(endpoint, method, body, headers);
+
+        if (response.success) {
+          setQuizzes(prev => prev.map(quiz =>
+            quiz.QuizID.toString() === selectedQuiz
+              ? { ...quiz, questionCount: Math.max(0, (quiz.questionCount || 0) - selectedMappedQuestions.length) }
+              : quiz
+          ));
+          Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: `${selectedMappedQuestions.length} question(s) removed successfully!`,
+          });
+          // Refresh the data
+          await fetchMappedQuestions();
+          await fetchQuestions();
+          setSelectedMappedQuestions([]);
+        } else {
+          throw new Error(response.message || 'Failed to remove questions');
+        }
+      }
+    } catch (error) {
+      console.error("Bulk removal error:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'Failed to remove questions',
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, mapping: false }));
+    }
+  };
+
+
+
+  useEffect(() => {
+    fetchQuizzes();
+    fetchGroups();
+    fetchLevels();
+  }, []);
+
+  useEffect(() => {
+    console.log('selectedQuiz changed:', selectedQuiz);
+    if (selectedQuiz) {
+      const fetchData = async () => {
+        console.log('Fetching mapped questions for quiz:', selectedQuiz);
+        setMappedQuestions([]);
+        await fetchMappedQuestions();
+      };
+      fetchData();
+    } else {
+      setMappedQuestions([]);
+    }
+  }, [selectedQuiz]);
+
+  useEffect(() => {
+    setSelectedLevel("");
+    setQuestions([]);
+    setSelectedQuestions([]);
+  }, [selectedGroup]);
+
+  useEffect(() => {
+    if (selectedLevel && selectedGroup && selectedQuiz) {
+      setQuestions([]);
+      setSelectedQuestions([]);
+      fetchQuestions();
+    }
+  }, [selectedLevel, selectedGroup, selectedQuiz, mappedQuestions]);
+
+  const handleQuizChange = (e) => {
+    const quizId = e.target.value;
+    console.log('Quiz changed to:', quizId);
+    setSelectedQuiz(quizId);
+    setSelectedGroup("");
+    setSelectedLevel("");
+    setMappedQuestions([]);
+    setSelectedQuestions([]);
+    setSelectedMappedQuestions([]);
+    setQuestions([]);
+  };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <div className="bg-white p-6 rounded-xl shadow-lg max-w-4xl mx-auto">
+      <div className="bg-white p-6 rounded-xl shadow-lg max-w-6xl mx-auto">
         <h2 className="text-2xl font-bold mb-6 text-center">Quiz Question Mapping</h2>
-
-        <div className="mb-4">
-          <label className="block font-semibold text-gray-700 mb-2">Quiz Group:</label>
-          <select
-            className="w-full p-2 border rounded-md"
-            onChange={(e) => setSelectedGroup(e.target.value)}
-            value={selectedGroup}
-            disabled={loading.groups}>
-            <option value="">-- Select Group --</option>
-            {quizGroups.map(group => (
-              <option key={group.group_id} value={group.group_id}>
-                {group.group_name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selectedGroup && (
-          <div className="mb-4">
-            <label className="block font-semibold text-gray-700 mb-2">Quiz:</label>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label className="block font-semibold text-gray-700 mb-2">Quiz Name:</label>
+            <div className="relative">
+              <select
+                className="w-full p-2 pl-3 pr-8 border rounded-md text-gray-800 bg-white appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={handleQuizChange}
+                value={selectedQuiz}
+                disabled={loading.quizzes}
+              >
+                <option value="">-- Select Quiz Name --</option>
+                {quizzes.map(quiz => (
+                  <option key={quiz.QuizID} value={quiz.QuizID}>
+                    {quiz.QuizName} • {quiz.questionCount} {quiz.questionCount === 1 ? 'Question' : 'Questions'}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="block font-semibold text-gray-700 mb-2">Question Group:</label>
             <select
               className="w-full p-2 border rounded-md"
-              onChange={(e) => setSelectedQuiz(e.target.value)}
-              value={selectedQuiz}
-              disabled={loading.quizzes}
-            >
-              <option value="">-- Select Quiz --</option>
-              {quizzes.map(quiz => (
-                <option key={quiz.quiz_id} value={quiz.quiz_id}>
-                  {quiz.quiz_name} ({quiz.quiz_level})
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              value={selectedGroup}
+              disabled={loading.groups}>
+              <option value="">-- Select Question Group--</option>
+              {groups.map(group => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
                 </option>
               ))}
             </select>
           </div>
-        )}
+          <div>
+            <label className="block font-semibold text-gray-700 mb-2">Question Level:</label>
+            <select
+              className="w-full p-2 border rounded-md"
+              onChange={(e) => setSelectedLevel(e.target.value)}
+              value={selectedLevel}
+              disabled={loading.levels}
+            >
+              <option value="">-- Select Question Level --</option>
+              {levels.map(level => (
+                <option key={level.id} value={level.id}>
+                  {level.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-        {selectedGroup && (
-          <>
-            <div className="mb-6">
-              <label className="block font-semibold text-gray-700 mb-2">Available Questions:</label>
-              <div className="max-h-60 overflow-y-auto border rounded-md p-3 bg-gray-50">
-                {loading.questions ? (
-                  <div className="text-center py-4">Loading questions...</div>
-                ) : questions.length > 0 ? (
-                  <table className="w-full">
+        {selectedQuiz && (
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold mb-4">Currently Mapped Questions</h3>
+            {loading.mapped ? (
+              <div className="text-center py-4">Loading mapped questions...</div>
+            ) : mappedQuestions.length > 0 ? (
+              <div>
+                <div className="bg-blue-50 p-4 rounded-lg mb-4 flex justify-between">
+                  <div>
+                    <span className="font-semibold">Total Marks: </span>
+                    <span className="text-blue-700 font-bold">
+                      {mappedQuestions.reduce((sum, q) => sum + (q.totalMarks || 0), 0)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Total Negative Marks: </span>
+                    <span className="text-blue-700 font-bold">
+                      {mappedQuestions.reduce((sum, q) => sum + (q.negativeMarks || 0), 0)}
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto mb-6">
+                  <table className="min-w-full bg-white border">
                     <thead>
-                      <tr className="bg-gray-200">
-                        <th className="p-2 text-left">Select</th>
-                        <th className="p-2 text-left">Question</th>
-                        <th className="p-2 text-left">Marks</th>
-                        <th className="p-2 text-left">Negative Marks</th>
+                      <tr className="bg-DGXgreen">
+                        <th className="py-2 px-4 border w-10">
+                          <input
+                            type="checkbox"
+                            onChange={(e) => {
+                              const allIds = mappedQuestions.map(q => q.mapping_id);
+                              setSelectedMappedQuestions(e.target.checked ? allIds : []);
+                            }}
+                            checked={selectedMappedQuestions.length === mappedQuestions.length && mappedQuestions.length > 0}
+                          />
+                        </th>
+                        <th className="py-2 px-4 border">#</th>
+                        <th className="py-2 px-4 border">Question</th>
+                        <th className="py-2 px-4 border">Correct Answer</th>
+                        <th className="py-2 px-4 border">Group</th>
+                        <th className="py-2 px-4 border">Level</th>
+                        <th className="py-2 px-4 border">Marks</th>
+                        <th className="py-2 px-4 border">Negative Marks</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {questions.map(q => (
-                        <tr key={q.question_id} className="border-t">
-                          <td className="p-2">
+                      {mappedQuestions.map((question, index) => (
+                        <tr key={question.mapping_id} className="border-t hover:bg-gray-50">
+                          <td className="py-2 px-4 border text-center">
                             <input
                               type="checkbox"
-                              id={`q-${q.question_id}`}
-                              checked={selectedQuestions.includes(q.question_id)}
-                              onChange={() => handleQuestionSelect(q.question_id)}
-                              className="mr-2"
-                              disabled={loading.questions}
+                              checked={selectedMappedQuestions.includes(question.mapping_id)}
+                              onChange={(e) => {
+                                setSelectedMappedQuestions(prev =>
+                                  e.target.checked
+                                    ? [...prev, question.mapping_id]
+                                    : prev.filter(id => id !== question.mapping_id)
+                                );
+                              }}
                             />
                           </td>
-                          <td className="p-2">
-                            <label htmlFor={`q-${q.question_id}`} className="text-sm">
-                              {q.question_text}
-                            </label>
+                          <td className="py-2 px-4 border text-center">{index + 1}</td>
+                          <td className="py-2 px-4 border">{question.question_text}</td>
+                          <td className="py-2 px-4 border">
+                            {question.options?.find(opt => opt.is_correct)?.option_text || "N/A"}
                           </td>
-                          <td className="p-2">
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.5"
-                              value={questionMarks[q.question_id]?.marks || 1}
-                              onChange={(e) => handleMarksChange(q.question_id, 'marks', e.target.value)}
-                              className="w-16 p-1 border rounded"
-                              disabled={!selectedQuestions.includes(q.question_id)}
-                            />
-                          </td>
-                          <td className="p-2">
-                            <input
-                              type="number"
-                              step="0.5"
-                              value={questionMarks[q.question_id]?.negative || 0}
-                              onChange={(e) => handleMarksChange(q.question_id, 'negative', e.target.value)}
-                              className="w-16 p-1 border rounded"
-                              disabled={!selectedQuestions.includes(q.question_id)}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p className="text-gray-500">No questions available for this group</p>
-                )}
-              </div>
-            </div>
-            {filteredMappedQuestions.length > 0 && (
-              <div className="mb-6">
-                <label className="block font-semibold text-gray-700 mb-2">
-                  {selectedQuiz
-                    ? `Questions Mapped to ${quizzes.find(q => q.quiz_id === parseInt(selectedQuiz))?.quiz_name || 'Selected Quiz'}`
-                    : `All Mapped Questions in Group`}
-                </label>
-                <div className="max-h-60 overflow-y-auto border rounded-md p-3 bg-gray-50">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="p-2 text-left">Question</th>
-                        {!selectedQuiz && <th className="p-2 text-left">Mapped To Quiz</th>}
-                        <th className="p-2 text-left">Marks</th>
-                        <th className="p-2 text-left">Negative Marks</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredMappedQuestions.map(q => (
-                        <tr key={`mapped-${q.question_id}-${q.quiz_id}`} className="border-t">
-                          <td className="p-2">{q.question_text}</td>
-                          {!selectedQuiz && <td className="p-2">{q.quiz_name}</td>}
-                          <td className="p-2">{q.marks}</td>
-                          <td className="p-2">{q.negative_marks}</td>
+                          <td className="py-2 px-4 border">{question.group_name}</td>
+                          <td className="py-2 px-4 border">{question.level_name}</td>
+                          <td className="py-2 px-4 border text-center">{question.totalMarks}</td>
+                          <td className="py-2 px-4 border text-center">{question.negativeMarks}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                {selectedMappedQuestions.length > 0 && (
+                  <div className="flex justify-end mt-4">
+                    <button
+                      onClick={handleBulkRemoveMapping}
+                      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                      disabled={loading.mapping}
+                    >
+                      {loading.mapping ? 'Removing...' : `Remove Selected (${selectedMappedQuestions.length})`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                No questions currently mapped to this quiz
               </div>
             )}
-          </>
+          </div>
         )}
 
-        <button
-          onClick={handleSubmitMapping}
-          disabled={!selectedQuiz || selectedQuestions.length === 0 || loading.mappings}
-          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading.mappings ? "Saving..." : "Save Question Mappings"}
-        </button>
+        {/* Available Questions Section */}
+        {selectedGroup && selectedLevel && (
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Available Questions</h3>
+              <button
+                onClick={handleMapQuestions}
+                disabled={!selectedQuiz || selectedQuestions.length === 0 || loading.mapping}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading.mapping ? "Mapping..." : "Map Selected Questions"}
+              </button>
+            </div>
+            {loading.questions ? (
+              <div className="text-center py-8">Loading questions...</div>
+            ) : questions.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white border">
+                  <thead>
+                    <tr className="bg-DGXgreen">
+                      <th className="py-2 px-4 border">Select</th>
+                      <th className="py-2 px-4 border">#</th>
+                      <th className="py-2 px-4 border">Question Text</th>
+                      <th className="py-2 px-4 border">Correct Answer</th> {/* Added this column */}
+                      <th className="py-2 px-4 border">
+                        <div className="flex items-center justify-between">
+                          <span>Marks</span>
+                          <div className="flex items-center">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={allMarksValue}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0;
+                                setAllMarksValue(value);
+                                const newMarks = { ...questionMarks };
+                                selectedQuestions.forEach(questionId => {
+                                  newMarks[questionId] = {
+                                    ...newMarks[questionId],
+                                    marks: value
+                                  };
+                                });
+                                setQuestionMarks(newMarks);
+                              }}
+                              className="w-16 p-1 border rounded mr-2"
+                            />
+                          </div>
+                        </div>
+                      </th>
+                      <th className="py-2 px-4 border">
+                        <div className="flex items-center justify-between">
+                          <span>Negative Marks</span>
+                          <div className="flex items-center">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={allNegativeMarksValue}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0;
+                                setAllNegativeMarksValue(value);
+                                // Update all selected questions immediately
+                                const newMarks = { ...questionMarks };
+                                selectedQuestions.forEach(questionId => {
+                                  newMarks[questionId] = {
+                                    ...newMarks[questionId],
+                                    negative: value
+                                  };
+                                });
+                                setQuestionMarks(newMarks);
+                              }}
+                              className="w-16 p-1 border rounded mr-2"
+                            />
+                          </div>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {questions.map((question, index) => (
+                      <tr key={question.question_id} className="border-t">
+                        <td className="py-2 px-4 border text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedQuestions.includes(question.question_id)}
+                            onChange={() => handleQuestionSelect(question.question_id)}
+                            className="h-4 w-4"
+                          />
+                        </td>
+                        <td className="py-2 px-4 border text-center">{index + 1}</td>
+                        <td className="py-2 px-4 border">{question.question_text}</td>
+                        <td className="py-2 px-4 border">
+                          {question.options?.find(opt => opt.is_correct)?.text || "N/A"}
+                        </td>
+                        <td className="py-2 px-4 border">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={questionMarks[question.question_id]?.marks || 1}
+                            onChange={(e) => handleMarksChange(question.question_id, 'marks', e.target.value)}
+                            className="w-20 p-1 border rounded"
+                            disabled={!selectedQuestions.includes(question.question_id)}
+                          />
+                        </td>
+                        <td className="py-2 px-4 border">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={questionMarks[question.question_id]?.negative || 0}
+                            onChange={(e) => handleMarksChange(question.question_id, 'negative', e.target.value)}
+                            className="w-20 p-1 border rounded"
+                            disabled={!selectedQuestions.includes(question.question_id)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No questions available for this group and level combination
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
