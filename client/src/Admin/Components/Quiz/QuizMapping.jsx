@@ -261,16 +261,16 @@ const QuizMapping = () => {
   };
 
   const handleMarksChange = (questionId, field, value) => {
-    const numValue = parseFloat(value);
-    if (isNaN(numValue)) return;
-
-    setQuestionMarks(prev => ({
-      ...prev,
-      [questionId]: {
-        ...prev[questionId],
-        [field]: field === 'negative' ? numValue : Math.max(0, numValue)
-      }
-    }));
+    // Allow empty string or valid numbers
+    if (value === '' || !isNaN(value)) {
+      setQuestionMarks(prev => ({
+        ...prev,
+        [questionId]: {
+          ...prev[questionId],
+          [field]: value === '' ? '' : (field === 'negative' ? parseFloat(value) : Math.max(0, parseFloat(value)))
+        }
+      }));
+    }
   };
 
   const prepareMappingData = () => {
@@ -381,7 +381,7 @@ const QuizMapping = () => {
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, remove them!'
+        confirmButtonText: 'Yes!'
       });
 
       if (result.isConfirmed) {
@@ -400,19 +400,45 @@ const QuizMapping = () => {
         const response = await fetchData(endpoint, method, body, headers);
 
         if (response.success) {
+          // Get the questions that were unmapped
+          const unmappedQuestions = mappedQuestions.filter(q =>
+            selectedMappedQuestions.includes(q.mapping_id)
+          );
+
+          // Update quizzes count
           setQuizzes(prev => prev.map(quiz =>
             quiz.QuizID.toString() === selectedQuiz
               ? { ...quiz, questionCount: Math.max(0, (quiz.questionCount || 0) - selectedMappedQuestions.length) }
               : quiz
           ));
+
+          // Update mapped questions by removing the unmapped ones
+          setMappedQuestions(prev =>
+            prev.filter(q => !selectedMappedQuestions.includes(q.mapping_id))
+          );
+
+          // Update available questions by adding the unmapped ones back
+          setQuestions(prev => {
+            // Create question objects in the format expected by the questions table
+            const newQuestions = unmappedQuestions.map(q => ({
+              question_id: q.question_id,
+              question_text: q.question_text,
+              options: q.options || []
+            }));
+
+            // Filter out duplicates and merge with existing questions
+            return [...prev, ...newQuestions].filter((q, index, self) =>
+              index === self.findIndex(t => t.question_id === q.question_id)
+            );
+          });
+
           Swal.fire({
             icon: 'success',
             title: 'Success',
             text: `${selectedMappedQuestions.length} question(s) removed successfully!`,
           });
-          // Refresh the data
-          await fetchMappedQuestions();
-          await fetchQuestions();
+
+          // Clear selection
           setSelectedMappedQuestions([]);
         } else {
           throw new Error(response.message || 'Failed to remove questions');
@@ -482,71 +508,45 @@ const QuizMapping = () => {
     <div className="p-6 bg-gray-100 min-h-screen">
       <div className="bg-white p-6 rounded-xl shadow-lg max-w-6xl mx-auto">
         <h2 className="text-2xl font-bold mb-6 text-center">Quiz Question Mapping</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label className="block font-semibold text-gray-700 mb-2">Quiz Name:</label>
-            <div className="relative">
-              <select
-                className="w-full p-2 pl-3 pr-8 border rounded-md text-gray-800 bg-white appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                onChange={handleQuizChange}
-                value={selectedQuiz}
-                disabled={loading.quizzes}
-              >
-                <option value="">-- Select Quiz Name --</option>
-                {quizzes.map(quiz => (
-                  <option key={quiz.QuizID} value={quiz.QuizID}>
-                    {quiz.QuizName} • {quiz.questionCount} {quiz.questionCount === 1 ? 'Question' : 'Questions'}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div>
-            <label className="block font-semibold text-gray-700 mb-2">Question Group:</label>
+
+        {/* Quiz Selection (First Step) */}
+        <div className="mb-8">
+          <label className="block font-semibold text-gray-700 mb-2">Select Quiz:</label>
+          <div className="relative">
             <select
-              className="w-full p-2 border rounded-md"
-              onChange={(e) => setSelectedGroup(e.target.value)}
-              value={selectedGroup}
-              disabled={loading.groups}>
-              <option value="">-- Select Question Group--</option>
-              {groups.map(group => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block font-semibold text-gray-700 mb-2">Question Level:</label>
-            <select
-              className="w-full p-2 border rounded-md"
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              value={selectedLevel}
-              disabled={loading.levels}
+              className="w-full p-2 pl-3 pr-8 border rounded-md text-gray-800 bg-white appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={handleQuizChange}
+              value={selectedQuiz}
+              disabled={loading.quizzes}
             >
-              <option value="">-- Select Question Level --</option>
-              {levels.map(level => (
-                <option key={level.id} value={level.id}>
-                  {level.name}
+              <option value="">-- Select Quiz Name --</option>
+              {quizzes.map(quiz => (
+                <option key={quiz.QuizID} value={quiz.QuizID}>
+                  {quiz.QuizName} • {quiz.questionCount} {quiz.questionCount === 1 ? 'Question' : 'Questions'}
                 </option>
               ))}
             </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
         </div>
 
+        {/* Mapped Questions Section (Shows immediately after quiz selection) */}
         {selectedQuiz && (
-          <div className="mb-8">
+          <div className="mb-8 border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">Currently Mapped Questions</h3>
             {loading.mapped ? (
               <div className="text-center py-4">Loading mapped questions...</div>
             ) : mappedQuestions.length > 0 ? (
               <div>
                 <div className="bg-blue-50 p-4 rounded-lg mb-4 flex justify-between">
+                  <div>
+                    <span className="font-semibold">Total Questions: </span>
+                    <span className="text-blue-700 font-bold">{mappedQuestions.length}</span>
+                  </div>
                   <div>
                     <span className="font-semibold">Total Marks: </span>
                     <span className="text-blue-700 font-bold">
@@ -634,11 +634,46 @@ const QuizMapping = () => {
           </div>
         )}
 
-        {/* Available Questions Section */}
+        {/* Group and Level Selection (Only shows after quiz is selected) */}
+        {selectedQuiz && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-t pt-6">
+            <div>
+              <label className="block font-semibold text-gray-700 mb-2">Question Group:</label>
+              <select
+                className="w-full p-2 border rounded-md"
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                value={selectedGroup}
+                disabled={loading.groups}>
+                <option value="">-- Select Question Group--</option>
+                {groups.map(group => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block font-semibold text-gray-700 mb-2">Question Level:</label>
+              <select
+                className="w-full p-2 border rounded-md"
+                onChange={(e) => setSelectedLevel(e.target.value)}
+                value={selectedLevel}
+                disabled={loading.levels}
+              >
+                <option value="">-- Select Question Level --</option>
+                {levels.map(level => (
+                  <option key={level.id} value={level.id}>
+                    {level.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
         {selectedGroup && selectedLevel && (
-          <div className="mb-6">
+          <div className="mb-6 border-t pt-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Available Questions</h3>
+              <h3 className="text-lg font-semibold">Available Questions to Map</h3>
               <button
                 onClick={handleMapQuestions}
                 disabled={!selectedQuiz || selectedQuestions.length === 0 || loading.mapping}
@@ -657,29 +692,31 @@ const QuizMapping = () => {
                       <th className="py-2 px-4 border">Select</th>
                       <th className="py-2 px-4 border">#</th>
                       <th className="py-2 px-4 border">Question Text</th>
-                      <th className="py-2 px-4 border">Correct Answer</th> {/* Added this column */}
+                      <th className="py-2 px-4 border">Correct Answer</th>
                       <th className="py-2 px-4 border">
                         <div className="flex items-center justify-between">
                           <span>Marks</span>
                           <div className="flex items-center">
                             <input
-                              type="number"
-                              min="0"
-                              step="0.5"
+                              type="text"
+                              inputMode="decimal"
                               value={allMarksValue}
                               onChange={(e) => {
-                                const value = parseFloat(e.target.value) || 0;
-                                setAllMarksValue(value);
-                                const newMarks = { ...questionMarks };
-                                selectedQuestions.forEach(questionId => {
-                                  newMarks[questionId] = {
-                                    ...newMarks[questionId],
-                                    marks: value
-                                  };
-                                });
-                                setQuestionMarks(newMarks);
+                                // Allow empty string or valid numbers
+                                const value = e.target.value;
+                                if (value === '' || !isNaN(value)) {
+                                  setAllMarksValue(value);
+                                  const newMarks = { ...questionMarks };
+                                  questions.forEach(question => {
+                                    newMarks[question.question_id] = {
+                                      ...newMarks[question.question_id],
+                                      marks: value === '' ? '' : parseFloat(value) || 1
+                                    };
+                                  });
+                                  setQuestionMarks(newMarks);
+                                }
                               }}
-                              className="w-16 p-1 border rounded mr-2"
+                              className="w-16 p-1 border rounded"
                             />
                           </div>
                         </div>
@@ -689,24 +726,24 @@ const QuizMapping = () => {
                           <span>Negative Marks</span>
                           <div className="flex items-center">
                             <input
-                              type="number"
-                              min="0"
-                              step="0.5"
+                              type="text"
+                              inputMode="decimal"
                               value={allNegativeMarksValue}
                               onChange={(e) => {
-                                const value = parseFloat(e.target.value) || 0;
-                                setAllNegativeMarksValue(value);
-                                // Update all selected questions immediately
-                                const newMarks = { ...questionMarks };
-                                selectedQuestions.forEach(questionId => {
-                                  newMarks[questionId] = {
-                                    ...newMarks[questionId],
-                                    negative: value
-                                  };
-                                });
-                                setQuestionMarks(newMarks);
+                                const value = e.target.value;
+                                if (value === '' || !isNaN(value)) {
+                                  setAllNegativeMarksValue(value);
+                                  const newMarks = { ...questionMarks };
+                                  questions.forEach(question => {
+                                    newMarks[question.question_id] = {
+                                      ...newMarks[question.question_id],
+                                      negative: value === '' ? '' : parseFloat(value) || 0
+                                    };
+                                  });
+                                  setQuestionMarks(newMarks);
+                                }
                               }}
-                              className="w-16 p-1 border rounded mr-2"
+                              className="w-16 p-1 border rounded"
                             />
                           </div>
                         </div>
@@ -714,45 +751,83 @@ const QuizMapping = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {questions.map((question, index) => (
-                      <tr key={question.question_id} className="border-t">
-                        <td className="py-2 px-4 border text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedQuestions.includes(question.question_id)}
-                            onChange={() => handleQuestionSelect(question.question_id)}
-                            className="h-4 w-4"
-                          />
-                        </td>
-                        <td className="py-2 px-4 border text-center">{index + 1}</td>
-                        <td className="py-2 px-4 border">{question.question_text}</td>
-                        <td className="py-2 px-4 border">
-                          {question.options?.find(opt => opt.is_correct)?.text || "N/A"}
-                        </td>
-                        <td className="py-2 px-4 border">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={questionMarks[question.question_id]?.marks || 1}
-                            onChange={(e) => handleMarksChange(question.question_id, 'marks', e.target.value)}
-                            className="w-20 p-1 border rounded"
-                            disabled={!selectedQuestions.includes(question.question_id)}
-                          />
-                        </td>
-                        <td className="py-2 px-4 border">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={questionMarks[question.question_id]?.negative || 0}
-                            onChange={(e) => handleMarksChange(question.question_id, 'negative', e.target.value)}
-                            className="w-20 p-1 border rounded"
-                            disabled={!selectedQuestions.includes(question.question_id)}
-                          />
-                        </td>
-                      </tr>
-                    ))}
+                    {questions.map((question, index) => {
+                      // Get current values or use defaults if undefined
+                      const currentMarks = questionMarks[question.question_id]?.marks ?? 1;
+                      const currentNegative = questionMarks[question.question_id]?.negative ?? 0;
+
+                      return (
+                        <tr key={question.question_id} className="border-t">
+                          <td className="py-2 px-4 border text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedQuestions.includes(question.question_id)}
+                              onChange={() => handleQuestionSelect(question.question_id)}
+                              className="h-4 w-4"
+                            />
+                          </td>
+                          <td className="py-2 px-4 border text-center">{index + 1}</td>
+                          <td className="py-2 px-4 border">{question.question_text}</td>
+                          <td className="py-2 px-4 border">
+                            {question.options?.find(opt => opt.is_correct)?.text || "N/A"}
+                          </td>
+                          <td className="py-2 px-4 border">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={selectedQuestions.includes(question.question_id)
+                                ? (questionMarks[question.question_id]?.marks ?? '')
+                                : (questionMarks[question.question_id]?.marks ?? 1)}
+                              onChange={(e) => {
+                                handleMarksChange(
+                                  question.question_id,
+                                  'marks',
+                                  e.target.value
+                                );
+                              }}
+                              onBlur={(e) => {
+                                if (e.target.value === '') {
+                                  handleMarksChange(
+                                    question.question_id,
+                                    'marks',
+                                    1
+                                  );
+                                }
+                              }}
+                              className="w-20 p-1 border rounded"
+                              disabled={!selectedQuestions.includes(question.question_id)}
+                            />
+                          </td>
+                          <td className="py-2 px-4 border">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={selectedQuestions.includes(question.question_id)
+                                ? (questionMarks[question.question_id]?.negative ?? '')
+                                : (questionMarks[question.question_id]?.negative ?? 0)}
+                              onChange={(e) => {
+                                handleMarksChange(
+                                  question.question_id,
+                                  'negative',
+                                  e.target.value
+                                );
+                              }}
+                              onBlur={(e) => {
+                                if (e.target.value === '') {
+                                  handleMarksChange(
+                                    question.question_id,
+                                    'negative',
+                                    0
+                                  );
+                                }
+                              }}
+                              className="w-20 p-1 border rounded"
+                              disabled={!selectedQuestions.includes(question.question_id)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

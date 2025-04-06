@@ -607,11 +607,14 @@ export const getUserQuizCategory = async (req, res) => {
       }
 
       try {
-        const query = `select group_name, QuizDetails.QuizName,count(QuestionsID) as Total_Question_No, SUM(totalMarks) as MaxScore , group_id, QuizDetails.QuizID
+        const query = `select  QuizDetails.QuizName,GroupMaster.group_name,count(distinct QuestionsID) as Total_Question_No, 
+        SUM( distinct QuizMapping.totalMarks) as MaxScore , group_id, QuizDetails.QuizID
+        --,quiz_score.noOfAttempts
         from
         QuizMapping
-        left join GroupMaster on QuizMapping.quizGroupID = GroupMaster.group_id
         left join QuizDetails on QuizMapping.quizId = QuizDetails.QuizID
+		    left join GroupMaster on QuizDetails.QuizCategory = GroupMaster.group_id
+        Left join quiz_score on QuizMapping.quizId = quiz_score.quizID
         where isnull(QuizMapping.delStatus,0)=0
         group by GroupMaster.group_name,QuizDetails.QuizName, GroupMaster.group_id, QuizDetails.QuizID`;
         const quizzes = await queryAsync(conn, query);
@@ -1000,7 +1003,7 @@ export const updateQuiz = async (req, res) => {
 };
 
 export const unmappQuestion = (req, res) => {
-  const { mappingIds } = req.body; 
+  const { mappingIds } = req.body;
   const adminName = req.user?.id;
 
   if (!mappingIds || (Array.isArray(mappingIds) && mappingIds.length === 0)) {
@@ -1035,7 +1038,7 @@ export const unmappQuestion = (req, res) => {
 
         // Execute the update without checking affected rows
         await queryAsync(conn, updateQuery, [adminName, idsToUnmap]);
-        
+
         // Always return success if the query executed without errors
         return res.status(200).json({
           success: true,
