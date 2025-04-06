@@ -403,6 +403,8 @@ export const deleteQuestion = async (req, res) => {
   }
 };
 
+
+
 export const getQuestionsByGroupAndLevel = async (req, res) => {
   let success = false;
   const { group_id, level_id } = req.body;
@@ -918,7 +920,6 @@ export const updateQuiz = async (req, res) => {
       }
 
       try {
-        // Remove transaction since we're doing a single update
         const checkQuizQuery = `
           SELECT QuizID FROM QuizDetails 
           WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
@@ -932,7 +933,7 @@ export const updateQuiz = async (req, res) => {
           });
         }
 
-        // Update quiz details
+        // Update quiz details with current timestamp and editor info
         const updateQuery = `
           UPDATE QuizDetails 
           SET 
@@ -958,7 +959,7 @@ export const updateQuiz = async (req, res) => {
           new Date(StartDateAndTime).toISOString(),
           new Date(EndDateTime).toISOString(),
           QuizVisibility,
-          AuthLstEdit,
+          AuthLstEdit || req.user.username || 'Unknown', // Fallback to current user if not provided
           QuizID
         ];
 
@@ -998,3 +999,236 @@ export const updateQuiz = async (req, res) => {
   }
 };
 
+export const unmappQuestion = (req, res) => {
+  const { mappingIds } = req.body; 
+  const adminName = req.user?.id;
+
+  if (!mappingIds || (Array.isArray(mappingIds) && mappingIds.length === 0)) {
+    return res.status(400).json({
+      success: false,
+      message: "Mapping ID(s) are required"
+    });
+  }
+
+  const idsToUnmap = Array.isArray(mappingIds) ? mappingIds : [mappingIds];
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection error.",
+        });
+      }
+
+      try {
+        const updateQuery = `
+          UPDATE QuizMapping 
+          SET 
+            delStatus = 1, 
+            delOnDt = GETDATE(), 
+            AuthDel = ? 
+          WHERE 
+            idCode IN (?) AND (delStatus IS NULL OR delStatus = 0)
+        `;
+
+        // Execute the update without checking affected rows
+        await queryAsync(conn, updateQuery, [adminName, idsToUnmap]);
+        
+        // Always return success if the query executed without errors
+        return res.status(200).json({
+          success: true,
+          message: "Unmapping request processed successfully"
+        });
+
+      } catch (updateErr) {
+        logError(updateErr);
+        return res.status(500).json({
+          success: false,
+          message: "Error updating question unmapping.",
+          error: updateErr.message
+        });
+      } finally {
+        if (conn) closeConnection(conn);
+      }
+    });
+  } catch (error) {
+    logError(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const updateQuestion = async (req, res) => {
+  console.log("Incoming question update request:", req.body);
+  let success = false;
+  const userId = req.user.id;
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      success, 
+      errors: errors.array(), 
+      message: "Invalid data format" 
+    });
+  }
+
+  try {
+    const {
+      question_id,
+      question_text,
+      Ques_level,
+      group_id,
+      image,
+      question_type,
+      options,
+      AuthLstEdit
+    } = req.body;
+
+    if (!question_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Question ID is required"
+      });
+    }
+
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        console.error("Database connection error:", err);
+        return res.status(500).json({ 
+          success: false, 
+          message: "Database connection failed" 
+        });
+      }
+
+      try {
+        // Check if question exists
+        const checkQuestionQuery = `
+          SELECT question_id FROM QuizQuestions 
+          WHERE question_id = ? AND ISNULL(delStatus, 0) = 0
+        `;
+        const questionRows = await queryAsync(conn, checkQuestionQuery, [question_id]);
+        
+        if (questionRows.length === 0) {
+          closeConnection();
+          return res.status(404).json({ 
+            success: false, 
+            message: "Question not found or has been deleted" 
+          });
+        }
+
+        // Begin transaction
+        await queryAsync(conn, "BEGIN TRANSACTION");
+
+        try {
+          // Update question details
+          const updateQuestionQuery = `
+            UPDATE QuizQuestions 
+            SET 
+              question_text = ?,
+              Ques_level = ?,
+              group_id = ?,
+              image = ?,
+              question_type = ?,
+              AuthLstEdit = ?,
+              editOnDt = GETDATE()
+            WHERE question_id = ? AND ISNULL(delStatus, 0) = 0
+          `;
+
+          const updateQuestionParams = [
+            question_text,
+            Ques_level,
+            group_id,
+            image || null,
+            question_type,
+            AuthLstEdit || req.user.username || 'Unknown',
+            question_id
+          ];
+
+          await queryAsync(conn, updateQuestionQuery, updateQuestionParams);
+
+          // Soft delete existing options (mark as deleted)
+          const deleteOptionsQuery = `
+            UPDATE QuizOptions 
+            SET 
+              delStatus = 1,
+              AuthDel = ?,
+              delOnDt = GETDATE()
+            WHERE question_id = ? AND ISNULL(delStatus, 0) = 0
+          `;
+          await queryAsync(conn, deleteOptionsQuery, [
+            AuthLstEdit || req.user.username || 'Unknown',
+            question_id
+          ]);
+
+          // Insert new options
+          for (const option of options) {
+            if (!option.option_text) continue;
+
+            const insertOptionQuery = `
+              INSERT INTO QuizOptions (
+                question_id,
+                option_text,
+                is_correct,
+                image,
+                AuthAdd,
+                AuthLstEdit,
+                AddOnDt,
+                editOnDt,
+                delStatus
+              ) VALUES (?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), 0)
+            `;
+
+            await queryAsync(conn, insertOptionQuery, [
+              question_id,
+              option.option_text,
+              option.is_correct ? 1 : 0,
+              option.image || null,
+              AuthLstEdit || req.user.username || 'Unknown',
+              AuthLstEdit || req.user.username || 'Unknown'
+            ]);
+          }
+
+          // Commit transaction
+          await queryAsync(conn, "COMMIT");
+          closeConnection();
+          
+          return res.status(200).json({ 
+            success: true,
+            message: "Question updated successfully",
+            questionId: question_id
+          });
+
+        } catch (queryErr) {
+          // Rollback transaction on error
+          await queryAsync(conn, "ROLLBACK");
+          closeConnection();
+          console.error("Database query error:", queryErr);
+          return res.status(500).json({ 
+            success: false, 
+            message: "Failed to update question",
+            error: queryErr.message 
+          });
+        }
+      } catch (error) {
+        closeConnection();
+        console.error("Database error:", error);
+        return res.status(500).json({ 
+          success: false, 
+          message: "Database operation failed",
+          error: error.message 
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Server error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
+};

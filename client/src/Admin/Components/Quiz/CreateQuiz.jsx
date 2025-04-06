@@ -235,7 +235,7 @@ const createQuiz = ({ navigateToQuizTable }) => {
     if (!validateForm()) {
       Swal.fire({
         icon: "error",
-        title: "Validation Error",
+        title: "Submission Error",
         text: "Please correct the errors in the form before submitting.",
       });
       return;

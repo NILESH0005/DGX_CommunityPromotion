@@ -5,7 +5,7 @@ import ApiContext from "../../../context/ApiContext";
 import { useContext } from "react";
 
 const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
-  const { fetchData, userToken } = useContext(ApiContext);
+  const { fetchData, userToken, user } = useContext(ApiContext);
   const [formData, setFormData] = useState({
     QuizID: '',
     QuizCategory: '',
@@ -19,6 +19,10 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
     AuthLstEdit: ''
   });
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({
+    StartDateAndTime: '',
+    EndDateTime: ''
+  });
 
   useEffect(() => {
     if (quiz) {
@@ -39,23 +43,74 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
         StartDateAndTime: formatDateForInput(quiz.StartDateAndTime),
         EndDateTime: formatDateForInput(quiz.EndDateTime),
         QuizVisibility: quiz.QuizVisibility || 'Public',
-        AuthLstEdit: userToken
+        AuthLstEdit: user?.username || '' // Use the username from user context
       });
     }
-  }, [quiz, userToken]);
+  }, [quiz, user]);
+
+  const validateTimes = (startTime, endTime) => {
+    const newErrors = { StartDateAndTime: '', EndDateTime: '' };
+    let isValid = true;
+    const now = new Date();
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+
+    // Validate start time
+    if (startDate < now) {
+      newErrors.StartDateAndTime = 'Start time cannot be in the past';
+      isValid = false;
+    }
+
+    // Validate end time
+    if (endDate <= startDate) {
+      newErrors.EndDateTime = 'End time must be after start time';
+      isValid = false;
+    } else {
+      const timeDiff = (endDate - startDate) / (1000 * 60); // difference in minutes
+      if (timeDiff < 30) {
+        newErrors.EndDateTime = 'There must be at least 30 minutes between start and end times';
+        isValid = false;
+      }
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [name]: type === 'checkbox' ? checked : value
-    }));
+    };
+    
+    setFormData(newFormData);
+
+    // Validate times when either changes
+    if (name === 'StartDateAndTime' || name === 'EndDateTime') {
+      validateTimes(
+        name === 'StartDateAndTime' ? value : newFormData.StartDateAndTime,
+        name === 'EndDateTime' ? value : newFormData.EndDateTime
+      );
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-  
+    
+    // Final validation before submission
+    if (!validateTimes(formData.StartDateAndTime, formData.EndDateTime)) {
+      Swal.fire({
+        title: 'Please check the date',
+        text: 'Please fix the time and date before submitting',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       const endpoint = "quiz/updateQuiz";
       const method = "POST";
@@ -64,11 +119,12 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
         "auth-token": userToken,
       };
   
-      // Format dates for SQL Server
+      // Format dates for SQL Server and include username in AuthLstEdit
       const formattedData = {
         ...formData,
         StartDateAndTime: new Date(formData.StartDateAndTime).toISOString(),
-        EndDateTime: new Date(formData.EndDateTime).toISOString()
+        EndDateTime: new Date(formData.EndDateTime).toISOString(),
+        AuthLstEdit: user?.username || 'Unknown' // Ensure we have a username
       };
   
       const response = await fetchData(endpoint, method, formattedData, headers);
@@ -231,6 +287,9 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
                 className="w-full p-2 border rounded"
                 required
               />
+              {errors.StartDateAndTime && (
+                <p className="text-red-500 text-xs mt-1">{errors.StartDateAndTime}</p>
+              )}
             </div>
 
             <div>
@@ -245,6 +304,9 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
                 className="w-full p-2 border rounded"
                 required
               />
+              {errors.EndDateTime && (
+                <p className="text-red-500 text-xs mt-1">{errors.EndDateTime}</p>
+              )}
             </div>
           </div>
 
