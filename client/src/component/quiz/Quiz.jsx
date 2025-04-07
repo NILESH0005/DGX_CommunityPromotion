@@ -69,7 +69,8 @@ const Quiz = () => {
       } else {
         setLoading(false);
       }
-    }}, [quiz, userToken]);
+    }
+  }, [quiz, userToken]);
 
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -103,6 +104,7 @@ const Quiz = () => {
       };
 
       const data = await fetchData(endpoint, method, body, headers);
+      console.log("ddddaaatttaaa", data);
 
       if (!data) {
         throw new Error("No data received from server");
@@ -150,24 +152,31 @@ const Quiz = () => {
       if (!questionMap[item.QuestionsID]) {
         questionMap[item.QuestionsID] = {
           id: item.QuestionsID,
-          question_text: item.question_text,
-          image: item.image,
+          question_text: item.QuestionTxt, // Changed from question_text to QuestionTxt
+          image: item.image || null, // Added fallback
           negativeMarks: item.negativeMarks,
-          totalMarks: item.totalMarks,
+          totalMarks: 1, // Assuming default marks since not in your data
           duration: item.QuizDuration,
           options: [],
           correctAnswers: []
         };
       }
 
-      questionMap[item.QuestionsID].options.push({
-        id: item.id,
-        option_text: item.option_text.trim(),
-        is_correct: item.is_correct
-      });
+      // Process each option in the options array
+      if (item.options && Array.isArray(item.options)) {
+        item.options.forEach(option => {
+          const optionText = option.option_text ? option.option_text.trim() : '';
 
-      if (item.is_correct === 1) {
-        questionMap[item.QuestionsID].correctAnswers.push(item.option_text.trim());
+          questionMap[item.QuestionsID].options.push({
+            id: option.id || Math.random(), // Added fallback ID
+            option_text: optionText,
+            is_correct: option.is_correct || 0 // Default to incorrect if not specified
+          });
+
+          if (option.is_correct === 1) {
+            questionMap[item.QuestionsID].correctAnswers.push(optionText);
+          }
+        });
       }
     });
 
@@ -285,8 +294,9 @@ const Quiz = () => {
           return acc + 1;
         }
         return acc;
-      }}, 0);
-      
+      }
+    }, 0);
+
 
     Swal.fire({
       title: 'Instant Result',
