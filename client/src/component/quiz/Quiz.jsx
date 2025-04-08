@@ -152,25 +152,24 @@ const Quiz = () => {
       if (!questionMap[item.QuestionsID]) {
         questionMap[item.QuestionsID] = {
           id: item.QuestionsID,
-          question_text: item.QuestionTxt, // Changed from question_text to QuestionTxt
-          image: item.image || null, // Added fallback
+          question_text: item.QuestionTxt,
+          image: item.image || null,
           negativeMarks: item.negativeMarks,
-          totalMarks: 1, // Assuming default marks since not in your data
+          totalMarks: item.totalMarks || 1,
           duration: item.QuizDuration,
           options: [],
           correctAnswers: []
         };
       }
 
-      // Process each option in the options array
       if (item.options && Array.isArray(item.options)) {
         item.options.forEach(option => {
           const optionText = option.option_text ? option.option_text.trim() : '';
 
           questionMap[item.QuestionsID].options.push({
-            id: option.id || Math.random(), // Added fallback ID
+            id: option.optionId, // Use optionId from API instead of generating random ID
             option_text: optionText,
-            is_correct: option.is_correct || 0 // Default to incorrect if not specified
+            is_correct: option.is_correct || 0
           });
 
           if (option.is_correct === 1) {
@@ -223,24 +222,24 @@ const Quiz = () => {
     handleQuizSubmit();
   };
 
-  const handleAnswerClick = (selectedOption) => {
+  const handleAnswerClick = (selectedOptionId) => { // Now we'll pass the optionId directly
     const currentQuestionData = questions[currentQuestion];
-    const selectedOptions = currentQuestionData.options
-      .filter(opt => opt.option_text === selectedOption);
 
-    const isCorrect = selectedOptions.some(opt => opt.is_correct === 1);
+    // Find the selected option
+    const selectedOption = currentQuestionData.options.find(opt => opt.id === selectedOptionId);
+
+    if (!selectedOption) return;
+
+    const isCorrect = selectedOption.is_correct === 1;
     const marks = isCorrect ? currentQuestionData.totalMarks : -currentQuestionData.negativeMarks;
 
     const newAnswer = {
       questionId: currentQuestionData.id,
       questionText: currentQuestionData.question_text,
-      options: selectedOptions.map(opt => ({
-        id: opt.id,
-        text: opt.option_text,
-        is_correct: opt.is_correct
-      })),
-      marksAwarded: marks,
+      selectedOptionId: selectedOptionId, // Store the selected optionId
+      selectedOptionText: selectedOption.option_text, // For reference
       isCorrect: isCorrect,
+      marksAwarded: marks,
       maxMarks: currentQuestionData.totalMarks,
       negativeMarks: currentQuestionData.negativeMarks
     };
@@ -375,14 +374,9 @@ const Quiz = () => {
       .filter(a => a !== null)
       .map(answer => ({
         questionId: Number(answer.questionId),
-        questionText: String(answer.questionText),
-        options: answer.options.map(option => ({
-          id: Number(option.id),
-          text: String(option.text),
-          is_correct: Number(option.is_correct)
-        })),
-        marksAwarded: Number(answer.marksAwarded),
+        selectedOptionId: Number(answer.selectedOptionId), // This is the crucial field
         isCorrect: Boolean(answer.isCorrect),
+        marksAwarded: Number(answer.marksAwarded),
         maxMarks: Number(answer.maxMarks),
         negativeMarks: Number(answer.negativeMarks)
       }));
@@ -392,7 +386,6 @@ const Quiz = () => {
       groupId: Number(savedData.groupId),
       answers: preparedAnswers
     };
-
     try {
       setSubmitting(true);
       setSubmitError(null);
@@ -497,13 +490,8 @@ const Quiz = () => {
                     <input
                       type="radio"
                       name="answer"
-                      value={option.option_text}
-                      checked={
-                        selectedAnswers[currentQuestion]?.options?.some(
-                          opt => opt.text === option.option_text
-                        )
-                      }
-                      onChange={() => handleAnswerClick(option.option_text)}
+                      checked={selectedAnswers[currentQuestion]?.selectedOptionId === option.id}
+                      onChange={() => handleAnswerClick(option.id)} // Pass option.id (which is now optionId from API)
                       className="w-4 h-4"
                     />
                     <span>{option.option_text}</span>

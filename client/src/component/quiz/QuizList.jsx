@@ -52,21 +52,23 @@ const QuizList = () => {
                             title: quiz.QuizName,
                             questions: quiz.Total_Question_No,
                             points: quiz.MaxScore,
-                            QuizID: quiz.QuizID,  // Add QuizID here
-                            group_id: quiz.group_id  // Add group_id here
+                            QuizID: quiz.QuizID,
+                            group_id: quiz.group_id,
+                            image: quiz.QuizImage  
                         });
                     } else {
                         acc.push({
                             id: quiz.group_name,
                             group_name: quiz.group_name,
-                            group_id: quiz.group_id,  // Add group_id to the group object
+                            group_id: quiz.group_id,
                             quizzes: [{
                                 id: quiz.QuizName,
                                 title: quiz.QuizName,
                                 questions: quiz.Total_Question_No,
                                 points: quiz.MaxScore,
-                                QuizID: quiz.QuizID,  // Add QuizID here
-                                group_id: quiz.group_id  // Add group_id here
+                                QuizID: quiz.QuizID,
+                                group_id: quiz.group_id,
+                                image: quiz.QuizImage  // Add image here
                             }]
                         });
                     }
@@ -159,12 +161,6 @@ const QuizList = () => {
                             Test your knowledge, earn points, and compete with others to become the top performer!
                         </p>
                         <div className="mt-10 flex items-center justify-center gap-x-6">
-                            {/* <a
-                                className="rounded-md bg-DGXgreen px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-lime-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-600"
-                                onClick={scrollToQuizzes}
-                            >
-                                Start a Quiz
-                            </a> */}
                         </div>
                     </div>
                 </div>
@@ -187,6 +183,18 @@ const QuizList = () => {
                                             className="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-blue-500 group-hover:border-purple-600 relative overflow-hidden"
                                         >
                                             <div className="absolute top-0 right-0 w-16 h-16 opacity-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-bl-full"></div>
+
+                                            {/* Add image section here */}
+                                            {quiz.image && (
+                                                <div className="mb-4 h-40 overflow-hidden rounded-lg">
+                                                    <img
+                                                        src={quiz.image} // Adjust the path as needed
+                                                        alt={quiz.title}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            )}
+
                                             <h4 className="text-xl font-bold text-gray-800 mb-2 relative z-10">{quiz.title}</h4>
                                             <div className="flex gap-4 mb-3 relative z-10">
                                                 <span className="flex items-center text-gray-600">

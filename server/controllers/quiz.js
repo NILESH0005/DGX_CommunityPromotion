@@ -607,32 +607,56 @@ export const getUserQuizCategory = async (req, res) => {
       }
 
       try {
-        const query = `select  QuizDetails.QuizName,GroupMaster.group_name,count(distinct QuestionsID) as Total_Question_No, 
-        SUM( distinct QuizMapping.totalMarks) as MaxScore , group_id, QuizDetails.QuizID
-        --,quiz_score.noOfAttempts
-        from
-        QuizMapping
+        const query = `select  
+          QuizDetails.QuizName, 
+          QuizDetails.QuizImage, 
+          GroupMaster.group_name,
+          count(distinct QuestionsID) as Total_Question_No, 
+          SUM(distinct QuizMapping.totalMarks) as MaxScore, 
+          group_id, 
+          QuizDetails.QuizID
+        from QuizMapping
         left join QuizDetails on QuizMapping.quizId = QuizDetails.QuizID
-		    left join GroupMaster on QuizDetails.QuizCategory = GroupMaster.group_id
+        left join GroupMaster on QuizDetails.QuizCategory = GroupMaster.group_id
         Left join quiz_score on QuizMapping.quizId = quiz_score.quizID
         where isnull(QuizMapping.delStatus,0)=0
-        group by GroupMaster.group_name,QuizDetails.QuizName, GroupMaster.group_id, QuizDetails.QuizID`;
+        group by GroupMaster.group_name, QuizDetails.QuizName, GroupMaster.group_id, QuizDetails.QuizID, QuizDetails.QuizImage`;
+
         const quizzes = await queryAsync(conn, query);
+
+        const validQuizzes = quizzes.filter(quiz =>
+          quiz.QuizID !== null &&
+          quiz.QuizName !== null &&
+          quiz.group_id !== null &&
+          quiz.group_name !== null
+        );
 
         success = true;
         closeConnection();
         const infoMessage = "Quizzes fetched successfully";
         logInfo(infoMessage);
-        res.status(200).json({ success, data: { quizzes }, message: infoMessage });
+        res.status(200).json({
+          success,
+          data: { quizzes: validQuizzes },
+          message: infoMessage
+        });
       } catch (queryErr) {
         logError(queryErr);
         closeConnection();
-        res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
+        res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: 'Something went wrong please try again'
+        });
       }
     });
   } catch (error) {
     logError(error);
-    res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
+    res.status(500).json({
+      success: false,
+      data: {},
+      message: 'Something went wrong please try again'
+    });
   }
 };
 
@@ -695,7 +719,8 @@ export const getQuizQuestions = async (req, res) => {
           tblDDReferences.ddValue AS question_level,
           Questions.image AS question_image,
           QuestionOptions.option_text,
-          QuestionOptions.is_correct
+          QuestionOptions.is_correct,
+          QuestionOptions.id AS optionId
         FROM QuizMapping
         LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
         LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
@@ -713,8 +738,6 @@ export const getQuizQuestions = async (req, res) => {
             message: "No questions found for this quiz"
           });
         }
-
-        // Group questions by ID to remove duplicates
         const questionMap = {};
         questions.forEach(q => {
           if (!questionMap[q.QuestionsID]) {
@@ -742,7 +765,8 @@ export const getQuizQuestions = async (req, res) => {
           if (q.option_text) {
             questionMap[q.QuestionsID].options.push({
               option_text: q.option_text,
-              is_correct: q.is_correct === 1
+              is_correct: q.is_correct === 1,
+              optionId: q.optionId
             });
           }
         });
@@ -784,7 +808,7 @@ export const getQuizQuestions = async (req, res) => {
 export const submitQuiz = async (req, res) => {
   console.log("Incoming quiz submission:", req.body);
   let success = false;
-  const userId = req.user.id; // Assuming you have user authentication
+  const userId = req.user.id;
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -813,7 +837,7 @@ export const submitQuiz = async (req, res) => {
 
         // Get user details
         const userQuery = `SELECT UserID, Name FROM Community_User 
-                               WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
+                         WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
         const userRows = await queryAsync(conn, userQuery, [userId]);
 
         if (userRows.length === 0) {
@@ -825,32 +849,54 @@ export const submitQuiz = async (req, res) => {
         }
 
         const user = userRows[0];
-        const currentDate = new Date().toISOString();
 
-        // Insert each answer
         for (const answer of answers) {
-          if (!answer) continue; // Skip unanswered questions
+          if (!answer || !answer.selectedOptionId) continue; 
+
+          const optionQuery = `SELECT is_correct FROM QuestionOptions 
+                             WHERE id = ? AND question_id = ?`;
+          const optionRows = await queryAsync(conn, optionQuery, [
+            answer.selectedOptionId,
+            answer.questionId
+          ]);
+
+          if (optionRows.length === 0) {
+            console.warn(`Option not found: ${answer.selectedOptionId} for question ${answer.questionId}`);
+            continue;
+          }
+
+          const isCorrect = optionRows[0].is_correct === 1;
+          const marksQuery = `SELECT totalMarks, negativeMarks FROM QuizMapping
+                           WHERE quizId = ? AND QuestionsID = ?`;
+          const marksRows = await queryAsync(conn, marksQuery, [
+            quizId,
+            answer.questionId
+          ]);
+
+          let marksAwarded = 0;
+          if (marksRows.length > 0) {
+            marksAwarded = isCorrect
+              ? marksRows[0].totalMarks
+              : (marksRows[0].negativeMarks || 0) * -1;
+          }
 
           const insertQuery = `
-                  INSERT INTO quiz_score (
-                      userID, quizID, questionID, answerID, correctAns, 
-                      marks, AuthAdd, AddOnDt, editOnDt, delStatus
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), 0)
-                  `;
-          for (const option of answer.options) {
-            await queryAsync(conn, insertQuery, [
-              user.UserID,
-              quizId,
-              answer.questionId,
-              option.id,
-              option.is_correct,
-              answer.marksAwarded,
-              user.Name
-            ]);
-          }
-        }
+            INSERT INTO quiz_score (
+              userID, quizID, questionID, answerID, correctAns, 
+              marks, AuthAdd, AddOnDt, editOnDt, delStatus
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), 0)
+          `;
 
-        // Commit transaction
+          await queryAsync(conn, insertQuery, [
+            user.UserID,
+            quizId,
+            answer.questionId,
+            answer.selectedOptionId,
+            isCorrect,
+            marksAwarded,
+            user.Name
+          ]);
+        }
         await queryAsync(conn, "COMMIT");
         closeConnection();
 
@@ -865,7 +911,8 @@ export const submitQuiz = async (req, res) => {
         console.error("Database query error:", queryErr);
         return res.status(500).json({
           success: false,
-          message: "Failed to submit quiz"
+          message: "Failed to submit quiz",
+          error: queryErr.message
         });
       }
     });
@@ -885,10 +932,10 @@ export const updateQuiz = async (req, res) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      success, 
-      errors: errors.array(), 
-      message: "Invalid data format" 
+    return res.status(400).json({
+      success,
+      errors: errors.array(),
+      message: "Invalid data format"
     });
   }
 
@@ -916,9 +963,9 @@ export const updateQuiz = async (req, res) => {
     connectToDatabase(async (err, conn) => {
       if (err) {
         console.error("Database connection error:", err);
-        return res.status(500).json({ 
-          success: false, 
-          message: "Database connection failed" 
+        return res.status(500).json({
+          success: false,
+          message: "Database connection failed"
         });
       }
 
@@ -928,11 +975,11 @@ export const updateQuiz = async (req, res) => {
           WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
         `;
         const quizRows = await queryAsync(conn, checkQuizQuery, [QuizID]);
-        
+
         if (quizRows.length === 0) {
-          return res.status(404).json({ 
-            success: false, 
-            message: "Quiz not found or has been deleted" 
+          return res.status(404).json({
+            success: false,
+            message: "Quiz not found or has been deleted"
           });
         }
 
@@ -969,15 +1016,15 @@ export const updateQuiz = async (req, res) => {
         const result = await queryAsync(conn, updateQuery, updateParams);
 
         if (result.affectedRows === 0) {
-          return res.status(404).json({ 
-            success: false, 
-            message: "No quiz was updated. Quiz may not exist or data was identical." 
+          return res.status(404).json({
+            success: false,
+            message: "No quiz was updated. Quiz may not exist or data was identical."
           });
         }
 
         closeConnection();
-        
-        return res.status(200).json({ 
+
+        return res.status(200).json({
           success: true,
           message: "Quiz updated successfully",
           quizId: QuizID
@@ -986,18 +1033,18 @@ export const updateQuiz = async (req, res) => {
       } catch (queryErr) {
         closeConnection();
         console.error("Database query error:", queryErr);
-        return res.status(500).json({ 
-          success: false, 
+        return res.status(500).json({
+          success: false,
           message: "Failed to update quiz",
-          error: queryErr.message 
+          error: queryErr.message
         });
       }
     });
   } catch (error) {
     console.error("Server error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Internal server error" 
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
     });
   }
 };
@@ -1072,10 +1119,10 @@ export const updateQuestion = async (req, res) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      success, 
-      errors: errors.array(), 
-      message: "Invalid data format" 
+    return res.status(400).json({
+      success,
+      errors: errors.array(),
+      message: "Invalid data format"
     });
   }
 
@@ -1101,9 +1148,9 @@ export const updateQuestion = async (req, res) => {
     connectToDatabase(async (err, conn) => {
       if (err) {
         console.error("Database connection error:", err);
-        return res.status(500).json({ 
-          success: false, 
-          message: "Database connection failed" 
+        return res.status(500).json({
+          success: false,
+          message: "Database connection failed"
         });
       }
 
@@ -1114,12 +1161,12 @@ export const updateQuestion = async (req, res) => {
           WHERE question_id = ? AND ISNULL(delStatus, 0) = 0
         `;
         const questionRows = await queryAsync(conn, checkQuestionQuery, [question_id]);
-        
+
         if (questionRows.length === 0) {
           closeConnection();
-          return res.status(404).json({ 
-            success: false, 
-            message: "Question not found or has been deleted" 
+          return res.status(404).json({
+            success: false,
+            message: "Question not found or has been deleted"
           });
         }
 
@@ -1198,8 +1245,8 @@ export const updateQuestion = async (req, res) => {
           // Commit transaction
           await queryAsync(conn, "COMMIT");
           closeConnection();
-          
-          return res.status(200).json({ 
+
+          return res.status(200).json({
             success: true,
             message: "Question updated successfully",
             questionId: question_id
@@ -1210,28 +1257,28 @@ export const updateQuestion = async (req, res) => {
           await queryAsync(conn, "ROLLBACK");
           closeConnection();
           console.error("Database query error:", queryErr);
-          return res.status(500).json({ 
-            success: false, 
+          return res.status(500).json({
+            success: false,
             message: "Failed to update question",
-            error: queryErr.message 
+            error: queryErr.message
           });
         }
       } catch (error) {
         closeConnection();
         console.error("Database error:", error);
-        return res.status(500).json({ 
-          success: false, 
+        return res.status(500).json({
+          success: false,
           message: "Database operation failed",
-          error: error.message 
+          error: error.message
         });
       }
     });
   } catch (error) {
     console.error("Server error:", error);
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: "Internal server error",
-      error: error.message 
+      error: error.message
     });
   }
 };
