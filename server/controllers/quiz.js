@@ -246,6 +246,8 @@ export const deleteQuiz = (req, res) => {
   }
 };
 
+
+
 export const createQuestion = async (req, res) => {
   let success = false;
   const userId = req.user.id;
@@ -312,6 +314,21 @@ export const createQuestion = async (req, res) => {
     return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const getQuestion = async (req, res) => {
   let success = false;
@@ -902,8 +919,7 @@ export const updateQuiz = async (req, res) => {
       NegativeMarking,
       StartDateAndTime,
       EndDateTime,
-      QuizVisibility,
-      AuthLstEdit
+      QuizVisibility
     } = req.body;
 
     if (!QuizID) {
@@ -923,6 +939,7 @@ export const updateQuiz = async (req, res) => {
       }
 
       try {
+        // First check if quiz exists
         const checkQuizQuery = `
           SELECT QuizID FROM QuizDetails 
           WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
@@ -935,6 +952,20 @@ export const updateQuiz = async (req, res) => {
             message: "Quiz not found or has been deleted" 
           });
         }
+
+        // Get user details like in createQuiz
+        const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+        
+        if (userRows.length === 0) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "User not found, please login first." 
+          });
+        }
+
+        const user = userRows[0];
+        const authLstEdit = user.Name; // Use the Name from database like in createQuiz
 
         // Update quiz details with current timestamp and editor info
         const updateQuery = `
@@ -962,7 +993,7 @@ export const updateQuiz = async (req, res) => {
           new Date(StartDateAndTime).toISOString(),
           new Date(EndDateTime).toISOString(),
           QuizVisibility,
-          AuthLstEdit || req.user.username || 'Unknown', // Fallback to current user if not provided
+          authLstEdit, // Using the Name from database
           QuizID
         ];
 
@@ -1072,10 +1103,10 @@ export const updateQuestion = async (req, res) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      success, 
-      errors: errors.array(), 
-      message: "Invalid data format" 
+    return res.status(400).json({
+      success,
+      errors: errors.array(),
+      message: "Invalid data format"
     });
   }
 
@@ -1101,9 +1132,9 @@ export const updateQuestion = async (req, res) => {
     connectToDatabase(async (err, conn) => {
       if (err) {
         console.error("Database connection error:", err);
-        return res.status(500).json({ 
-          success: false, 
-          message: "Database connection failed" 
+        return res.status(500).json({
+          success: false,
+          message: "Database connection failed"
         });
       }
 
@@ -1114,12 +1145,12 @@ export const updateQuestion = async (req, res) => {
           WHERE question_id = ? AND ISNULL(delStatus, 0) = 0
         `;
         const questionRows = await queryAsync(conn, checkQuestionQuery, [question_id]);
-        
+
         if (questionRows.length === 0) {
           closeConnection();
-          return res.status(404).json({ 
-            success: false, 
-            message: "Question not found or has been deleted" 
+          return res.status(404).json({
+            success: false,
+            message: "Question not found or has been deleted"
           });
         }
 
@@ -1198,8 +1229,8 @@ export const updateQuestion = async (req, res) => {
           // Commit transaction
           await queryAsync(conn, "COMMIT");
           closeConnection();
-          
-          return res.status(200).json({ 
+
+          return res.status(200).json({
             success: true,
             message: "Question updated successfully",
             questionId: question_id
@@ -1210,28 +1241,28 @@ export const updateQuestion = async (req, res) => {
           await queryAsync(conn, "ROLLBACK");
           closeConnection();
           console.error("Database query error:", queryErr);
-          return res.status(500).json({ 
-            success: false, 
+          return res.status(500).json({
+            success: false,
             message: "Failed to update question",
-            error: queryErr.message 
+            error: queryErr.message
           });
         }
       } catch (error) {
         closeConnection();
         console.error("Database error:", error);
-        return res.status(500).json({ 
-          success: false, 
+        return res.status(500).json({
+          success: false,
           message: "Database operation failed",
-          error: error.message 
+          error: error.message
         });
       }
     });
   } catch (error) {
     console.error("Server error:", error);
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: "Internal server error",
-      error: error.message 
+      error: error.message
     });
   }
 };
