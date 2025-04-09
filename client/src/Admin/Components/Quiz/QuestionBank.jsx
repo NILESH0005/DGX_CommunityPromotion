@@ -31,41 +31,48 @@ const QuizBank = () => {
       const [questionsData, categoriesData, levelsData] = await Promise.all([
         fetchData(endpoint, method, {}, headers),
         fetchCategories(),
-        fetchQuestionLevels()
+        fetchQuestionLevels(),
       ]);
+      console.log("daaaatttaaa", questionsData);
 
       if (questionsData.success) {
         const questionMap = new Map();
-        
+
         questionsData.data.quizzes.forEach((quiz) => {
           const questionKey = `${quiz.question_text}_${quiz.id}`;
           const existingQuestion = questionMap.get(questionKey);
-          
+
           if (existingQuestion) {
-            const existingAnswers = Array.isArray(existingQuestion.correctAnswer) 
-              ? existingQuestion.correctAnswer 
+            const existingAnswers = Array.isArray(
+              existingQuestion.correctAnswer
+            )
+              ? existingQuestion.correctAnswer
               : [existingQuestion.correctAnswer];
-            
+
             const newAnswers = Array.isArray(quiz.option_text)
               ? quiz.option_text
               : [quiz.option_text];
-            
-            const combinedAnswers = [...new Set([...existingAnswers, ...newAnswers])];
-            
+
+            const combinedAnswers = [
+              ...new Set([...existingAnswers, ...newAnswers]),
+            ];
+
             questionMap.set(questionKey, {
               ...existingQuestion,
               correctAnswer: combinedAnswers,
               id: existingQuestion.id,
               count: existingQuestion.count + (quiz.count || 0),
-              images: existingQuestion.images || (quiz.image_url ? [quiz.image_url] : []),
+              images:
+                existingQuestion.images ||
+                (quiz.image_url ? [quiz.image_url] : []),
               options: [
                 ...(existingQuestion.options || []),
                 {
                   option_text: quiz.option_text,
                   is_correct: quiz.is_correct,
-                  image: quiz.image_url || null
-                }
-              ]
+                  image: quiz.image_url || null,
+                },
+              ],
             });
           } else {
             questionMap.set(questionKey, {
@@ -83,29 +90,35 @@ const QuizBank = () => {
                 {
                   option_text: quiz.option_text,
                   is_correct: quiz.is_correct,
-                  image: quiz.image_url || null
-                }
-              ]
+                  image: quiz.image_url || null,
+                },
+              ],
             });
           }
         });
 
-        const mappedQuestions = Array.from(questionMap.values()).map(question => {
-          let correctAnswers = question.correctAnswer;
-          if (Array.isArray(correctAnswers)) {
-            correctAnswers = correctAnswers.join(" | ");
+        const mappedQuestions = Array.from(questionMap.values()).map(
+          (question) => {
+            let correctAnswers = question.correctAnswer;
+            if (Array.isArray(correctAnswers)) {
+              correctAnswers = correctAnswers.join(" | ");
+            }
+
+            return {
+              ...question,
+              correctAnswer: correctAnswers,
+            };
           }
-          
-          return {
-            ...question,
-            correctAnswer: correctAnswers
-          };
-        });
+        );
 
         setFinalQuestions(mappedQuestions);
       } else {
         setError(questionsData.message || "Failed to fetch questions.");
-        Swal.fire("Error", questionsData.message || "Failed to fetch questions.", "error");
+        Swal.fire(
+          "Error",
+          questionsData.message || "Failed to fetch questions.",
+          "error"
+        );
       }
     } catch (error) {
       console.error("Error fetching questions:", error);
@@ -127,7 +140,10 @@ const QuizBank = () => {
     try {
       const data = await fetchData(endpoint, method, headers);
       if (data?.success) {
-        setCategories(data.data?.sort((a, b) => a.group_name.localeCompare(b.group_name)) || []);
+        setCategories(
+          data.data?.sort((a, b) => a.group_name.localeCompare(b.group_name)) ||
+            []
+        );
         return data.data;
       }
       return [];
@@ -160,13 +176,13 @@ const QuizBank = () => {
 
   const handleDelete = async (questionId) => {
     const result = await Swal.fire({
-      title: 'Are you sure?',
+      title: "Are you sure?",
       text: "You won't be able to revert this!",
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'OK'
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "OK",
     });
 
     if (!result.isConfirmed) return;
@@ -192,7 +208,11 @@ const QuizBank = () => {
         );
         Swal.fire("Deleted!", "Question has been deleted.", "success");
       } else {
-        Swal.fire("Error", data?.message || "Failed to delete the question.", "error");
+        Swal.fire(
+          "Error",
+          data?.message || "Failed to delete the question.",
+          "error"
+        );
       }
     } catch (error) {
       console.error("Error deleting question:", error);
@@ -206,14 +226,14 @@ const QuizBank = () => {
       question_id: question.id,
       question_text: question.question_text || question.text,
       Ques_level: question.Ques_level || question.level,
-      group_id: question.group_id?.toString() || '',
+      group_id: question.group_id?.toString() || "",
       image: question.image || null,
       options: question.options || [
-        { option_text: '', is_correct: 0, image: null },
-        { option_text: '', is_correct: 0, image: null }
-      ]
+        { option_text: "", is_correct: 0, image: null },
+        { option_text: "", is_correct: 0, image: null },
+      ],
     };
-    
+
     setSelectedQuestion(questionData);
     setShowEditModal(true);
   };
@@ -221,7 +241,7 @@ const QuizBank = () => {
   const handleCloseModal = (isUpdated = false) => {
     setShowEditModal(false);
     setSelectedQuestion(null);
-    
+
     if (isUpdated) {
       fetchQuestions(); // Refresh the questions list
     }
@@ -242,14 +262,16 @@ const QuizBank = () => {
   const filteredQuestions = finalQuestions.filter((question) => {
     return (
       (selectedGroup === "All" || question.group === selectedGroup) &&
-      (question.question_text || question.text).toLowerCase().includes(searchQuery.toLowerCase())
+      (question.question_text || question.text)
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
     );
   });
 
   if (showQuizQuestions) {
     return (
-      <QuizQuestions 
-        onBackToBank={() => setShowQuizQuestions(false)} 
+      <QuizQuestions
+        onBackToBank={() => setShowQuizQuestions(false)}
         onQuestionCreated={handleQuestionCreated}
       />
     );
@@ -320,10 +342,10 @@ const QuizBank = () => {
                   <td className="border p-2">
                     {q.images && q.images.length > 0 ? (
                       q.images.map((img, i) => (
-                        <img 
-                          key={i} 
-                          src={img} 
-                          alt={`Answer ${i + 1}`} 
+                        <img
+                          key={i}
+                          src={img}
+                          alt={`Answer ${i + 1}`}
                           className="h-12 w-auto mx-auto"
                         />
                       ))
@@ -332,7 +354,9 @@ const QuizBank = () => {
                     )}
                   </td>
                   <td className="border p-2 text-center">{q.group}</td>
-                  <td className="border p-2 text-center">{q.Ques_level || q.level}</td>
+                  <td className="border p-2 text-center">
+                    {q.Ques_level || q.level}
+                  </td>
                   <td className="border p-2 text-center">{q.count}</td>
                   <td className="border p-2 space-x-1 text-center">
                     <button
@@ -359,13 +383,16 @@ const QuizBank = () => {
 
       {showEditModal && selectedQuestion && (
         <EditQuestionModal
+          isOpen={showEditModal}
+          onClose={() => handleCloseModal(false)}
           questionData={selectedQuestion}
-          onClose={handleCloseModal}
-          onUpdate={() => handleCloseModal(true)}
+          onUpdateSuccess={() => handleCloseModal(true)}
           categories={categories}
           questionLevels={questionLevels}
+          userToken={userToken}
         />
       )}
+
     </div>
   );
 };

@@ -28,14 +28,16 @@ export const createQuiz = async (req, res) => {
       endTime,
       type,
       quizVisibility,
-      quizImage
+      quizImage,
     } = req.body;
 
     console.log("Request Body:", req.body);
 
     // Manual validation
     if (!name || !startDate || !startTime || !endDate || !endTime) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
     }
 
     let startDateAndTime = `${startDate} ${startTime}`;
@@ -56,7 +58,9 @@ export const createQuiz = async (req, res) => {
     connectToDatabase(async (err, conn) => {
       if (err) {
         logError("Failed to connect to database");
-        return res.status(500).json({ success: false, message: "Failed to connect to database" });
+        return res
+          .status(500)
+          .json({ success: false, message: "Failed to connect to database" });
       }
       logInfo("Database connection established successfully");
 
@@ -67,7 +71,10 @@ export const createQuiz = async (req, res) => {
 
         if (userRows.length === 0) {
           logWarning("User not found, please login first.");
-          return res.status(400).json({ success: false, message: "User not found, please login first." });
+          return res.status(400).json({
+            success: false,
+            message: "User not found, please login first.",
+          });
         }
 
         const user = userRows[0];
@@ -112,7 +119,9 @@ export const createQuiz = async (req, res) => {
         });
       } catch (queryErr) {
         logError("Database Query Error:", queryErr.message || queryErr);
-        return res.status(500).json({ success: false, message: "Database Query Error" });
+        return res
+          .status(500)
+          .json({ success: false, message: "Database Query Error" });
       } finally {
         closeConnection(conn);
       }
@@ -120,7 +129,9 @@ export const createQuiz = async (req, res) => {
   } catch (error) {
     logError("Unexpected Error:", error.stack || JSON.stringify(error));
     console.error("Error Details:", error);
-    return res.status(500).json({ success: false, message: "Unexpected Error, check logs" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Unexpected Error, check logs" });
   }
 };
 
@@ -131,7 +142,9 @@ export const getQuizzes = async (req, res) => {
     const warningMessage = "Data is not in the right format";
     console.error(warningMessage, errors.array());
     logWarning(warningMessage);
-    res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    res
+      .status(400)
+      .json({ success, data: errors.array(), message: warningMessage });
     return;
   }
 
@@ -140,7 +153,9 @@ export const getQuizzes = async (req, res) => {
       if (err) {
         const errorMessage = "Failed to connect to database";
         logError(err);
-        res.status(500).json({ success: false, data: err, message: errorMessage });
+        res
+          .status(500)
+          .json({ success: false, data: err, message: errorMessage });
         return;
       }
 
@@ -152,16 +167,26 @@ export const getQuizzes = async (req, res) => {
         closeConnection();
         const infoMessage = "Quizzes fetched successfully";
         logInfo(infoMessage);
-        res.status(200).json({ success, data: { quizzes }, message: infoMessage });
+        res
+          .status(200)
+          .json({ success, data: { quizzes }, message: infoMessage });
       } catch (queryErr) {
         logError(queryErr);
         closeConnection();
-        res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
+        res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: "Something went wrong please try again",
+        });
       }
     });
   } catch (error) {
     logError(error);
-    res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
+    res.status(500).json({
+      success: false,
+      data: {},
+      message: "Something went wrong please try again",
+    });
   }
 };
 
@@ -246,8 +271,6 @@ export const deleteQuiz = (req, res) => {
   }
 };
 
-
-
 export const createQuestion = async (req, res) => {
   let success = false;
   const userId = req.user.id;
@@ -255,19 +278,36 @@ export const createQuestion = async (req, res) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ success, data: errors.array(), message: "Data is not in the right format" });
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: "Data is not in the right format",
+    });
   }
 
   try {
     const { question_text, Ques_level, image, group_id, options } = req.body;
 
-    if (!question_text || !Ques_level || !group_id || !options || options.length < 2) {
-      return res.status(400).json({ success, message: "Missing required fields or insufficient options." });
+    if (
+      !question_text ||
+      !Ques_level ||
+      !group_id ||
+      !options ||
+      options.length < 2
+    ) {
+      return res.status(400).json({
+        success,
+        message: "Missing required fields or insufficient options.",
+      });
     }
 
     connectToDatabase(async (err, conn) => {
       if (err) {
-        return res.status(500).json({ success: false, data: err, message: "Failed to connect to database" });
+        return res.status(500).json({
+          success: false,
+          data: err,
+          message: "Failed to connect to database",
+        });
       }
 
       try {
@@ -277,11 +317,18 @@ export const createQuestion = async (req, res) => {
           VALUES (?, ?, ?, ?, ?, GETDATE(), 0);
         `;
         const questionResult = await queryAsync(conn, insertQuestionQuery, [
-          question_text, Ques_level, image, group_id, userId
+          question_text,
+          Ques_level,
+          image,
+          group_id,
+          userId,
         ]);
 
         const lastQuestionIdQuery = `SELECT TOP 1 id FROM Questions ORDER BY id DESC;`;
-        const lastQuestionIdResult = await queryAsync(conn, lastQuestionIdQuery);
+        const lastQuestionIdResult = await queryAsync(
+          conn,
+          lastQuestionIdQuery
+        );
         const questionId = lastQuestionIdResult[0].id;
 
         for (const option of options) {
@@ -292,7 +339,11 @@ export const createQuestion = async (req, res) => {
             VALUES (?, ?, ?, ?, ?, GETDATE(), 0);
           `;
           await queryAsync(conn, insertOptionQuery, [
-            questionId, option_text, is_correct ? 1 : 0, image, userId
+            questionId,
+            option_text,
+            is_correct ? 1 : 0,
+            image,
+            userId,
           ]);
         }
 
@@ -301,34 +352,27 @@ export const createQuestion = async (req, res) => {
         return res.status(200).json({
           success,
           data: { questionId },
-          message: "Question and options added successfully!"
+          message: "Question and options added successfully!",
         });
       } catch (queryErr) {
         closeConnection();
         console.error("Database Query Error:", queryErr);
-        return res.status(500).json({ success: false, data: queryErr, message: "Database Query Error" });
+        return res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: "Database Query Error",
+        });
       }
     });
   } catch (error) {
     console.error("Unexpected Error:", error);
-    return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
+    return res.status(500).json({
+      success: false,
+      data: error,
+      message: "Unexpected Error, check logs",
+    });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export const getQuestion = async (req, res) => {
   let success = false;
@@ -337,7 +381,9 @@ export const getQuestion = async (req, res) => {
     const warningMessage = "Data is not in the right format";
     console.error(warningMessage, errors.array());
     logWarning(warningMessage);
-    res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    res
+      .status(400)
+      .json({ success, data: errors.array(), message: warningMessage });
     return;
   }
 
@@ -346,33 +392,45 @@ export const getQuestion = async (req, res) => {
       if (err) {
         const errorMessage = "Failed to connect to database";
         logError(err);
-        res.status(500).json({ success: false, data: err, message: errorMessage });
+        res
+          .status(500)
+          .json({ success: false, data: err, message: errorMessage });
         return;
       }
 
       try {
-        const query = `select question_text,GroupMaster.group_name,tblDDReferences.ddValue,option_text, 0 as count
-                          from Questions
-                          left join GroupMaster on Questions.group_id = GroupMaster.group_id
-                          left join tblDDReferences on Questions.Ques_level = tblDDReferences.idCode
-                          left join QuestionOptions on Questions.id = QuestionOptions.question_id
-                          where QuestionOptions.is_correct = 1 and isnull(Questions.delStatus,0)=0 ORDER BY Questions.AddOnDt DESC;`;
+        const query = `select  question_id,  Questions.id, question_text,GroupMaster.group_name,tblDDReferences.ddValue,option_text, 0 as count
+                            from Questions
+                            left join GroupMaster on Questions.group_id = GroupMaster.group_id
+                            left join tblDDReferences on Questions.Ques_level = tblDDReferences.idCode
+                            left join QuestionOptions on Questions.id = QuestionOptions.question_id
+                            where QuestionOptions.is_correct = 1 and isnull(Questions.delStatus,0)=0 ORDER BY Questions.AddOnDt DESC;`;
         const quizzes = await queryAsync(conn, query);
 
         success = true;
         closeConnection();
         const infoMessage = "Questions fetched successfully";
         logInfo(infoMessage);
-        res.status(200).json({ success, data: { quizzes }, message: infoMessage });
+        res
+          .status(200)
+          .json({ success, data: { quizzes }, message: infoMessage });
       } catch (queryErr) {
         logError(queryErr);
         closeConnection();
-        res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
+        res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: "Something went wrong please try again",
+        });
       }
     });
   } catch (error) {
     logError(error);
-    res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
+    res.status(500).json({
+      success: false,
+      data: {},
+      message: "Something went wrong please try again",
+    });
   }
 };
 
@@ -383,7 +441,9 @@ export const deleteQuestion = async (req, res) => {
     const warningMessage = "Data is not in the right format";
     console.error(warningMessage, errors.array());
     logWarning(warningMessage);
-    res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    res
+      .status(400)
+      .json({ success, data: errors.array(), message: warningMessage });
     return;
   }
 
@@ -394,7 +454,9 @@ export const deleteQuestion = async (req, res) => {
       if (err) {
         const errorMessage = "Failed to connect to database";
         logError(err);
-        res.status(500).json({ success: false, data: err, message: errorMessage });
+        res
+          .status(500)
+          .json({ success: false, data: err, message: errorMessage });
         return;
       }
 
@@ -411,16 +473,22 @@ export const deleteQuestion = async (req, res) => {
       } catch (queryErr) {
         logError(queryErr);
         closeConnection();
-        res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
+        res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: "Something went wrong please try again",
+        });
       }
     });
   } catch (error) {
     logError(error);
-    res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
+    res.status(500).json({
+      success: false,
+      data: {},
+      message: "Something went wrong please try again",
+    });
   }
 };
-
-
 
 export const getQuestionsByGroupAndLevel = async (req, res) => {
   let success = false;
@@ -429,7 +497,7 @@ export const getQuestionsByGroupAndLevel = async (req, res) => {
   if (!group_id || !level_id) {
     return res.status(400).json({
       success,
-      message: "Group ID and Level ID are required"
+      message: "Group ID and Level ID are required",
     });
   }
 
@@ -438,7 +506,7 @@ export const getQuestionsByGroupAndLevel = async (req, res) => {
       if (err) {
         return res.status(500).json({
           success: false,
-          message: "Database connection failed"
+          message: "Database connection failed",
         });
       }
 
@@ -449,7 +517,7 @@ export const getQuestionsByGroupAndLevel = async (req, res) => {
         if (!levelResult) {
           return res.status(400).json({
             success: false,
-            message: "Invalid level ID"
+            message: "Invalid level ID",
           });
         }
 
@@ -476,7 +544,10 @@ export const getQuestionsByGroupAndLevel = async (req, res) => {
           AND Questions.group_id = ?
           AND Questions.Ques_level = ?`;
 
-        const questions = await queryAsync(conn, allQuestionsQuery, [group_id, level_id]); // Changed levelName to level_id
+        const questions = await queryAsync(conn, allQuestionsQuery, [
+          group_id,
+          level_id,
+        ]); // Changed levelName to level_id
 
         return res.status(200).json({
           success: true,
@@ -484,17 +555,16 @@ export const getQuestionsByGroupAndLevel = async (req, res) => {
             questions: questions,
             levelInfo: {
               id: level_id,
-              name: levelName
-            }
+              name: levelName,
+            },
           },
-          message: "Data fetched successfully"
+          message: "Data fetched successfully",
         });
-
       } catch (error) {
         console.error("Database error:", error);
         return res.status(500).json({
           success: false,
-          message: "Database query failed"
+          message: "Database query failed",
         });
       } finally {
         closeConnection(conn);
@@ -504,7 +574,7 @@ export const getQuestionsByGroupAndLevel = async (req, res) => {
     console.error("Server error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
@@ -516,20 +586,28 @@ export const createQuizQuestionMapping = async (req, res) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ success, data: errors.array(), message: "Data is not in the right format" });
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: "Data is not in the right format",
+    });
   }
 
   try {
     const { mappings } = req.body;
 
     if (!mappings || !Array.isArray(mappings)) {
-      return res.status(400).json({ success: false, message: 'Invalid mapping data' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid mapping data" });
     }
 
     connectToDatabase(async (err, conn) => {
       if (err) {
         console.error("Database connection error:", err);
-        return res.status(500).json({ success: false, message: 'Database connection failed' });
+        return res
+          .status(500)
+          .json({ success: false, message: "Database connection failed" });
       }
 
       try {
@@ -538,7 +616,10 @@ export const createQuizQuestionMapping = async (req, res) => {
         console.log("User Rows:", userRows);
 
         if (userRows.length === 0) {
-          return res.status(400).json({ success: false, message: "User not found, please login first." });
+          return res.status(400).json({
+            success: false,
+            message: "User not found, please login first.",
+          });
         }
 
         const user = userRows[0];
@@ -546,26 +627,38 @@ export const createQuizQuestionMapping = async (req, res) => {
         await queryAsync(conn, "BEGIN TRANSACTION");
 
         const insertPromises = mappings.map(async (mapping) => {
-          const { quizGroupID, QuestionsID, QuestionName, negativeMarks, totalMarks, quizId, Ques_level } = mapping;
+          const {
+            quizGroupID,
+            QuestionsID,
+            QuestionName,
+            negativeMarks,
+            totalMarks,
+            quizId,
+            Ques_level,
+          } = mapping;
 
           const params = [
             parseInt(quizGroupID) || 0,
             parseInt(quizId) || 0,
             parseInt(QuestionsID) || 0,
-            String(QuestionName || '').substring(0, 500),
+            String(QuestionName || "").substring(0, 500),
             parseFloat(negativeMarks) || 0,
             parseFloat(totalMarks) || 1,
             parseInt(Ques_level) || 0,
             authAdd,
-            0
+            0,
           ];
 
-          return queryAsync(conn, `
+          return queryAsync(
+            conn,
+            `
             INSERT INTO QuizMapping (
               quizGroupID, quizId, QuestionsID, QuestionTxt,
               negativeMarks, totalMarks, Ques_level, AuthAdd, AddOnDt, delStatus
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?)
-          `, params);
+          `,
+            params
+          );
         });
 
         await Promise.all(insertPromises);
@@ -575,9 +668,8 @@ export const createQuizQuestionMapping = async (req, res) => {
         return res.json({
           success,
           count: mappings.length,
-          message: 'Questions mapped successfully'
+          message: "Questions mapped successfully",
         });
-
       } catch (queryErr) {
         try {
           await queryAsync(conn, "ROLLBACK TRANSACTION");
@@ -587,8 +679,8 @@ export const createQuizQuestionMapping = async (req, res) => {
         console.error("Query error:", queryErr);
         return res.status(500).json({
           success: false,
-          message: 'Failed to map questions',
-          error: queryErr.message
+          message: "Failed to map questions",
+          error: queryErr.message,
         });
       } finally {
         closeConnection(conn);
@@ -598,7 +690,7 @@ export const createQuizQuestionMapping = async (req, res) => {
     console.error("Server error:", error);
     return res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: "Internal server error",
     });
   }
 };
@@ -610,7 +702,9 @@ export const getUserQuizCategory = async (req, res) => {
     const warningMessage = "Data is not in the right format";
     console.error(warningMessage, errors.array());
     logWarning(warningMessage);
-    res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    res
+      .status(400)
+      .json({ success, data: errors.array(), message: warningMessage });
     return;
   }
 
@@ -619,7 +713,9 @@ export const getUserQuizCategory = async (req, res) => {
       if (err) {
         const errorMessage = "Failed to connect to database";
         logError(err);
-        res.status(500).json({ success: false, data: err, message: errorMessage });
+        res
+          .status(500)
+          .json({ success: false, data: err, message: errorMessage });
         return;
       }
 
@@ -640,16 +736,26 @@ export const getUserQuizCategory = async (req, res) => {
         closeConnection();
         const infoMessage = "Quizzes fetched successfully";
         logInfo(infoMessage);
-        res.status(200).json({ success, data: { quizzes }, message: infoMessage });
+        res
+          .status(200)
+          .json({ success, data: { quizzes }, message: infoMessage });
       } catch (queryErr) {
         logError(queryErr);
         closeConnection();
-        res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
+        res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: "Something went wrong please try again",
+        });
       }
     });
   } catch (error) {
     logError(error);
-    res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
+    res.status(500).json({
+      success: false,
+      data: {},
+      message: "Something went wrong please try again",
+    });
   }
 };
 
@@ -660,7 +766,7 @@ export const getQuizQuestions = async (req, res) => {
     return res.status(400).json({
       success,
       data: errors.array(),
-      message: "Data is not in the right format"
+      message: "Data is not in the right format",
     });
   }
 
@@ -671,7 +777,7 @@ export const getQuizQuestions = async (req, res) => {
       return res.status(400).json({
         success: false,
         data: null,
-        message: "QuizID is required"
+        message: "QuizID is required",
       });
     }
 
@@ -680,7 +786,7 @@ export const getQuizQuestions = async (req, res) => {
       return res.status(400).json({
         success: false,
         data: null,
-        message: "QuizID must be a valid number"
+        message: "QuizID must be a valid number",
       });
     }
 
@@ -690,7 +796,7 @@ export const getQuizQuestions = async (req, res) => {
         return res.status(500).json({
           success: false,
           data: null,
-          message: "Database connection failed"
+          message: "Database connection failed",
         });
       }
 
@@ -727,13 +833,13 @@ export const getQuizQuestions = async (req, res) => {
           return res.status(404).json({
             success: false,
             data: null,
-            message: "No questions found for this quiz"
+            message: "No questions found for this quiz",
           });
         }
 
         // Group questions by ID to remove duplicates
         const questionMap = {};
-        questions.forEach(q => {
+        questions.forEach((q) => {
           if (!questionMap[q.QuestionsID]) {
             questionMap[q.QuestionsID] = {
               idCode: q.idCode,
@@ -751,7 +857,7 @@ export const getQuizQuestions = async (req, res) => {
               QuizDuration: q.QuizDuration,
               question_level: q.question_level,
               question_image: q.question_image,
-              options: []
+              options: [],
             };
           }
 
@@ -759,7 +865,7 @@ export const getQuizQuestions = async (req, res) => {
           if (q.option_text) {
             questionMap[q.QuestionsID].options.push({
               option_text: q.option_text,
-              is_correct: q.is_correct === 1
+              is_correct: q.is_correct === 1,
             });
           }
         });
@@ -772,11 +878,11 @@ export const getQuizQuestions = async (req, res) => {
           success,
           data: {
             quizId,
-            quizName: questions[0]?.QuizName || '',
+            quizName: questions[0]?.QuizName || "",
             quizDuration: questions[0]?.QuizDuration || 0,
-            questions: formattedQuestions
+            questions: formattedQuestions,
           },
-          message: "Quiz questions fetched successfully"
+          message: "Quiz questions fetched successfully",
         });
       } catch (queryErr) {
         console.error("Query error:", queryErr);
@@ -784,7 +890,7 @@ export const getQuizQuestions = async (req, res) => {
         return res.status(500).json({
           success: false,
           data: null,
-          message: "Failed to execute query"
+          message: "Failed to execute query",
         });
       }
     });
@@ -793,7 +899,7 @@ export const getQuizQuestions = async (req, res) => {
     return res.status(500).json({
       success: false,
       data: null,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
@@ -808,7 +914,7 @@ export const submitQuiz = async (req, res) => {
     return res.status(400).json({
       success,
       errors: errors.array(),
-      message: "Invalid data format"
+      message: "Invalid data format",
     });
   }
 
@@ -820,7 +926,7 @@ export const submitQuiz = async (req, res) => {
         console.error("Database connection error:", err);
         return res.status(500).json({
           success: false,
-          message: "Database connection failed"
+          message: "Database connection failed",
         });
       }
 
@@ -837,7 +943,7 @@ export const submitQuiz = async (req, res) => {
           await queryAsync(conn, "ROLLBACK");
           return res.status(404).json({
             success: false,
-            message: "User not found"
+            message: "User not found",
           });
         }
 
@@ -862,7 +968,7 @@ export const submitQuiz = async (req, res) => {
               option.id,
               option.is_correct,
               answer.marksAwarded,
-              user.Name
+              user.Name,
             ]);
           }
         }
@@ -873,16 +979,15 @@ export const submitQuiz = async (req, res) => {
 
         return res.status(200).json({
           success: true,
-          message: "Quiz submitted successfully"
+          message: "Quiz submitted successfully",
         });
-
       } catch (queryErr) {
         await queryAsync(conn, "ROLLBACK");
         closeConnection();
         console.error("Database query error:", queryErr);
         return res.status(500).json({
           success: false,
-          message: "Failed to submit quiz"
+          message: "Failed to submit quiz",
         });
       }
     });
@@ -890,7 +995,7 @@ export const submitQuiz = async (req, res) => {
     console.error("Server error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
@@ -902,10 +1007,10 @@ export const updateQuiz = async (req, res) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      success, 
-      errors: errors.array(), 
-      message: "Invalid data format" 
+    return res.status(400).json({
+      success,
+      errors: errors.array(),
+      message: "Invalid data format",
     });
   }
 
@@ -919,53 +1024,39 @@ export const updateQuiz = async (req, res) => {
       NegativeMarking,
       StartDateAndTime,
       EndDateTime,
-      QuizVisibility
+      QuizVisibility,
+      AuthLstEdit,
     } = req.body;
 
     if (!QuizID) {
       return res.status(400).json({
         success: false,
-        message: "QuizID is required"
+        message: "QuizID is required",
       });
     }
 
     connectToDatabase(async (err, conn) => {
       if (err) {
         console.error("Database connection error:", err);
-        return res.status(500).json({ 
-          success: false, 
-          message: "Database connection failed" 
+        return res.status(500).json({
+          success: false,
+          message: "Database connection failed",
         });
       }
 
       try {
-        // First check if quiz exists
         const checkQuizQuery = `
           SELECT QuizID FROM QuizDetails 
           WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
         `;
         const quizRows = await queryAsync(conn, checkQuizQuery, [QuizID]);
-        
+
         if (quizRows.length === 0) {
-          return res.status(404).json({ 
-            success: false, 
-            message: "Quiz not found or has been deleted" 
+          return res.status(404).json({
+            success: false,
+            message: "Quiz not found or has been deleted",
           });
         }
-
-        // Get user details like in createQuiz
-        const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
-        const userRows = await queryAsync(conn, userQuery, [userId]);
-        
-        if (userRows.length === 0) {
-          return res.status(400).json({ 
-            success: false, 
-            message: "User not found, please login first." 
-          });
-        }
-
-        const user = userRows[0];
-        const authLstEdit = user.Name; // Use the Name from database like in createQuiz
 
         // Update quiz details with current timestamp and editor info
         const updateQuery = `
@@ -993,42 +1084,42 @@ export const updateQuiz = async (req, res) => {
           new Date(StartDateAndTime).toISOString(),
           new Date(EndDateTime).toISOString(),
           QuizVisibility,
-          authLstEdit, // Using the Name from database
-          QuizID
+          AuthLstEdit || req.user.username || "Unknown", // Fallback to current user if not provided
+          QuizID,
         ];
 
         const result = await queryAsync(conn, updateQuery, updateParams);
 
         if (result.affectedRows === 0) {
-          return res.status(404).json({ 
-            success: false, 
-            message: "No quiz was updated. Quiz may not exist or data was identical." 
+          return res.status(404).json({
+            success: false,
+            message:
+              "No quiz was updated. Quiz may not exist or data was identical.",
           });
         }
 
         closeConnection();
-        
-        return res.status(200).json({ 
+
+        return res.status(200).json({
           success: true,
           message: "Quiz updated successfully",
-          quizId: QuizID
+          quizId: QuizID,
         });
-
       } catch (queryErr) {
         closeConnection();
         console.error("Database query error:", queryErr);
-        return res.status(500).json({ 
-          success: false, 
+        return res.status(500).json({
+          success: false,
           message: "Failed to update quiz",
-          error: queryErr.message 
+          error: queryErr.message,
         });
       }
     });
   } catch (error) {
     console.error("Server error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Internal server error" 
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 };
@@ -1040,7 +1131,7 @@ export const unmappQuestion = (req, res) => {
   if (!mappingIds || (Array.isArray(mappingIds) && mappingIds.length === 0)) {
     return res.status(400).json({
       success: false,
-      message: "Mapping ID(s) are required"
+      message: "Mapping ID(s) are required",
     });
   }
 
@@ -1073,15 +1164,14 @@ export const unmappQuestion = (req, res) => {
         // Always return success if the query executed without errors
         return res.status(200).json({
           success: true,
-          message: "Unmapping request processed successfully"
+          message: "Unmapping request processed successfully",
         });
-
       } catch (updateErr) {
         logError(updateErr);
         return res.status(500).json({
           success: false,
           message: "Error updating question unmapping.",
-          error: updateErr.message
+          error: updateErr.message,
         });
       } finally {
         if (conn) closeConnection(conn);
@@ -1106,7 +1196,7 @@ export const updateQuestion = async (req, res) => {
     return res.status(400).json({
       success,
       errors: errors.array(),
-      message: "Invalid data format"
+      message: "Invalid data format",
     });
   }
 
@@ -1119,13 +1209,13 @@ export const updateQuestion = async (req, res) => {
       image,
       question_type,
       options,
-      AuthLstEdit
+      AuthLstEdit,
     } = req.body;
 
     if (!question_id) {
       return res.status(400).json({
         success: false,
-        message: "Question ID is required"
+        message: "Question ID is required",
       });
     }
 
@@ -1134,7 +1224,7 @@ export const updateQuestion = async (req, res) => {
         console.error("Database connection error:", err);
         return res.status(500).json({
           success: false,
-          message: "Database connection failed"
+          message: "Database connection failed",
         });
       }
 
@@ -1144,13 +1234,15 @@ export const updateQuestion = async (req, res) => {
           SELECT question_id FROM QuizQuestions 
           WHERE question_id = ? AND ISNULL(delStatus, 0) = 0
         `;
-        const questionRows = await queryAsync(conn, checkQuestionQuery, [question_id]);
+        const questionRows = await queryAsync(conn, checkQuestionQuery, [
+          question_id,
+        ]);
 
         if (questionRows.length === 0) {
           closeConnection();
           return res.status(404).json({
             success: false,
-            message: "Question not found or has been deleted"
+            message: "Question not found or has been deleted",
           });
         }
 
@@ -1178,8 +1270,8 @@ export const updateQuestion = async (req, res) => {
             group_id,
             image || null,
             question_type,
-            AuthLstEdit || req.user.username || 'Unknown',
-            question_id
+            AuthLstEdit || req.user.username || "Unknown",
+            question_id,
           ];
 
           await queryAsync(conn, updateQuestionQuery, updateQuestionParams);
@@ -1194,8 +1286,8 @@ export const updateQuestion = async (req, res) => {
             WHERE question_id = ? AND ISNULL(delStatus, 0) = 0
           `;
           await queryAsync(conn, deleteOptionsQuery, [
-            AuthLstEdit || req.user.username || 'Unknown',
-            question_id
+            AuthLstEdit || req.user.username || "Unknown",
+            question_id,
           ]);
 
           // Insert new options
@@ -1221,8 +1313,8 @@ export const updateQuestion = async (req, res) => {
               option.option_text,
               option.is_correct ? 1 : 0,
               option.image || null,
-              AuthLstEdit || req.user.username || 'Unknown',
-              AuthLstEdit || req.user.username || 'Unknown'
+              AuthLstEdit || req.user.username || "Unknown",
+              AuthLstEdit || req.user.username || "Unknown",
             ]);
           }
 
@@ -1233,9 +1325,8 @@ export const updateQuestion = async (req, res) => {
           return res.status(200).json({
             success: true,
             message: "Question updated successfully",
-            questionId: question_id
+            questionId: question_id,
           });
-
         } catch (queryErr) {
           // Rollback transaction on error
           await queryAsync(conn, "ROLLBACK");
@@ -1244,7 +1335,7 @@ export const updateQuestion = async (req, res) => {
           return res.status(500).json({
             success: false,
             message: "Failed to update question",
-            error: queryErr.message
+            error: queryErr.message,
           });
         }
       } catch (error) {
@@ -1253,7 +1344,7 @@ export const updateQuestion = async (req, res) => {
         return res.status(500).json({
           success: false,
           message: "Database operation failed",
-          error: error.message
+          error: error.message,
         });
       }
     });
@@ -1262,7 +1353,7 @@ export const updateQuestion = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
