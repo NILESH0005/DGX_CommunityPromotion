@@ -87,30 +87,28 @@ const QuizList = () => {
         }
     };
     useEffect(() => {
-        // Only fetch quizzes if we have a token
         if (userToken) {
             fetchQuizzes();
         } else {
             setLoading(false);
             setError("Please login to access quizzes");
-            // Alternatively, you could redirect to login here:
-            // navigate('/login');
+            
         }
     }, [userToken]); // 
 
     const handleQuizClick = (quiz, group) => {
         console.log("Passing quiz data:", {
             ...quiz,
-            group_id: group.group_id,  // Use the group_id from the group object
-            QuizID: quiz.QuizID  // Use the QuizID from the quiz object
+            group_id: group.group_id,  
+            QuizID: quiz.QuizID  
         });
 
         navigate(`/Quiz`, {
             state: {
                 quiz: {
                     ...quiz,
-                    group_id: group.group_id,  // Use the group_id from the group object
-                    QuizID: quiz.QuizID  // Use the QuizID from the quiz object
+                    group_id: group.group_id, 
+                    QuizID: quiz.QuizID 
                 }
             }
         });

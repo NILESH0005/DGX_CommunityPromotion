@@ -445,6 +445,7 @@ export const getQuestionsByGroupAndLevel = async (req, res) => {
           QuizMapping.quizGroupID as mapped_quiz_id,
           QuizMapping.totalMarks, 
           QuizMapping.negativeMarks, 
+		  QuizDetails.NegativeMarking,
 	  tblDDReferences.ddValue AS question_level,
 	            QuestionOptions.option_text,
 				          QuestionOptions.is_correct,
@@ -716,6 +717,7 @@ export const getQuizQuestions = async (req, res) => {
           QuizMapping.delStatus,
           QuizDetails.QuizName,
           QuizDetails.QuizDuration,
+		  QuizDetails.NegativeMarking,
           tblDDReferences.ddValue AS question_level,
           Questions.image AS question_image,
           QuestionOptions.option_text,
@@ -749,6 +751,7 @@ export const getQuizQuestions = async (req, res) => {
               QuestionTxt: q.QuestionTxt,
               Ques_level: q.Ques_level,
               negativeMarks: q.negativeMarks,
+              negativeMarking: q.NegativeMarking,
               totalMarks: q.totalMarks,
               AuthAdd: q.AuthAdd,
               AddOnDt: q.AddOnDt,
@@ -849,9 +852,35 @@ export const submitQuiz = async (req, res) => {
         }
 
         const user = userRows[0];
+        let obtainedMarks = 0;
+        let totalPossibleMarks = 0;
 
+        // Get current attempt count
+        const attemptQuery = `SELECT MAX(noOfAttempts) as maxAttempt 
+                            FROM quiz_score 
+                            WHERE userID = ? AND quizID = ?`;
+        const attemptRows = await queryAsync(conn, attemptQuery, [user.UserID, quizId]);
+        const noOfAttempts = (attemptRows[0]?.maxAttempt || 0) + 1;
+
+        // Calculate total possible marks
         for (const answer of answers) {
-          if (!answer || !answer.selectedOptionId) continue; 
+          if (!answer || !answer.selectedOptionId) continue;
+
+          const marksQuery = `SELECT totalMarks FROM QuizMapping
+                           WHERE quizId = ? AND QuestionsID = ?`;
+          const marksRows = await queryAsync(conn, marksQuery, [
+            quizId,
+            answer.questionId
+          ]);
+
+          if (marksRows.length > 0) {
+            totalPossibleMarks += marksRows[0].totalMarks;
+          }
+        }
+
+        // Process each answer
+        for (const answer of answers) {
+          if (!answer || !answer.selectedOptionId) continue;
 
           const optionQuery = `SELECT is_correct FROM QuestionOptions 
                              WHERE id = ? AND question_id = ?`;
@@ -860,10 +889,7 @@ export const submitQuiz = async (req, res) => {
             answer.questionId
           ]);
 
-          if (optionRows.length === 0) {
-            console.warn(`Option not found: ${answer.selectedOptionId} for question ${answer.questionId}`);
-            continue;
-          }
+          if (optionRows.length === 0) continue;
 
           const isCorrect = optionRows[0].is_correct === 1;
           const marksQuery = `SELECT totalMarks, negativeMarks FROM QuizMapping
@@ -873,19 +899,24 @@ export const submitQuiz = async (req, res) => {
             answer.questionId
           ]);
 
-          let marksAwarded = 0;
+          let questionMarks = 0;
+          let obtainedPoints = 0;
+
           if (marksRows.length > 0) {
-            marksAwarded = isCorrect
+            questionMarks = marksRows[0].totalMarks;
+            obtainedPoints = isCorrect
               ? marksRows[0].totalMarks
               : (marksRows[0].negativeMarks || 0) * -1;
           }
 
-          const insertQuery = `
-            INSERT INTO quiz_score (
-              userID, quizID, questionID, answerID, correctAns, 
-              marks, AuthAdd, AddOnDt, editOnDt, delStatus
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), 0)
-          `;
+          obtainedMarks += obtainedPoints;
+
+          const insertQuery = `INSERT INTO quiz_score (
+            userID, quizID, questionID, answerID, correctAns, 
+            marks, AuthAdd, AddOnDt, delStatus,
+            ObtainedMarks, totalMarks, noOfAttempts,
+            editOnDt
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), 0, ?, ?, ?, NULL)`;
 
           await queryAsync(conn, insertQuery, [
             user.UserID,
@@ -893,16 +924,25 @@ export const submitQuiz = async (req, res) => {
             answer.questionId,
             answer.selectedOptionId,
             isCorrect,
-            marksAwarded,
-            user.Name
+            questionMarks,
+            user.Name,
+            obtainedPoints,
+            totalPossibleMarks,
+            noOfAttempts
           ]);
         }
+
         await queryAsync(conn, "COMMIT");
         closeConnection();
 
         return res.status(200).json({
           success: true,
-          message: "Quiz submitted successfully"
+          message: "Quiz submitted successfully",
+          data: {
+            obtainedMarks,
+            totalMarks: totalPossibleMarks,
+            noOfAttempts
+          }
         });
 
       } catch (queryErr) {
