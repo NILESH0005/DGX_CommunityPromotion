@@ -717,18 +717,18 @@ export const getQuizQuestions = async (req, res) => {
           QuizMapping.delStatus,
           QuizDetails.QuizName,
           QuizDetails.QuizDuration,
-		  QuizDetails.NegativeMarking,
+		      QuizDetails.NegativeMarking,
           tblDDReferences.ddValue AS question_level,
           Questions.image AS question_image,
           QuestionOptions.option_text,
           QuestionOptions.is_correct,
           QuestionOptions.id AS optionId
-        FROM QuizMapping
-        LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
-        LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
-        LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
-        LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
-        WHERE QuizMapping.quizId = ? AND QuizMapping.delStatus = 0`;
+          FROM QuizMapping
+          LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
+          LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
+          LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
+          LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
+          WHERE QuizMapping.quizId = ? AND QuizMapping.delStatus = 0`;
 
         const questions = await queryAsync(conn, query, [quizId]);
 
