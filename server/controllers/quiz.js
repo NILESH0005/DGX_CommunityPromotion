@@ -246,6 +246,8 @@ export const deleteQuiz = (req, res) => {
   }
 };
 
+
+
 export const createQuestion = async (req, res) => {
   let success = false;
   const userId = req.user.id;
@@ -312,6 +314,21 @@ export const createQuestion = async (req, res) => {
     return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const getQuestion = async (req, res) => {
   let success = false;
@@ -989,8 +1006,7 @@ export const updateQuiz = async (req, res) => {
       NegativeMarking,
       StartDateAndTime,
       EndDateTime,
-      QuizVisibility,
-      AuthLstEdit
+      QuizVisibility
     } = req.body;
 
     if (!QuizID) {
@@ -1010,6 +1026,7 @@ export const updateQuiz = async (req, res) => {
       }
 
       try {
+        // First check if quiz exists
         const checkQuizQuery = `
           SELECT QuizID FROM QuizDetails 
           WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
@@ -1022,6 +1039,20 @@ export const updateQuiz = async (req, res) => {
             message: "Quiz not found or has been deleted"
           });
         }
+
+        // Get user details like in createQuiz
+        const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+        
+        if (userRows.length === 0) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "User not found, please login first." 
+          });
+        }
+
+        const user = userRows[0];
+        const authLstEdit = user.Name; // Use the Name from database like in createQuiz
 
         // Update quiz details with current timestamp and editor info
         const updateQuery = `
@@ -1049,7 +1080,7 @@ export const updateQuiz = async (req, res) => {
           new Date(StartDateAndTime).toISOString(),
           new Date(EndDateTime).toISOString(),
           QuizVisibility,
-          AuthLstEdit || req.user.username || 'Unknown', // Fallback to current user if not provided
+          authLstEdit, // Using the Name from database
           QuizID
         ];
 
