@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { FaCalendarAlt, FaCheckCircle } from "react-icons/fa";
 import ApiContext from "../../../context/ApiContext";
 import Swal from "sweetalert2";
+import {compressImage} from "../../../utils/compressImage.js";
 
 const createQuiz = ({ navigateToQuizTable }) => {
   const { userToken, fetchData } = useContext(ApiContext);
@@ -253,7 +254,7 @@ const createQuiz = ({ navigateToQuizTable }) => {
       if (result.isConfirmed) {
         setLoading(true);
   
-        // Convert to JSON instead of FormData
+        // Prepare the payload with Base64 image
         const payload = {
           category: quizData.category,
           name: quizData.name,
@@ -265,8 +266,8 @@ const createQuiz = ({ navigateToQuizTable }) => {
           endDate: quizData.endDate,
           endTime: quizData.endTime,
           type: quizData.type,
-          quizVisibility: quizData.type, // Assuming type is the same as visibility
-          quizImage: quizData.quizImage ? quizData.quizImage.name : "default.png" // Just send the filename
+          quizVisibility: quizData.type,
+          quizImage: quizData.quizImage // Now contains Base64 string
         };
   
         try {
@@ -306,7 +307,7 @@ const createQuiz = ({ navigateToQuizTable }) => {
       setErrors(prev => ({ ...prev, quizImage: "Please upload a quiz banner image" }));
       return;
     }
-
+  
     // Check file type
     const allowedFormats = ["image/jpeg", "image/png", "image/svg+xml"];
     if (!allowedFormats.includes(file.type)) {
@@ -316,29 +317,34 @@ const createQuiz = ({ navigateToQuizTable }) => {
       }));
       return;
     }
-
+  
     // Check file size (50KB)
     const maxSize = 50 * 1024; // 50KB in bytes
     if (file.size > maxSize) {
-      setErrors(prev => ({
-        ...prev,
-        quizImage: `Image size (${(file.size / 1024).toFixed(2)}KB) exceeds 50KB limit`,
-      }));
+      try {
+        // Compress the image if it's too large
+        const compressedImage = await compressImage(file);
+        setQuizData(prev => ({ ...prev, quizImage: compressedImage }));
+        setImagePreview(compressedImage);
+        setErrors(prev => ({ ...prev, quizImage: "" }));
+      } catch (error) {
+        setErrors(prev => ({
+          ...prev,
+          quizImage: "Failed to compress image",
+        }));
+      }
       return;
     }
-
-    // Clear any previous errors
-    setErrors(prev => ({ ...prev, quizImage: "" }));
-    
-    // Use the original file directly
-    setQuizData(prev => ({ ...prev, quizImage: file }));
-
-    // Create preview
+  
+    // For images that are already small enough
     const reader = new FileReader();
     reader.onloadend = () => {
-      setImagePreview(reader.result);
+      const base64String = reader.result;
+      setQuizData(prev => ({ ...prev, quizImage: base64String }));
+      setImagePreview(base64String);
     };
     reader.readAsDataURL(file);
+    setErrors(prev => ({ ...prev, quizImage: "" }));
   };
 
   const removeImage = () => {

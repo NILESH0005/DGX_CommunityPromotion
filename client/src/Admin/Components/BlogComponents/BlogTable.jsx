@@ -109,7 +109,7 @@ const BlogTable = ({ blogs, userToken }) => {
                     <td className="p-2 border text-center min-w-[120px]">{blog.category}</td>
                     <td className="p-2 border text-center min-w-[150px]">{blog.UserName}</td>
                     <td className="p-2 border text-center min-w-[180px]">
-                      {moment.utc(blog.publishedDate).format("MMMM D, YYYY h:mm A")}
+                      {moment.utc(blog.publishedDate).format("MMMM D, YYYY ")}
                     </td>
                     <td className="p-2 border text-center min-w-[120px]">
                       {blog.Status || "Pending"}
