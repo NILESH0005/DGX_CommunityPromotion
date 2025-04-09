@@ -146,41 +146,27 @@ const Quiz = () => {
   };
 
   const transformQuestions = (apiQuestions) => {
-    const questionMap = {};
-
-    apiQuestions.forEach(item => {
-      if (!questionMap[item.QuestionsID]) {
-        questionMap[item.QuestionsID] = {
-          id: item.QuestionsID,
-          question_text: item.QuestionTxt, // Changed from question_text to QuestionTxt
-          image: item.image || null, // Added fallback
-          negativeMarks: item.negativeMarks,
-          totalMarks: 1, // Assuming default marks since not in your data
-          duration: item.QuizDuration,
-          options: [],
-          correctAnswers: []
-        };
-      }
-
-      // Process each option in the options array
-      if (item.options && Array.isArray(item.options)) {
-        item.options.forEach(option => {
-          const optionText = option.option_text ? option.option_text.trim() : '';
-
-          questionMap[item.QuestionsID].options.push({
-            id: option.id || Math.random(), // Added fallback ID
-            option_text: optionText,
-            is_correct: option.is_correct || 0 // Default to incorrect if not specified
-          });
-
-          if (option.is_correct === 1) {
-            questionMap[item.QuestionsID].correctAnswers.push(optionText);
-          }
-        });
-      }
+    return apiQuestions.map(item => {
+      // Find all correct option IDs for this question
+      const correctAnswers = item.options
+        .filter(option => option.is_correct === true || option.is_correct === 1)
+        .map(option => option.optionId);
+  
+      return {
+        id: item.QuestionsID,
+        question_text: item.QuestionTxt,
+        image: item.question_image,
+        negativeMarks: item.negativeMarks || 0,
+        totalMarks: item.totalMarks || 1,
+        duration: item.QuizDuration,
+        options: item.options.map(option => ({
+          id: option.optionId,
+          option_text: option.option_text ? option.option_text.trim() : '',
+          is_correct: option.is_correct === true || option.is_correct === 1
+        })),
+        correctAnswers: correctAnswers
+      };
     });
-
-    return Object.values(questionMap);
   };
 
   useEffect(() => {
@@ -223,34 +209,54 @@ const Quiz = () => {
     handleQuizSubmit();
   };
 
-  const handleAnswerClick = (selectedOption) => {
+ 
+  const handleNavigation = (nextQuestion) => {
+    if (selectedAnswers[currentQuestion] === null && questionStatus[currentQuestion + 1] === "not-visited") {
+      setQuestionStatus(prev => ({ ...prev, [currentQuestion + 1]: "not-answered" }));
+    }
+    setCurrentQuestion(nextQuestion);
+  };
+
+  const handleAnswerClick = (selectedOptionId) => {
     const currentQuestionData = questions[currentQuestion];
-    const selectedOptions = currentQuestionData.options
-      .filter(opt => opt.option_text === selectedOption);
-
-    const isCorrect = selectedOptions.some(opt => opt.is_correct === 1);
-    const marks = isCorrect ? currentQuestionData.totalMarks : -currentQuestionData.negativeMarks;
-
+    
+    // Verify the correctAnswers array contains the selected option
+    console.log('Correct answers:', currentQuestionData.correctAnswers);
+    console.log('Selected option:', selectedOptionId);
+  
+    const isCorrect = currentQuestionData.correctAnswers.includes(selectedOptionId);
+    console.log('Is correct?', isCorrect);
+  
+    const selectedOption = currentQuestionData.options.find(opt => opt.id === selectedOptionId);
+    if (!selectedOption) return;
+  
+    const marks = isCorrect
+      ? currentQuestionData.totalMarks
+      : -currentQuestionData.negativeMarks;
+  
     const newAnswer = {
       questionId: currentQuestionData.id,
       questionText: currentQuestionData.question_text,
-      options: selectedOptions.map(opt => ({
-        id: opt.id,
-        text: opt.option_text,
-        is_correct: opt.is_correct
-      })),
-      marksAwarded: marks,
+      selectedOptionId: selectedOptionId,
+      selectedOptionText: selectedOption.option_text,
       isCorrect: isCorrect,
+      marksAwarded: marks,
       maxMarks: currentQuestionData.totalMarks,
-      negativeMarks: currentQuestionData.negativeMarks
+      negativeMarks: currentQuestionData.negativeMarks,
+      correctAnswers: currentQuestionData.correctAnswers.map(id => 
+        currentQuestionData.options.find(opt => opt.id === id)?.option_text
+      ).filter(Boolean)
     };
-
+  
     const newAnswers = [...selectedAnswers];
     newAnswers[currentQuestion] = newAnswer;
-
     setSelectedAnswers(newAnswers);
-    setQuestionStatus(prev => ({ ...prev, [currentQuestion + 1]: "answered" }));
-
+  
+    setQuestionStatus(prev => ({ 
+      ...prev, 
+      [currentQuestion + 1]: "answered" 
+    }));
+  
     saveAnswersToStorage({
       quizId: quiz.QuizID,
       groupId: quiz.group_id,
@@ -258,11 +264,12 @@ const Quiz = () => {
     });
   };
 
+  
   const handleSaveAndNext = () => {
     if (currentQuestion + 1 < questions.length) {
-      setCurrentQuestion(currentQuestion + 1);
+      handleNavigation(currentQuestion + 1);
     } else {
-      setShowScore(true);
+      handleQuizSubmit(); 
     }
   };
 
@@ -276,7 +283,7 @@ const Quiz = () => {
 
   const handleSkip = () => {
     if (currentQuestion + 1 < questions.length) {
-      setCurrentQuestion(currentQuestion + 1);
+      handleNavigation(currentQuestion + 1);
     } else {
       setShowScore(true);
     }
@@ -285,25 +292,6 @@ const Quiz = () => {
   const handleMarkForReview = () => {
     setQuestionStatus((prev) => ({ ...prev, [currentQuestion + 1]: "marked" }));
     handleSkip();
-  };
-
-  const handleInstantResult = () => {
-    const correct = questions.reduce((acc, question, index) => {
-      if (selectedAnswers[index]?.isCorrect) {
-        if (selectedAnswers[index]?.isCorrect) {
-          return acc + 1;
-        }
-        return acc;
-      }
-    }, 0);
-
-
-    Swal.fire({
-      title: 'Instant Result',
-      html: `You've answered <b>${correct}</b> out of <b>${questions.length}</b> questions correctly.`,
-      icon: 'info'
-    });
-
   };
 
   const handleQuizSubmit = async () => {
@@ -315,7 +303,7 @@ const Quiz = () => {
       });
       return;
     }
-
+  
     const savedData = loadSavedAnswers();
     if (!savedData) {
       Swal.fire({
@@ -325,37 +313,42 @@ const Quiz = () => {
       });
       return;
     }
-    const localCalculation = questions.reduce((acc, question, index) => {
-      const answer = savedData.answers[index];
-      if (answer) {
-        if (answer.isCorrect) {
-          acc.correctAnswers++;
-          acc.totalScore += question.totalMarks;
-        } else {
-          acc.totalScore -= question.negativeMarks;
-        }
-      }
-      return acc;
-    }, { correctAnswers: 0, totalScore: 0 });
-
-    const totalPossibleMarks = questions.reduce((sum, question) => sum + question.totalMarks, 0);
-
+  
+    const correctCount = selectedAnswers.filter(answer => 
+      answer !== null && answer.isCorrect
+    ).length;
+    
+    const incorrectCount = selectedAnswers.filter(answer => 
+      answer !== null && !answer.isCorrect
+    ).length;
+    
+    const attemptedCount = selectedAnswers.filter(answer => answer !== null).length;
+    
+    const positiveMarks = selectedAnswers.reduce((sum, answer) => 
+      sum + (answer?.isCorrect ? answer.marksAwarded : 0), 0
+    );
+    
+    const negativeMarks = selectedAnswers.reduce((sum, answer) => 
+      sum + (!answer?.isCorrect ? Math.abs(answer.marksAwarded) : 0), 0
+    );
+  
+    const totalScore = positiveMarks - negativeMarks;
+  
     const result = await Swal.fire({
       title: 'Are you sure?',
       html: `
-        <p class="mt-4">You won't be able to change your answers after submission!</p>
-      `,
+        <p class="mt-4">You won't be able to change your answers after submission!</p>`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
       confirmButtonText: 'Yes!'
     });
-
+  
     if (!result.isConfirmed) {
       return;
     }
-
+  
     const swalInstance = Swal.fire({
       title: 'Submitting...',
       allowOutsideClick: false,
@@ -363,72 +356,67 @@ const Quiz = () => {
         Swal.showLoading();
       }
     });
-
-    const endpoint = "quiz/submitQuiz";
-    const method = "POST";
-    const headers = {
-      'Content-Type': 'application/json',
-      'auth-token': userToken
-    };
-
-    const preparedAnswers = savedData.answers
-      .filter(a => a !== null)
-      .map(answer => ({
-        questionId: Number(answer.questionId),
-        questionText: String(answer.questionText),
-        options: answer.options.map(option => ({
-          id: Number(option.id),
-          text: String(option.text),
-          is_correct: Number(option.is_correct)
-        })),
-        marksAwarded: Number(answer.marksAwarded),
-        isCorrect: Boolean(answer.isCorrect),
-        maxMarks: Number(answer.maxMarks),
-        negativeMarks: Number(answer.negativeMarks)
-      }));
-
-    const body = {
-      quizId: Number(savedData.quizId),
-      groupId: Number(savedData.groupId),
-      answers: preparedAnswers
-    };
-
+  
     try {
       setSubmitting(true);
       setSubmitError(null);
-
+  
+      const endpoint = "quiz/submitQuiz";
+      const method = "POST";
+      const headers = {
+        'Content-Type': 'application/json',
+        'auth-token': userToken
+      };
+  
+      const preparedAnswers = savedData.answers
+        .filter(a => a !== null)
+        .map(answer => ({
+          questionId: Number(answer.questionId),
+          selectedOptionId: Number(answer.selectedOptionId),
+          isCorrect: Boolean(answer.isCorrect),
+          marksAwarded: Number(answer.marksAwarded),
+          maxMarks: Number(answer.maxMarks),
+          negativeMarks: Number(answer.negativeMarks)
+        }));
+  
+      const body = {
+        quizId: Number(savedData.quizId),
+        groupId: Number(savedData.groupId),
+        answers: preparedAnswers
+      };
+  
       const data = await fetchData(endpoint, method, body, headers);
-
+  
       if (!data.success) {
         throw new Error(data.message || "Submission failed");
       }
-
+  
       setSubmitSuccess(true);
-      setFinalScore(data.data?.totalScore || 0);
       localStorage.removeItem(STORAGE_KEY);
-
+  
       await swalInstance.close();
-
+  
       navigate('/quiz-result', {
         state: {
           quiz: quiz,
-          score: data.data?.totalScore || 0,
+          score: data.data?.totalScore || totalScore, // Use server score if available, otherwise use local calculation
           totalQuestions: questions.length,
           answers: selectedAnswers.filter(a => a !== null),
-          correctAnswers: questions.reduce((acc, q, idx) => {
-            if (selectedAnswers[idx]?.isCorrect) acc++;
-            return acc;
-          }, 0),
-          timeTaken: `${timer.hours}h ${timer.minutes}m ${timer.seconds}s`
+          correctAnswers: correctCount,
+          incorrectAnswers: incorrectCount,
+          attemptedCount: attemptedCount,
+          positiveMarks: positiveMarks,
+          negativeMarks: negativeMarks,
+          timeTaken: `${timer.hours}h ${timer.minutes}m ${timer.seconds}s`,
+          serverData: data.data
         }
       });
-
     } catch (error) {
       console.error("Quiz submission error:", error);
       setSubmitError(error.message);
-
+  
       await swalInstance.close();
-
+  
       Swal.fire({
         icon: 'error',
         title: 'Submission Failed',
@@ -477,33 +465,43 @@ const Quiz = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="lg:col-span-3 border border-gray-300 rounded-md">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border-b border-gray-300">
-              <div className="text-gray-700">Question No. {currentQuestion + 1}</div>
-              <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex items-center gap-4">
+                <span className="text-gray-700">Question {currentQuestion + 1} of {questions.length}</span>
+                <div className="w-32 h-2 bg-gray-200 rounded-full">
+                  <div
+                    className="h-2 bg-blue-500 rounded-full"
+                    style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-4 items-center mt-2 md:mt-0">
                 <div className="flex items-center gap-2">
-                  <span>Right mark:</span>
-                  <span className="text-green-600 font-medium">{questions[currentQuestion]?.totalMarks || 1}.00</span>
+                  <span className="text-sm">+{questions[currentQuestion]?.totalMarks || 1}</span>
+                  <span className="text-green-600 font-medium">Correct</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span>Negative mark:</span>
-                  <span className="text-red-600 font-medium">{questions[currentQuestion]?.negativeMarks || 0}.00</span>
+                  <span className="text-sm">-{questions[currentQuestion]?.negativeMarks || 0}</span>
+                  <span className="text-red-600 font-medium">Wrong</span>
                 </div>
               </div>
             </div>
+
             <div className="p-6 border-b border-gray-300">
               <p className="text-lg mb-6">{questions[currentQuestion]?.question_text}</p>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {questions[currentQuestion]?.options?.map((option) => (
-                  <label key={option.id} className="flex items-center gap-2 cursor-pointer">
+                  <label
+                    key={option.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition
+                      ${selectedAnswers[currentQuestion]?.selectedOptionId === option.id
+                        ? 'bg-blue-100 border border-blue-300'
+                        : 'hover:bg-gray-50'}`}
+                  >
                     <input
                       type="radio"
                       name="answer"
-                      value={option.option_text}
-                      checked={
-                        selectedAnswers[currentQuestion]?.options?.some(
-                          opt => opt.text === option.option_text
-                        )
-                      }
-                      onChange={() => handleAnswerClick(option.option_text)}
+                      checked={selectedAnswers[currentQuestion]?.selectedOptionId === option.id}
+                      onChange={() => handleAnswerClick(option.id)}
                       className="w-4 h-4"
                     />
                     <span>{option.option_text}</span>
@@ -514,30 +512,35 @@ const Quiz = () => {
 
             <div className="flex justify-between p-4">
               <div className="flex gap-2">
+                {currentQuestion > 0 && (
+                  <button
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition"
+                    onClick={() => handleNavigation(currentQuestion - 1)}
+                  >
+                    Previous
+                  </button>
+                )}
                 <button
-                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
+                  className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition"
                   onClick={handleMarkForReview}
                 >
-                  Mark for Review & Next
+                  Mark for Review
                 </button>
                 <button
-                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
+                  className="px-4 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200 transition"
                   onClick={handleClearResponse}
                 >
-                  Clear Response
+                  Clear
                 </button>
-                {/* <button
-                  className="px-4 py-2 bg-blue-200 text-blue-800 rounded"
-                  onClick={handleInstantResult}
-                >
-                  Instant Result
-                </button> */}
               </div>
               <button
-                className="px-4 py-2 bg-blue-700 text-white rounded"
+                className={`px-6 py-2 text-white rounded transition
+                    ${currentQuestion + 1 === questions.length
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-blue-600 hover:bg-blue-700'}`}
                 onClick={handleSaveAndNext}
               >
-                {currentQuestion + 1 === questions.length ? 'Finish' : 'Save & Next'}
+                {currentQuestion + 1 === questions.length ? 'Submit Quiz' : 'Next'}
               </button>
             </div>
           </div>
@@ -545,10 +548,9 @@ const Quiz = () => {
           <QuizPalette
             questionStatus={questionStatus}
             currentQuestion={currentQuestion}
-            setCurrentQuestion={setCurrentQuestion}
+            setCurrentQuestion={(index) => handleNavigation(index)}
             timer={timer}
             totalQuestions={questions.length}
-            onSubmitQuiz={handleQuizSubmit}
           />
         </div>
       </div>

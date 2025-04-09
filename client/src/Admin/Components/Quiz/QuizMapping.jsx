@@ -124,11 +124,14 @@ const QuizMapping = () => {
         QuizID: parseInt(selectedQuiz)
       };
       const data = await fetchData(endpoint, method, body, headers);
-      console.log('API response:', data);
+      console.log('API responseedszfsdfwefwef:', data);
 
       if (data.success) {
         const questions = data.data?.questions || [];
         console.log('Received questions:', questions.length);
+
+        const hasNegativeMarking = questions.some(q => q.negativeMarking);
+        setQuizHasNegativeMarking(hasNegativeMarking);
 
         // Group questions by ID to remove duplicates
         const questionMap = {};
@@ -189,7 +192,7 @@ const QuizMapping = () => {
       setLoading(prev => ({ ...prev, mapped: false }));
     }
   };
-
+  const [quizHasNegativeMarking, setQuizHasNegativeMarking] = useState(false);
   const fetchQuestions = async () => {
     if (!selectedGroup || !selectedLevel || !selectedQuiz) {
       return;
@@ -580,8 +583,9 @@ const QuizMapping = () => {
                         <th className="py-2 px-4 border">Group</th>
                         <th className="py-2 px-4 border">Level</th>
                         <th className="py-2 px-4 border">Marks</th>
-                        <th className="py-2 px-4 border">Negative Marks</th>
-                      </tr>
+                        {quizHasNegativeMarking && (
+                          <th className="py-2 px-4 border">Negative Marks</th>
+                        )}                      </tr>
                     </thead>
                     <tbody>
                       {mappedQuestions.map((question, index) => (
@@ -607,8 +611,9 @@ const QuizMapping = () => {
                           <td className="py-2 px-4 border">{question.group_name}</td>
                           <td className="py-2 px-4 border">{question.level_name}</td>
                           <td className="py-2 px-4 border text-center">{question.totalMarks}</td>
-                          <td className="py-2 px-4 border text-center">{question.negativeMarks}</td>
-                        </tr>
+                          {quizHasNegativeMarking && (
+                            <td className="py-2 px-4 border text-center">{question.negativeMarks}</td>
+                          )}                        </tr>
                       ))}
                     </tbody>
                   </table>
@@ -721,33 +726,35 @@ const QuizMapping = () => {
                           </div>
                         </div>
                       </th>
-                      <th className="py-2 px-4 border">
-                        <div className="flex items-center justify-between">
-                          <span>Negative Marks</span>
-                          <div className="flex items-center">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={allNegativeMarksValue}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === '' || !isNaN(value)) {
-                                  setAllNegativeMarksValue(value);
-                                  const newMarks = { ...questionMarks };
-                                  questions.forEach(question => {
-                                    newMarks[question.question_id] = {
-                                      ...newMarks[question.question_id],
-                                      negative: value === '' ? '' : parseFloat(value) || 0
-                                    };
-                                  });
-                                  setQuestionMarks(newMarks);
-                                }
-                              }}
-                              className="w-16 p-1 border rounded"
-                            />
+                      {quizHasNegativeMarking && (
+                        <th className="py-2 px-4 border">
+                          <div className="flex items-center justify-between">
+                            <span>Negative Marks</span>
+                            <div className="flex items-center">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={allNegativeMarksValue}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || !isNaN(value)) {
+                                    setAllNegativeMarksValue(value);
+                                    const newMarks = { ...questionMarks };
+                                    questions.forEach(question => {
+                                      newMarks[question.question_id] = {
+                                        ...newMarks[question.question_id],
+                                        negative: value === '' ? '' : parseFloat(value) || 0
+                                      };
+                                    });
+                                    setQuestionMarks(newMarks);
+                                  }
+                                }}
+                                className="w-16 p-1 border rounded"
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </th>
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -798,33 +805,35 @@ const QuizMapping = () => {
                               disabled={!selectedQuestions.includes(question.question_id)}
                             />
                           </td>
-                          <td className="py-2 px-4 border">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={selectedQuestions.includes(question.question_id)
-                                ? (questionMarks[question.question_id]?.negative ?? '')
-                                : (questionMarks[question.question_id]?.negative ?? 0)}
-                              onChange={(e) => {
-                                handleMarksChange(
-                                  question.question_id,
-                                  'negative',
-                                  e.target.value
-                                );
-                              }}
-                              onBlur={(e) => {
-                                if (e.target.value === '') {
+                          {quizHasNegativeMarking && (
+                            <td className="py-2 px-4 border">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={selectedQuestions.includes(question.question_id)
+                                  ? (questionMarks[question.question_id]?.negative ?? '')
+                                  : (questionMarks[question.question_id]?.negative ?? 0)}
+                                onChange={(e) => {
                                   handleMarksChange(
                                     question.question_id,
                                     'negative',
-                                    0
+                                    e.target.value
                                   );
-                                }
-                              }}
-                              className="w-20 p-1 border rounded"
-                              disabled={!selectedQuestions.includes(question.question_id)}
-                            />
-                          </td>
+                                }}
+                                onBlur={(e) => {
+                                  if (e.target.value === '') {
+                                    handleMarksChange(
+                                      question.question_id,
+                                      'negative',
+                                      0
+                                    );
+                                  }
+                                }}
+                                className="w-20 p-1 border rounded"
+                                disabled={!selectedQuestions.includes(question.question_id)}
+                              />
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
