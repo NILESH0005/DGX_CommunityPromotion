@@ -9,39 +9,39 @@ export const Algorithms = () => {
     {
       id: 1,
       title: "DeepSpeech",
-      description: "Mozilla's open-source automatic speech recognition (ASR) engine.",
+      description: "An end-to-end automatic speech recognition (ASR) system using RNNs that converts audio to text, with pre-trained models available for English and other languages.",
       progress: 35,
-      thumbnail: "https://miro.medium.com/v2/resize:fit:1200/1*_41QvPVqBOiaU1iknQk1MQ.png",
+      thumbnail: "deepspeech1.png",
     },
     {
       id: 2,
       title: "DETR",
-      description: "DEtection TRansformer: End-to-end object detection with transformers.",
+      description: "An object detection model combining CNNs with transformers, offering end-to-end training with pre-trained models for COCO dataset detection without anchor boxes.",
       progress: 45,
-      thumbnail: "https://production-media.paperswithcode.com/methods/Screen_Shot_2020-05-27_at_2.17.38_PM.png",
+      thumbnail: "Detr.png",
     },
     {
       id: 3,
       title: "LSTM",
-      description: "Long Short-Term Memory networks for sequence modeling and prediction.",
+      description: " specialized RNN architecture for sequence modeling that handles long-term dependencies, with pre-trained models widely used in time-series forecasting and NLP tasks like text generation.",
       progress: 65,
-      thumbnail: "https://miro.medium.com/v2/resize:fit:1400/1*goJVQs-p9kgLODFNyhl9zA.png",
+      thumbnail: "lstm.png",
     },
     {
       id: 4,
       title: "Resnet50",
-      description: "50-layer deep convolutional neural network for image classification.",
+      description: "A 50-layer deep convolutional neural network with residual connections, featuring pre-trained models on ImageNet that excel in image classification and transfer learning.",
       progress: 75,
-      thumbnail: "https://production-media.paperswithcode.com/methods/resnet-1.png",
+      thumbnail: "Resnet50.png",
     }
   ];
 
   const handleCardClick = (title) => {
     const routes = {
-      "DeepSpeech": "/deepspeech-algorithm",
-      "DETR": "/detr-algorithm",
-      "LSTM": "/lstm-algorithm",
-      "Resnet50": "/resnet50-algorithm"
+      "DeepSpeech": "/deepspeech",
+      "DETR": "/detr",
+      "LSTM": "/lstm",
+      "Resnet50": "/resnet"
     };
 
     const route = routes[title];

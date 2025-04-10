@@ -8,40 +8,25 @@ export const ObjectClassification = () => {
   const models = [
     {
       id: 1,
-      title: "Faster RCNN",
-      description: "Fast Region-based CNN for real-time object detection with region proposal networks.",
+      title: "Guides",
+      description: "Learn to categorize images into predefined classes using deep learning models like CNNs, covering architectures (ResNet, EfficientNet), datasets (ImageNet, CIFAR), and evaluation metrics (accuracy, confusion matrices).",
       progress: 70,
-      thumbnail: "https://miro.medium.com/v2/resize:fit:1400/1*PeeriXGcI1x3yQ6_2zQlXQ.png",
+      thumbnail: "objectclas.jpeg",
     },
     {
       id: 2,
-      title: "Mask RCNN",
-      description: "Extension of Faster RCNN that adds pixel-level segmentation capability.",
+      title: "Practical Implementation",
+      description: "Build and train classifiers in PyTorch/TensorFlow: Preprocess data, fine-tune pre-trained models (VGG, MobileNet), and deploy with ONNX or TFLite for real-world applications.",
       progress: 65,
-      thumbnail: "https://production-media.paperswithcode.com/methods/maskrcnn.png",
-    },
-    {
-      id: 3,
-      title: "SSD Object Detection",
-      description: "Single Shot MultiBox Detector for fast, single-pass object detection.",
-      progress: 80,
-      thumbnail: "https://miro.medium.com/v2/resize:fit:1400/1*Hqft4Qo-kF6GXh0tOyX9Xw.png",
-    },
-    {
-      id: 4,
-      title: "Vision Transformers",
-      description: "Transformer-based architecture for image classification and object detection.",
-      progress: 55,
-      thumbnail: "https://production-media.paperswithcode.com/methods/Screen_Shot_2021-01-26_at_12.36.05_PM.png",
+      thumbnail: "Objectclas1.jpeg",
     }
   ];
 
   const handleCardClick = (title) => {
     const routes = {
-      "Faster RCNN": "/faster-rcnn",
-      "Mask RCNN": "/mask-rcnn",
-      "SSD Object Detection": "/ssd-detection",
-      "Vision Transformers": "/vision-transformers"
+      "Guides": "/ObjectGuide",
+      "Practical Implementation": "/ObjectClass",
+  
     };
 
     const route = routes[title];
@@ -65,10 +50,10 @@ export const ObjectClassification = () => {
           <div className="space-y-8">
             <div className="text-center">
               <h1 className="text-5xl font-bold mb-4">
-                Computer Vision Models
+              Object Classification Models
               </h1>
               <p className="text-gray-600">
-                Explore state-of-the-art object classification and detection models
+                Explore state-of-the-art object classification models
               </p>
             </div>
 

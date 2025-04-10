@@ -1,204 +1,239 @@
-import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
+import React, { useState, useEffect, useContext } from "react";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
+import { FiUpload, FiTrash2, FiPlus, FiX } from "react-icons/fi";
+import ApiContext from "../../../context/ApiContext";
 
-export const EditQuestionModal = ({
+const EditQuestionModal = ({
   isOpen,
   onClose,
   questionData,
   onUpdateSuccess,
   categories,
   questionLevels,
-  userToken,
-  quizId // Receive the quiz ID from parent
 }) => {
+  const { fetchData, userToken, user } = useContext(ApiContext);
   const [formData, setFormData] = useState({
-    question_id: quizId || '', // Use the quiz ID here
-    question_text: '',
-    Ques_level: '',
-    group_id: '',
+    question_text: "",
+    Ques_level: "",
+    group_id: "",
     image: null,
     question_type: 0,
-    options: [
-      { option_text: '', is_correct: 0, image: null },
-      { option_text: '', is_correct: 0, image: null }
-    ],
-    AuthLstEdit: ''
+    options: [],
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
+  const [optionImages, setOptionImages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (questionData) {
-      // Transform the incoming data to match our form structure
-      const transformedData = {
-        question_id: quizId || questionData.question_id || questionData.id,
-        question_text: questionData.question_text,
-        Ques_level: questionData.Ques_level,
-        group_id: questionData.group_id?.toString(),
-        image: questionData.image,
-        question_type: questionData.question_type || 0,
-        options: questionData.options || [
-          { option_text: '', is_correct: 0, image: null },
-          { option_text: '', is_correct: 0, image: null }
-        ],
-        AuthLstEdit: ''
-      };
+    if (questionData && isOpen) {
+      const initialOptions = questionData.options?.length >= 2 
+        ? questionData.options 
+        : [
+            ...questionData.options,
+            ...Array(2 - questionData.options.length).fill({
+              option_text: "",
+              is_correct: false,
+              image: null
+            })
+          ];
 
-      setFormData(transformedData);
-      if (questionData.image) {
-        setImagePreview(questionData.image);
-      }
+      setFormData({
+        id: questionData.question_id,
+        question_text: questionData.question_text || "",
+        Ques_level: questionData.Ques_level || "",
+        group_id: questionData.group_id || "",
+        image: questionData.image || null,
+        question_type: questionData.question_type || 0,
+        options: initialOptions,
+      });
+
+      setImagePreview(questionData.image || null);
+      setOptionImages(initialOptions.map(opt => opt.image || null));
     }
-  }, [questionData, quizId]); // Include quizId in dependencies
+  }, [questionData, isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleOptionChange = (index, field, value) => {
     const updatedOptions = [...formData.options];
     updatedOptions[index] = {
       ...updatedOptions[index],
-      [field]: field === 'is_correct' ? (value === '1' ? 1 : 0) : value
+      [field]: field === "is_correct" ? (value === "true" || value === true) : value
     };
+
+    // If single correct answer type, ensure only one option is marked correct
+    if (field === "is_correct" && value && formData.question_type === 0) {
+      updatedOptions.forEach((opt, i) => {
+        if (i !== index) opt.is_correct = false;
+      });
+    }
+
+    setFormData(prev => ({ ...prev, options: updatedOptions }));
+  };
+
+  const handleOptionImageUpload = (event, index) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        Swal.fire("Error", "Image size must be less than 2 MB.", "error");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const newOptionImages = [...optionImages];
+        newOptionImages[index] = reader.result;
+        setOptionImages(newOptionImages);
+        
+        const updatedOptions = [...formData.options];
+        updatedOptions[index].image = reader.result;
+        setFormData(prev => ({ ...prev, options: updatedOptions }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeOptionImage = (index) => {
+    const newOptionImages = [...optionImages];
+    newOptionImages[index] = null;
+    setOptionImages(newOptionImages);
     
-    setFormData(prev => ({
-      ...prev,
-      options: updatedOptions
-    }));
+    const updatedOptions = [...formData.options];
+    updatedOptions[index].image = null;
+    setFormData(prev => ({ ...prev, options: updatedOptions }));
   };
 
   const addOption = () => {
     setFormData(prev => ({
       ...prev,
-      options: [
-        ...prev.options,
-        { option_text: '', is_correct: 0, image: null }
-      ]
+      options: [...prev.options, { option_text: "", is_correct: false, image: null }]
     }));
+    setOptionImages(prev => [...prev, null]);
   };
 
   const removeOption = (index) => {
     if (formData.options.length <= 2) {
-      Swal.fire('Warning', 'You must have at least 2 options', 'warning');
+      Swal.fire("Warning", "You must have at least 2 options.", "warning");
       return;
     }
-    
-    const updatedOptions = formData.options.filter((_, i) => i !== index);
+
     setFormData(prev => ({
       ...prev,
-      options: updatedOptions
+      options: prev.options.filter((_, i) => i !== index)
     }));
+    setOptionImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
     if (file) {
-      setFormData(prev => ({
-        ...prev,
-        image: file
-      }));
-      
+      if (file.size > 2 * 1024 * 1024) {
+        Swal.fire("Error", "Image size must be less than 2 MB.", "error");
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onload = () => {
         setImagePreview(reader.result);
+        setFormData(prev => ({ ...prev, image: reader.result }));
       };
       reader.readAsDataURL(file);
     }
   };
 
   const removeImage = () => {
-    setFormData(prev => ({
-      ...prev,
-      image: null
-    }));
     setImagePreview(null);
+    setFormData(prev => ({ ...prev, image: null }));
   };
 
   const validateForm = () => {
-    const newErrors = {};
-    
     if (!formData.question_text.trim()) {
-      newErrors.question_text = 'Question text is required';
+      Swal.fire("Error", "Please enter a question!", "error");
+      return false;
     }
-    
+
     if (!formData.group_id) {
-      newErrors.group_id = 'Group is required';
+      Swal.fire("Error", "Please select a question group!", "error");
+      return false;
     }
-    
-    if (formData.options.length < 2) {
-      newErrors.options = 'At least 2 options are required';
-    } else {
-      formData.options.forEach((option, index) => {
-        if (!option.option_text.trim()) {
-          newErrors[`option_${index}`] = 'Option text is required';
-        }
-      });
-      
-      const hasCorrectAnswer = formData.options.some(opt => opt.is_correct === 1);
-      if (!hasCorrectAnswer) {
-        newErrors.correctAnswer = 'At least one correct answer is required';
-      }
-      
-      if (formData.question_type === 1) {
-        const correctCount = formData.options.filter(opt => opt.is_correct === 1).length;
-        if (correctCount < 2) {
-          newErrors.correctAnswer = 'Multiple choice requires at least 2 correct answers';
-        }
-      }
+
+    if (!formData.Ques_level) {
+      Swal.fire("Error", "Please select a question level!", "error");
+      return false;
     }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    const validOptions = formData.options.filter(opt => opt.option_text.trim() !== "");
+    if (validOptions.length < 2) {
+      Swal.fire("Error", "You must have at least 2 valid answer options!", "error");
+      return false;
+    }
+
+    const hasCorrectAnswer = formData.options.some(opt => opt.is_correct);
+    if (!hasCorrectAnswer) {
+      Swal.fire("Error", "Please select at least one correct answer!", "error");
+      return false;
+    }
+
+    if (formData.question_type === 1 && formData.options.filter(opt => opt.is_correct).length < 2) {
+      Swal.fire("Error", "Multiple choice questions require at least 2 correct answers!", "error");
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
+    if (!validateForm()) return;
+
     setIsLoading(true);
-    
+
     try {
+      // Prepare the payload with only valid options
+      const validOptions = formData.options
+        .filter(opt => opt.option_text.trim() !== "")
+        .map(opt => ({
+          option_text: opt.option_text.trim(),
+          is_correct: opt.is_correct ? 1 : 0,
+          image: opt.image || null
+        }));
+
       const payload = {
-        ...formData,
-        AuthLstEdit: 'current_user' // You might want to get this from context or props
+        id: formData.id,
+        question_text: formData.question_text.trim(),
+        Ques_level: formData.Ques_level,
+        group_id: formData.group_id,
+        image: formData.image || null,
+        question_type: formData.question_type,
+        options: validOptions,
+        AuthLstEdit: user?.email || "Unknown"
       };
-      
-      // Convert options to the required format
-      payload.options = formData.options.map(opt => ({
-        option_text: opt.option_text,
-        is_correct: opt.is_correct,
-        image: opt.image
-      }));
-      
-      const response = await fetch('http://localhost:8000/quiz/updateQuestion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'auth-token': userToken
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        Swal.fire('Success', 'Question updated successfully!', 'success');
-        onUpdateSuccess();
+
+      const response = await fetchData(
+        "quiz/updateQuestion",
+        "POST",
+        payload,
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        }
+      );
+
+      if (response?.success) {
+        Swal.fire("Success", "Question updated successfully!", "success").then(() => {
+          onUpdateSuccess();
+          onClose();
+        });
       } else {
-        Swal.fire('Error', data.message || 'Failed to update question', 'error');
+        throw new Error(response?.message || "Failed to update question");
       }
     } catch (error) {
-      console.error('Error updating question:', error);
-      Swal.fire('Error', 'An error occurred while updating the question', 'error');
+      console.error("Error updating question:", error);
+      Swal.fire("Error", error.message || "Failed to update question. Please try again.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -208,246 +243,258 @@ export const EditQuestionModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Edit Question</h2>
-            <button
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="p-4 sticky top-0 bg-white z-10 border-b">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Edit Question</h2>
+            <button 
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <FiX size={24} />
             </button>
           </div>
-          
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="space-y-4">
-                {/* Question Text */}
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Question Settings */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="p-4">
+              <h3 className="text-lg font-bold text-blue-700 mb-4">Question Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Group Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Question Text <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    name="question_text"
-                    value={formData.question_text}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    rows={3}
-                  />
-                  {errors.question_text && (
-                    <p className="text-red-500 text-xs mt-1">{errors.question_text}</p>
-                  )}
-                </div>
-                
-                {/* Question Group */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Question Group <span className="text-red-500">*</span>
+                    Question Group
                   </label>
                   <select
+                    className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
                     name="group_id"
                     value={formData.group_id}
                     onChange={handleInputChange}
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Select a group</option>
-                    {categories?.map((category) => (
-                      <option key={category.group_id} value={category.group_id}>
-                        {category.group_name}
+                    <option value="">Select Group</option>
+                    {categories.map((cat) => (
+                      <option key={cat.group_id} value={cat.group_id}>
+                        {cat.group_name}
                       </option>
                     ))}
                   </select>
-                  {errors.group_id && (
-                    <p className="text-red-500 text-xs mt-1">{errors.group_id}</p>
-                  )}
                 </div>
-                
+
                 {/* Question Level */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Question Level
                   </label>
                   <select
+                    className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
                     name="Ques_level"
                     value={formData.Ques_level}
                     onChange={handleInputChange}
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Select a level</option>
-                    {questionLevels?.map((level) => (
-                      <option key={level.ddValue} value={level.ddValue}>
+                    <option value="">Select Question Level</option>
+                    {questionLevels.map((level) => (
+                      <option key={level.idCode} value={level.idCode}>
                         {level.ddValue}
                       </option>
                     ))}
                   </select>
                 </div>
-                
+
                 {/* Question Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Question Type
                   </label>
-                  <select
-                    name="question_type"
-                    value={formData.question_type}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="0">Single Correct Answer</option>
-                    <option value="1">Multiple Correct Answers</option>
-                  </select>
-                </div>
-              </div>
-              
-              {/* Image Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Question Image
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  {imagePreview ? (
-                    <div className="relative">
-                      <img 
-                        src={imagePreview} 
-                        alt="Question preview" 
-                        className="max-h-48 mx-auto mb-2"
+                  <div className="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        className="w-4 h-4 text-blue-600"
+                        checked={formData.question_type === 0}
+                        onChange={() => setFormData(prev => ({ ...prev, question_type: 0 }))}
                       />
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="flex justify-center mb-2">
-                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-2">Drag and drop your image here, or click to browse</p>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    id="question-image"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="question-image"
-                    className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 cursor-pointer"
-                  >
-                    Choose Image
-                  </label>
+                      <span className="text-sm">Single Choice</span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        className="w-4 h-4 text-blue-600"
+                        checked={formData.question_type === 1}
+                        onChange={() => setFormData(prev => ({ ...prev, question_type: 1 }))}
+                      />
+                      <span className="text-sm">Multiple Choice</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
-            
-            {/* Options Section */}
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-medium text-gray-800">
-                  Answer Options <span className="text-red-500">*</span>
-                </h3>
+          </div>
+
+          {/* Question Content */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="p-4">
+              <h3 className="text-lg font-bold text-blue-700 mb-4">Question Content</h3>
+              <div className="space-y-4">
+                {/* Question Text */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Question Text
+                  </label>
+                  <textarea
+                    className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm min-h-[80px]"
+                    placeholder="Enter your question..."
+                    name="question_text"
+                    value={formData.question_text}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                {/* Question Image */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Question Image (Optional)
+                  </label>
+                  {imagePreview ? (
+                    <div className="mt-2 relative flex justify-center items-center border border-gray-200 rounded overflow-hidden bg-gray-50 p-2">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="max-w-full h-auto max-h-[200px] object-contain"
+                      />
+                      <button
+                        onClick={removeImage}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600 transition-colors"
+                      >
+                        <FiX size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center space-x-2 cursor-pointer bg-gray-50 p-2 rounded border border-dashed border-gray-300 hover:border-blue-500 transition-colors">
+                      <FiUpload className="text-blue-500" size={16} />
+                      <span className="text-blue-500 font-medium text-sm">
+                        Upload Image
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Answer Options */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-blue-700">Answer Options</h3>
                 <button
-                  type="button"
                   onClick={addOption}
-                  className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm"
+                  className="flex items-center space-x-1 bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors text-sm"
                 >
-                  Add Option
+                  <FiPlus size={14} />
+                  <span>Add Option</span>
                 </button>
               </div>
-              
-              {errors.options && (
-                <p className="text-red-500 text-xs mb-2">{errors.options}</p>
-              )}
-              {errors.correctAnswer && (
-                <p className="text-red-500 text-xs mb-2">{errors.correctAnswer}</p>
-              )}
-              
-              <div className="space-y-3">
+
+              <div className="space-y-2">
                 {formData.options.map((option, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
+                  <div
+                    key={index}
+                    className="bg-gray-50 p-2 rounded border border-gray-200"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="flex items-center space-x-2 min-w-[120px]">
                         <input
-                          type={formData.question_type === '1' ? 'checkbox' : 'radio'}
-                          name="correct_option"
-                          checked={option.is_correct === 1}
-                          onChange={() => handleOptionChange(
-                            index, 
-                            'is_correct', 
-                            option.is_correct === 1 ? '0' : '1'
-                          )}
-                          className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                          type={formData.question_type === 0 ? "radio" : "checkbox"}
+                          checked={option.is_correct}
+                          onChange={(e) => handleOptionChange(index, "is_correct", e.target.checked)}
+                          className={`w-4 h-4 cursor-pointer ${
+                            formData.question_type === 0
+                              ? "text-blue-600"
+                              : "accent-blue-500"
+                          }`}
+                          name={formData.question_type === 0 ? "correctAnswer" : undefined}
                         />
-                        <span className="text-sm text-gray-700">
-                          {formData.question_type === '1' ? 'Correct' : 'Correct Answer'}
-                        </span>
+                        <label className="text-sm font-medium">
+                          {String.fromCharCode(65 + index)}
+                        </label>
                       </div>
+
                       <input
                         type="text"
+                        className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder={`Option ${String.fromCharCode(65 + index)}`}
                         value={option.option_text}
-                        onChange={(e) => handleOptionChange(index, 'option_text', e.target.value)}
-                        placeholder={`Option ${index + 1}`}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        onChange={(e) => handleOptionChange(index, "option_text", e.target.value)}
                       />
-                      {errors[`option_${index}`] && (
-                        <p className="text-red-500 text-xs mt-1">{errors[`option_${index}`]}</p>
-                      )}
+
+                      <div className="flex items-center space-x-1">
+                        <label className="flex items-center space-x-1 cursor-pointer bg-gray-200 p-1 rounded hover:bg-gray-300 transition-colors">
+                          <FiUpload className="text-blue-500" size={14} />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleOptionImageUpload(e, index)}
+                            className="hidden"
+                          />
+                        </label>
+
+                        <button
+                          onClick={() => removeOption(index)}
+                          className="flex items-center justify-center bg-red-500 text-white p-1 rounded hover:bg-red-600 transition-colors"
+                          disabled={formData.options.length <= 2}
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                    {formData.options.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => removeOption(index)}
-                        className="bg-red-500 text-white p-2 rounded hover:bg-red-600 mt-5"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+
+                    {optionImages[index] && (
+                      <div className="mt-2 relative flex justify-center items-center bg-white p-1 rounded border border-gray-200">
+                        <img
+                          src={optionImages[index]}
+                          alt="Option Preview"
+                          className="max-w-full h-20 object-contain"
+                        />
+                        <button
+                          onClick={() => removeOptionImage(index)}
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors"
+                        >
+                          <FiX size={10} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
               </div>
             </div>
-            
-            {/* Form Actions */}
-            <div className="flex justify-end space-x-3 pt-4 border-t">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Updating...
-                  </span>
-                ) : 'Update Question'}
-              </button>
-            </div>
-          </form>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="sticky bottom-0 bg-white pt-4 pb-4 border-t border-gray-200 px-4">
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors text-sm font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm font-semibold disabled:opacity-70"
+            >
+              {isLoading ? "Updating..." : "Update Question"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

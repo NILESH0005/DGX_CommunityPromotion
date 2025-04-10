@@ -62,12 +62,12 @@ export const DatasetModules = () => {
   const handleCardClick = (title) => {
     const routes = {
       "MNIST": "/mnist-dataset",
-      "Make-Blobs": "/make-blobs-dataset",
-      "IRIS": "/iris-dataset",
-      "Image Classification CNN (Cat-Dog)": "/cat-dog-cnn",
-      "Human Evolution Vid Dataset": "/human-evolution-dataset",
-      "House Prediction": "/house-prediction",
-      "CIFAR-10": "/cifar-10-dataset",
+      "Make-Blobs": "/makeblobs",
+      "IRIS": "/iris",
+      "Image Classification CNN (Cat-Dog)": "/imageclass",
+      "Human Evolution Vid Dataset": "/humanevol",
+      "House Prediction": "/housepred",
+      "CIFAR-10": "/cifar",
     };
 
     const route = routes[title];
