@@ -34,7 +34,6 @@ const QuizResult = () => {
       };
     }
 
-    // Otherwise calculate from userAnswers and questions
     let correctCount = 0;
     let totalScore = 0;
 
@@ -46,7 +45,6 @@ const QuizResult = () => {
       }
     });
 
-    // Calculate time taken if we have start and end times
     let calculatedTimeTaken = timeTaken;
     if (startTime && endTime) {
       const timeDiffInSeconds = Math.floor((endTime - startTime) / 1000);
@@ -172,16 +170,7 @@ const QuizResult = () => {
                 </p>
               </div>
 
-              <div className="bg-amber-50 p-4 rounded-xl text-center">
-                <div className="flex justify-center text-amber-500 mb-2">
-                  <FaClock size={20} />
-                </div>
-                <h3 className="text-sm font-medium text-gray-700">Time Taken</h3>
-                <p className="text-xl font-bold text-gray-800">
-                  {finalTimeTaken}
-                </p>
-              </div>
-
+              
               <div className="bg-emerald-50 p-4 rounded-xl text-center">
                 <div className="flex justify-center text-emerald-500 mb-2">
                   <FaTrophy size={20} />

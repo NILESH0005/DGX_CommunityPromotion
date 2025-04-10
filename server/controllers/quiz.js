@@ -315,21 +315,6 @@ export const createQuestion = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export const getQuestion = async (req, res) => {
   let success = false;
   const errors = validationResult(req);
@@ -351,12 +336,7 @@ export const getQuestion = async (req, res) => {
       }
 
       try {
-        const query = `select question_text,GroupMaster.group_name,tblDDReferences.ddValue,option_text, 0 as count
-                          from Questions
-                          left join GroupMaster on Questions.group_id = GroupMaster.group_id
-                          left join tblDDReferences on Questions.Ques_level = tblDDReferences.idCode
-                          left join QuestionOptions on Questions.id = QuestionOptions.question_id
-                          where QuestionOptions.is_correct = 1 and isnull(Questions.delStatus,0)=0 ORDER BY Questions.AddOnDt DESC;`;
+        const query = `select  question_id,  Questions.id, question_text,GroupMaster.group_name,tblDDReferences.ddValue,option_text, 0 as count from Questions left join GroupMaster on Questions.group_id = GroupMaster.group_id left join tblDDReferences on Questions.Ques_level = tblDDReferences.idCode left join QuestionOptions on Questions.id = QuestionOptions.question_id where QuestionOptions.is_correct = 1 and isnull(Questions.delStatus,0)=0 ORDER BY Questions.AddOnDt DESC;`;
         const quizzes = await queryAsync(conn, query);
 
         success = true;
@@ -1043,11 +1023,11 @@ export const updateQuiz = async (req, res) => {
         // Get user details like in createQuiz
         const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
         const userRows = await queryAsync(conn, userQuery, [userId]);
-        
+
         if (userRows.length === 0) {
-          return res.status(400).json({ 
-            success: false, 
-            message: "User not found, please login first." 
+          return res.status(400).json({
+            success: false,
+            message: "User not found, please login first."
           });
         }
 
@@ -1353,3 +1333,48 @@ export const updateQuestion = async (req, res) => {
     });
   }
 };
+
+export const getLeaderboardRanking = async (req, res) => {
+  let success = false;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const warningMessage = "Data is not in the right format";
+    console.error(warningMessage, errors.array());
+    logWarning(warningMessage);
+    res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    return;
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        const errorMessage = "Failed to connect to database";
+        logError(err);
+        res.status(500).json({ success: false, data: err, message: errorMessage });
+        return;
+      }
+
+      try {
+        const query = `WITH MaxAttempts AS ( SELECT userID, quizID, MAX(noOfAttempts) AS max_attempt FROM quiz_score GROUP BY userID, quizID) SELECT SUM(qs.ObtainedMarks) AS totalPoints, cu.Name FROM quiz_score qs JOIN MaxAttempts ma ON qs.userID = ma.userID 
+        AND qs.quizID = ma.quizID AND qs.noOfAttempts = ma.max_attempt LEFT JOIN Community_User cu ON qs.userID = cu.UserID
+        GROUP BY cu.Name;`;
+        const quizzes = await queryAsync(conn, query);
+
+        success = true;
+        closeConnection();
+        const infoMessage = "LeaderBoard fetched successfully";
+        logInfo(infoMessage);
+        res.status(200).json({ success, data: { quizzes }, message: infoMessage });
+      } catch (queryErr) {
+        logError(queryErr);
+        closeConnection();
+        res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
+      }
+    });
+  } catch (error) {
+    logError(error);
+    res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
+  }
+};
+
+
