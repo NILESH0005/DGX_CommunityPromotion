@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Trophy, Crown, Award, ChevronDown, ChevronUp, Sparkles, Medal } from "lucide-react";
+import { Trophy, Crown, Award, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const LeaderBoard = () => {
@@ -7,7 +7,7 @@ export const LeaderBoard = () => {
   const [topUsers, setTopUsers] = useState([]);
   const [otherUsers, setOtherUsers] = useState([]);
 
-
+  // Enhanced dummy data with correct IDs and unique rankings
   const leaderboardData = [
     {
       id: 1,
@@ -117,9 +117,11 @@ export const LeaderBoard = () => {
   ];
 
   useEffect(() => {
+    // Separate top 3 users for special treatment
     setTopUsers(leaderboardData.slice(0, 3));
     setOtherUsers(leaderboardData.slice(3).map((user, index) => ({
       ...user,
+      // Ensure ranks continue correctly from 4 onwards
       rank: index + 4
     })));
   }, []);
@@ -129,57 +131,9 @@ export const LeaderBoard = () => {
   };
 
   const rankColors = {
-    1: { 
-      bg: "bg-gradient-to-b from-yellow-400 to-yellow-200",
-      text: "text-yellow-800",
-      border: "border-yellow-300",
-      medal: "text-yellow-500",
-      icon: <Medal className="w-6 h-6 absolute" />
-    },
-    2: { 
-      bg: "bg-gradient-to-b from-gray-300 to-gray-100",
-      text: "text-gray-700",
-      border: "border-gray-200",
-      medal: "text-gray-400",
-      icon: <Medal className="w-6 h-6 absolute" />
-    },
-    3: { 
-      bg: "bg-gradient-to-b from-amber-400 to-amber-200",
-      text: "text-amber-800",
-      border: "border-amber-300",
-      medal: "text-amber-600",
-      icon: <Medal className="w-6 h-6 absolute" />
-    }
-  };
-
-  const podiumVariants = {
-    hidden: { y: 50, opacity: 0 },
-    visible: (i) => ({
-      y: 0,
-      opacity: 1,
-      transition: {
-        delay: i * 0.15,
-        duration: 0.5,
-        type: "spring",
-        damping: 10,
-        stiffness: 100
-      }
-    }),
-    hover: {
-      y: -5,
-      transition: { type: "spring", stiffness: 300 }
-    }
-  };
-
-  const floatVariants = {
-    float: {
-      y: [0, -10, 0],
-      transition: {
-        duration: 3,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
+    1: { bg: "bg-gradient-to-r from-yellow-400 to-yellow-200", text: "text-yellow-800" },
+    2: { bg: "bg-gradient-to-r from-gray-300 to-gray-100", text: "text-gray-700" },
+    3: { bg: "bg-gradient-to-r from-amber-400 to-amber-200", text: "text-amber-800" }
   };
 
   return (
@@ -201,65 +155,31 @@ export const LeaderBoard = () => {
         <p className="mt-2 opacity-90">Top performers this week</p>
       </div>
 
-      {/* Top 3 in a Row with Medals */}
+      {/* Top 3 Podium */}
       <div className="px-6 py-4 bg-white">
-        <div className="flex justify-center items-end space-x-4 h-48">
+        <div className="grid grid-cols-3 gap-4 h-48">
           {topUsers.map((user) => (
             <motion.div
               key={user.id}
-              custom={user.rank}
-              initial="hidden"
-              animate="visible"
-              whileHover="hover"
-              variants={podiumVariants}
-              className={`flex flex-col items-center justify-end rounded-t-lg p-4 relative ${
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5, delay: user.rank * 0.1 }}
+              className={`flex flex-col items-center justify-end rounded-t-xl p-4 ${
                 rankColors[user.rank].bg
-              } ${user.rank === 1 ? "h-40 w-32" : user.rank === 2 ? "h-36 w-28" : "h-32 w-24"}`}
+              } ${user.rank === 1 ? "h-full" : user.rank === 2 ? "h-4/5" : "h-3/5"}`}
             >
-              {/* Medal with rank number */}
-              <motion.div 
-                variants={floatVariants}
-                animate="float"
-                className={`absolute -top-3 flex items-center justify-center ${rankColors[user.rank].medal}`}
-              >
-                <div className="relative">
-                  {rankColors[user.rank].icon}
-                  <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
-                    {user.rank}
-                  </span>
-                </div>
-              </motion.div>
-              
-              {/* User avatar and info */}
               <motion.div
-                className="flex flex-col items-center -mb-4"
+                whileHover={{ scale: 1.05 }}
+                className="relative -top-10 flex flex-col items-center"
               >
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-14 h-14 rounded-full border-4 border-white overflow-hidden shadow-lg mb-2"
-                >
+                <div className="w-16 h-16 rounded-full border-4 border-white overflow-hidden shadow-lg mb-2">
                   <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                </motion.div>
+                </div>
                 <div className="text-center">
-                  <h3 className={`text-sm font-bold ${rankColors[user.rank].text}`}>{user.name}</h3>
-                  <p className="text-xs font-semibold text-white">{user.points} pts</p>
+                  <h3 className={`font-bold ${rankColors[user.rank].text}`}>{user.name}</h3>
+                  <p className="text-sm font-semibold text-white">{user.points} pts</p>
                 </div>
               </motion.div>
-              
-              {/* Shining effect for 1st place */}
-              {user.rank === 1 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 0.3, 0], scale: [1, 1.2, 1] }}
-                  transition={{ 
-                    repeat: Infinity, 
-                    duration: 3,
-                    times: [0, 0.5, 1]
-                  }}
-                  className="absolute inset-0 rounded-t-lg bg-yellow-200 pointer-events-none"
-                />
-              )}
             </motion.div>
           ))}
         </div>
@@ -270,9 +190,9 @@ export const LeaderBoard = () => {
         {otherUsers.map((user) => (
           <motion.div
             key={user.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
             className="bg-white rounded-lg shadow-sm mb-3 overflow-hidden"
           >
             <div 

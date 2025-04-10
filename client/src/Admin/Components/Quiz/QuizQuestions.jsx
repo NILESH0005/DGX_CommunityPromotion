@@ -553,5 +553,3 @@ const QuizQuestions = ({ onBackToBank }) => {
 };
 
 export default QuizQuestions;
-
-

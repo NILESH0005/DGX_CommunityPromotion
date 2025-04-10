@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm.jsx";
-import QuizList from "../../quiz/QuizList.jsx";
 
 const DeepLearningKit = () => {
   const { category, subcategory } = useParams();
@@ -473,10 +472,10 @@ const DeepLearningKit = () => {
 
               {selectedFileId && (
                 <div className="w-full max-w-7xl mt-6">
-                  {/* <FeedbackForm
+                  <FeedbackForm
                     fileId={selectedFileId}
                     onSubmit={handleFeedbackSubmit}
-                  /> */}
+                  />
                 </div>
               )}
             </div>
