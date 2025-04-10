@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import QuizHeader from './QuizHeader';
 import QuizPalette from './QuizPalette';
 import ApiContext from '../../context/ApiContext';
@@ -7,6 +7,7 @@ import Loader from '../LoadPage';
 import Swal from 'sweetalert2';
 
 const Quiz = () => {
+  const { quizId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const quiz = location.state?.quiz || {};
@@ -147,7 +148,6 @@ const Quiz = () => {
 
   const transformQuestions = (apiQuestions) => {
     return apiQuestions.map(item => {
-      // Find all correct option IDs for this question
       const correctAnswers = item.options
         .filter(option => option.is_correct === true || option.is_correct === 1)
         .map(option => option.optionId);

@@ -1408,3 +1408,45 @@ export const updateQuestion = async (req, res) => {
   }
 };
 
+export const getLeaderboardRanking = async (req, res) => {
+  let success = false;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const warningMessage = "Data is not in the right format";
+    console.error(warningMessage, errors.array());
+    logWarning(warningMessage);
+    res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    return;
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        const errorMessage = "Failed to connect to database";
+        logError(err);
+        res.status(500).json({ success: false, data: err, message: errorMessage });
+        return;
+      }
+
+      try {
+        const query = `WITH MaxAttempts AS ( SELECT userID, quizID, MAX(noOfAttempts) AS max_attempt FROM quiz_score GROUP BY userID, quizID) SELECT SUM(qs.ObtainedMarks) AS totalPoints, cu.Name FROM quiz_score qs JOIN MaxAttempts ma ON qs.userID = ma.userID 
+        AND qs.quizID = ma.quizID AND qs.noOfAttempts = ma.max_attempt LEFT JOIN Community_User cu ON qs.userID = cu.UserID
+        GROUP BY cu.Name;`;
+        const quizzes = await queryAsync(conn, query);
+
+        success = true;
+        closeConnection();
+        const infoMessage = "LeaderBoard fetched successfully";
+        logInfo(infoMessage);
+        res.status(200).json({ success, data: { quizzes }, message: infoMessage });
+      } catch (queryErr) {
+        logError(queryErr);
+        closeConnection();
+        res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
+      }
+    });
+  } catch (error) {
+    logError(error);
+    res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
+  }
+};

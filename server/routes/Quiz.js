@@ -1,12 +1,13 @@
 import express from "express";
 import { fetchUser } from '../middleware/fetchUser.js';
-import { createQuiz, getQuizzes, deleteQuiz, createQuestion, deleteQuestion, getQuestionsByGroupAndLevel, updateQuiz, createQuizQuestionMapping, getUserQuizCategory, getQuizQuestions, submitQuiz,getQuestion, unmappQuestion, updateQuestion } from "../controllers/quiz.js";
+import { createQuiz, getQuizzes, deleteQuiz, createQuestion, deleteQuestion, getQuestionsByGroupAndLevel, updateQuiz, createQuizQuestionMapping, getUserQuizCategory, getQuizQuestions, submitQuiz,getQuestion, unmappQuestion, updateQuestion,getLeaderboardRanking } from "../controllers/quiz.js";
 
 const router = express.Router();
 
 router.post('/createQuiz', fetchUser, createQuiz)
 router.post('/deleteQuiz', fetchUser, deleteQuiz)
 router.get('/getQuizzes', fetchUser, getQuizzes)
+router.get('/getLeaderboardRanking', fetchUser, getLeaderboardRanking)
 router.post('/createQuestion', fetchUser, createQuestion)
 router.get('/getQuestion', fetchUser, getQuestion)
 router.post('/deleteQuestion', fetchUser, deleteQuestion)
