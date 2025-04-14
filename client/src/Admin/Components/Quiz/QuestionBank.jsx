@@ -18,6 +18,51 @@ const QuizBank = () => {
   const [categories, setCategories] = useState([]);
   const [questionLevels, setQuestionLevels] = useState([]);
 
+  const fetchCategories = async () => {
+    const endpoint = `dropdown/getQuestionGroupDropdown`;
+    const method = "GET";
+    const headers = {
+      "Content-Type": "application/json",
+      "auth-token": userToken,
+    };
+
+    try {
+      const data = await fetchData(endpoint, method, {}, headers);
+      if (data?.success) {
+        setCategories(
+          data.data?.sort((a, b) => a.group_name.localeCompare(b.group_name)) ||
+            []
+        );
+        return data.data;
+      }
+      return [];
+    } catch (error) {
+      console.error("Error fetching quiz categories:", error);
+      return [];
+    }
+  };
+
+  const fetchQuestionLevels = async () => {
+    const endpoint = `dropdown/getDropdownValues?category=questionLevel`;
+    const method = "GET";
+    const headers = {
+      "Content-Type": "application/json",
+      "auth-token": userToken,
+    };
+
+    try {
+      const data = await fetchData(endpoint, method, {}, headers);
+      if (data?.success) {
+        setQuestionLevels(data.data || []);
+        return data.data;
+      }
+      return [];
+    } catch (error) {
+      console.error("Error fetching question levels:", error);
+      return [];
+    }
+  };
+
   const fetchQuestions = async () => {
     setLoading(true);
     const endpoint = "quiz/getQuestion";
@@ -33,67 +78,68 @@ const QuizBank = () => {
         fetchCategories(),
         fetchQuestionLevels(),
       ]);
-      console.log("daaaatttaaa", questionsData);
-
       if (questionsData.success) {
         const questionMap = new Map();
 
         questionsData.data.quizzes.forEach((quiz) => {
-          const questionKey = `${quiz.question_text}_${quiz.id}`;
-          const existingQuestion = questionMap.get(questionKey);
+          // Only process correct answers
+          if (quiz.is_correct === 1) {
+            const questionKey = `${quiz.question_text}_${quiz.id}`;
+            const existingQuestion = questionMap.get(questionKey);
 
-          if (existingQuestion) {
-            const existingAnswers = Array.isArray(
-              existingQuestion.correctAnswer
-            )
-              ? existingQuestion.correctAnswer
-              : [existingQuestion.correctAnswer];
+            if (existingQuestion) {
+              const existingAnswers = Array.isArray(
+                existingQuestion.correctAnswer
+              )
+                ? existingQuestion.correctAnswer
+                : [existingQuestion.correctAnswer];
 
-            const newAnswers = Array.isArray(quiz.option_text)
-              ? quiz.option_text
-              : [quiz.option_text];
+              const newAnswers = Array.isArray(quiz.option_text)
+                ? quiz.option_text
+                : [quiz.option_text];
 
-            const combinedAnswers = [
-              ...new Set([...existingAnswers, ...newAnswers]),
-            ];
+              const combinedAnswers = [
+                ...new Set([...existingAnswers, ...newAnswers]),
+              ];
 
-            questionMap.set(questionKey, {
-              ...existingQuestion,
-              correctAnswer: combinedAnswers,
-              id: existingQuestion.id,
-              count: existingQuestion.count + (quiz.count || 0),
-              images:
-                existingQuestion.images ||
-                (quiz.image_url ? [quiz.image_url] : []),
-              options: [
-                ...(existingQuestion.options || []),
-                {
-                  option_text: quiz.option_text,
-                  is_correct: quiz.is_correct,
-                  image: quiz.image_url || null,
-                },
-              ],
-            });
-          } else {
-            questionMap.set(questionKey, {
-              id: quiz.id,
-              question_id: quiz.id,
-              question_text: quiz.question_text,
-              correctAnswer: quiz.option_text,
-              group: quiz.group_name,
-              group_id: quiz.group_id,
-              Ques_level: quiz.ddValue,
-              count: quiz.count || 0,
-              images: quiz.image_url ? [quiz.image_url] : [],
-              image: quiz.question_image || null,
-              options: [
-                {
-                  option_text: quiz.option_text,
-                  is_correct: quiz.is_correct,
-                  image: quiz.image_url || null,
-                },
-              ],
-            });
+              questionMap.set(questionKey, {
+                ...existingQuestion,
+                correctAnswer: combinedAnswers,
+                id: existingQuestion.id,
+                count: existingQuestion.count + (quiz.quiz_count || 0),
+                images:
+                  existingQuestion.images ||
+                  (quiz.image_url ? [quiz.image_url] : []),
+                options: [
+                  ...(existingQuestion.options || []),
+                  {
+                    option_text: quiz.option_text,
+                    is_correct: quiz.is_correct,
+                    image: quiz.image_url || null,
+                  },
+                ],
+              });
+            } else {
+              questionMap.set(questionKey, {
+                id: quiz.id,
+                question_id: quiz.id,
+                question_text: quiz.question_text,
+                correctAnswer: quiz.option_text,
+                group: quiz.group_name,
+                group_id: quiz.group_id,
+                Ques_level: quiz.ddValue,
+                count: quiz.quiz_count || 0,
+                images: quiz.image_url ? [quiz.image_url] : [],
+                image: quiz.question_image || null,
+                options: [
+                  {
+                    option_text: quiz.option_text,
+                    is_correct: quiz.is_correct,
+                    image: quiz.image_url || null,
+                  },
+                ],
+              });
+            }
           }
         });
 
@@ -129,51 +175,7 @@ const QuizBank = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    const endpoint = `dropdown/getQuestionGroupDropdown`;
-    const method = "GET";
-    const headers = {
-      "Content-Type": "application/json",
-      "auth-token": userToken,
-    };
-
-    try {
-      const data = await fetchData(endpoint, method, headers);
-      if (data?.success) {
-        setCategories(
-          data.data?.sort((a, b) => a.group_name.localeCompare(b.group_name)) ||
-            []
-        );
-        return data.data;
-      }
-      return [];
-    } catch (error) {
-      console.error("Error fetching quiz categories:", error);
-      return [];
-    }
-  };
-
-  const fetchQuestionLevels = async () => {
-    const endpoint = `dropdown/getDropdownValues?category=questionLevel`;
-    const method = "GET";
-    const headers = {
-      "Content-Type": "application/json",
-      "auth-token": userToken,
-    };
-
-    try {
-      const data = await fetchData(endpoint, method, headers);
-      if (data?.success) {
-        setQuestionLevels(data.data || []);
-        return data.data;
-      }
-      return [];
-    } catch (error) {
-      console.error("Error fetching question levels:", error);
-      return [];
-    }
-  };
-
+  
   const handleDelete = async (questionId) => {
     const result = await Swal.fire({
       title: "Are you sure?",
@@ -235,6 +237,7 @@ const QuizBank = () => {
     };
 
     setSelectedQuestion(questionData);
+
     setShowEditModal(true);
   };
 
@@ -392,9 +395,7 @@ const QuizBank = () => {
           userToken={userToken}
         />
       )}
-
     </div>
   );
 };
-
 export default QuizBank;

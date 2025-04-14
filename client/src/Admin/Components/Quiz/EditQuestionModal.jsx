@@ -18,7 +18,7 @@ const EditQuestionModal = ({
     Ques_level: "",
     group_id: "",
     image: null,
-    question_type: 0,
+    question_type: 0, // 0 for single, 1 for multiple
     options: [],
   });
   const [imagePreview, setImagePreview] = useState(null);
@@ -27,6 +27,11 @@ const EditQuestionModal = ({
 
   useEffect(() => {
     if (questionData && isOpen) {
+      // Determine question type based on number of correct answers
+      const correctAnswersCount = questionData.options?.filter(opt => opt.is_correct).length || 0;
+      const questionType = correctAnswersCount > 1 ? 1 : 0;
+
+      // Ensure we have at least 2 options
       const initialOptions = questionData.options?.length >= 2 
         ? questionData.options 
         : [
@@ -39,16 +44,16 @@ const EditQuestionModal = ({
           ];
 
       setFormData({
-        id: questionData.question_id,
+        id: questionData.question_id || questionData.id,
         question_text: questionData.question_text || "",
-        Ques_level: questionData.Ques_level || "",
-        group_id: questionData.group_id || "",
-        image: questionData.image || null,
-        question_type: questionData.question_type || 0,
+        Ques_level: questionData.Ques_level || questionData.level || "",
+        group_id: questionData.group_id?.toString() || "",
+        image: questionData.image || questionData.question_image || null,
+        question_type: questionType,
         options: initialOptions,
       });
 
-      setImagePreview(questionData.image || null);
+      setImagePreview(questionData.image || questionData.question_image || null);
       setOptionImages(initialOptions.map(opt => opt.image || null));
     }
   }, [questionData, isOpen]);
@@ -222,7 +227,6 @@ const EditQuestionModal = ({
           "auth-token": userToken,
         }
       );
-
       if (response?.success) {
         Swal.fire("Success", "Question updated successfully!", "success").then(() => {
           onUpdateSuccess();
