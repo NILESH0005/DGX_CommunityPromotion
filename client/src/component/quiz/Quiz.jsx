@@ -58,10 +58,8 @@ const Quiz = () => {
     }
   };
 
-  const [selectedAnswers, setSelectedAnswers] = useState(() => {
-    const saved = loadSavedAnswers();
-    return saved ? saved.answers : Array(questions.length).fill(null);
-  });
+  const [selectedAnswers, setSelectedAnswers] = useState([]);
+
 
   useEffect(() => {
     if (userToken && quiz.QuizID && quiz.group_id) {
@@ -115,6 +113,9 @@ const Quiz = () => {
         const transformedQuestions = transformQuestions(data.data.questions);
         setQuestions(transformedQuestions);
 
+        const saved = loadSavedAnswers();
+        setSelectedAnswers(saved?.answers || Array(transformedQuestions.length).fill(null));
+
         if (transformedQuestions.length > 0) {
           const duration = transformedQuestions[0].duration || 30;
           const hours = Math.floor(duration / 60);
@@ -122,13 +123,13 @@ const Quiz = () => {
           setTimer({ hours, minutes, seconds: 0 });
         }
 
-        const initialSelectedAnswers = Array(transformedQuestions.length).fill(null);
+        // const initialSelectedAnswers = Array(transformedQuestions.length).fill(null);
         const initialQuestionStatus = transformedQuestions.reduce((acc, _, index) => {
           acc[index + 1] = "not-visited";
           return acc;
         }, {});
 
-        setSelectedAnswers(initialSelectedAnswers);
+        // setSelectedAnswers(initialSelectedAnswers);
         setQuestionStatus(initialQuestionStatus);
       } else {
         throw new Error(data.message || "Failed to fetch questions");
@@ -148,23 +149,25 @@ const Quiz = () => {
 
   const transformQuestions = (apiQuestions) => {
     return apiQuestions.map(item => {
-      const correctAnswers = item.options
+      // First ensure options have proper IDs
+      const optionsWithIds = item.options.map((option, index) => ({
+        ...option,
+        id: option.id ? Number(option.id) : index + 1 // Fallback to index if ID is missing
+      }));
+
+      // Then find correct answers
+      const correctAnswers = optionsWithIds
         .filter(option => option.is_correct === true || option.is_correct === 1)
-        .map(option => option.optionId);
-  
+        .map(option => Number(option.id));
+
       return {
-        id: item.QuestionsID,
+        id: Number(item.QuestionsID),
         question_text: item.QuestionTxt,
-        image: item.question_image,
-        negativeMarks: item.negativeMarks || 0,
-        totalMarks: item.totalMarks || 1,
-        duration: item.QuizDuration,
-        options: item.options.map(option => ({
-          id: option.optionId,
-          option_text: option.option_text ? option.option_text.trim() : '',
-          is_correct: option.is_correct === true || option.is_correct === 1
-        })),
-        correctAnswers: correctAnswers
+        totalMarks: Number(item.totalMarks) || 1,
+        negativeMarks: Number(item.negativeMarks) || 0,
+        duration: Number(item.QuizDuration) || 30,
+        options: optionsWithIds,
+        correctAnswers
       };
     });
   };
@@ -209,54 +212,56 @@ const Quiz = () => {
     handleQuizSubmit();
   };
 
- 
+
   const handleNavigation = (nextQuestion) => {
     if (selectedAnswers[currentQuestion] === null && questionStatus[currentQuestion + 1] === "not-visited") {
       setQuestionStatus(prev => ({ ...prev, [currentQuestion + 1]: "not-answered" }));
     }
     setCurrentQuestion(nextQuestion);
   };
-
   const handleAnswerClick = (selectedOptionId) => {
+    const optionId = Number(selectedOptionId); // Ensure numeric ID
     const currentQuestionData = questions[currentQuestion];
-    
-    // Verify the correctAnswers array contains the selected option
-    console.log('Correct answers:', currentQuestionData.correctAnswers);
-    console.log('Selected option:', selectedOptionId);
-  
-    const isCorrect = currentQuestionData.correctAnswers.includes(selectedOptionId);
-    console.log('Is correct?', isCorrect);
-  
-    const selectedOption = currentQuestionData.options.find(opt => opt.id === selectedOptionId);
-    if (!selectedOption) return;
-  
-    const marks = isCorrect
-      ? currentQuestionData.totalMarks
-      : -currentQuestionData.negativeMarks;
-  
+
+    if (!currentQuestionData) return;
+
+    console.log('Current question options:', currentQuestionData.options);
+    console.log('Selected option ID:', optionId);
+
+    const selectedOption = currentQuestionData.options.find(opt =>
+      Number(opt.id) === optionId
+    );
+
+    if (!selectedOption) {
+      console.error('Option not found');
+      return;
+    }
+
+    const isCorrect = currentQuestionData.correctAnswers.includes(optionId);
+
     const newAnswer = {
       questionId: currentQuestionData.id,
       questionText: currentQuestionData.question_text,
-      selectedOptionId: selectedOptionId,
+      selectedOptionId: optionId, // Use the numeric ID
       selectedOptionText: selectedOption.option_text,
-      isCorrect: isCorrect,
-      marksAwarded: marks,
+      isCorrect,
+      marksAwarded: isCorrect ? currentQuestionData.totalMarks : -currentQuestionData.negativeMarks,
       maxMarks: currentQuestionData.totalMarks,
       negativeMarks: currentQuestionData.negativeMarks,
-      correctAnswers: currentQuestionData.correctAnswers.map(id => 
-        currentQuestionData.options.find(opt => opt.id === id)?.option_text
+      correctAnswers: currentQuestionData.correctAnswers.map(id =>
+        currentQuestionData.options.find(opt => Number(opt.id) === Number(id))?.option_text
       ).filter(Boolean)
     };
-  
+
     const newAnswers = [...selectedAnswers];
     newAnswers[currentQuestion] = newAnswer;
     setSelectedAnswers(newAnswers);
-  
-    setQuestionStatus(prev => ({ 
-      ...prev, 
-      [currentQuestion + 1]: "answered" 
+
+    setQuestionStatus(prev => ({
+      ...prev,
+      [currentQuestion + 1]: "answered"
     }));
-  
+
     saveAnswersToStorage({
       quizId: quiz.QuizID,
       groupId: quiz.group_id,
@@ -264,12 +269,12 @@ const Quiz = () => {
     });
   };
 
-  
+
   const handleSaveAndNext = () => {
     if (currentQuestion + 1 < questions.length) {
       handleNavigation(currentQuestion + 1);
     } else {
-      handleQuizSubmit(); 
+      handleQuizSubmit();
     }
   };
 
@@ -303,7 +308,7 @@ const Quiz = () => {
       });
       return;
     }
-  
+
     const savedData = loadSavedAnswers();
     if (!savedData) {
       Swal.fire({
@@ -313,27 +318,27 @@ const Quiz = () => {
       });
       return;
     }
-  
-    const correctCount = selectedAnswers.filter(answer => 
+
+    const correctCount = selectedAnswers.filter(answer =>
       answer !== null && answer.isCorrect
     ).length;
-    
-    const incorrectCount = selectedAnswers.filter(answer => 
+
+    const incorrectCount = selectedAnswers.filter(answer =>
       answer !== null && !answer.isCorrect
     ).length;
-    
+
     const attemptedCount = selectedAnswers.filter(answer => answer !== null).length;
-    
-    const positiveMarks = selectedAnswers.reduce((sum, answer) => 
+
+    const positiveMarks = selectedAnswers.reduce((sum, answer) =>
       sum + (answer?.isCorrect ? answer.marksAwarded : 0), 0
     );
-    
-    const negativeMarks = selectedAnswers.reduce((sum, answer) => 
+
+    const negativeMarks = selectedAnswers.reduce((sum, answer) =>
       sum + (!answer?.isCorrect ? Math.abs(answer.marksAwarded) : 0), 0
     );
-  
+
     const totalScore = positiveMarks - negativeMarks;
-  
+
     const result = await Swal.fire({
       title: 'Are you sure?',
       html: `
@@ -344,11 +349,11 @@ const Quiz = () => {
       cancelButtonColor: '#d33',
       confirmButtonText: 'Yes!'
     });
-  
+
     if (!result.isConfirmed) {
       return;
     }
-  
+
     const swalInstance = Swal.fire({
       title: 'Submitting...',
       allowOutsideClick: false,
@@ -356,18 +361,18 @@ const Quiz = () => {
         Swal.showLoading();
       }
     });
-  
+
     try {
       setSubmitting(true);
       setSubmitError(null);
-  
+
       const endpoint = "quiz/submitQuiz";
       const method = "POST";
       const headers = {
         'Content-Type': 'application/json',
         'auth-token': userToken
       };
-  
+
       const preparedAnswers = savedData.answers
         .filter(a => a !== null)
         .map(answer => ({
@@ -378,24 +383,24 @@ const Quiz = () => {
           maxMarks: Number(answer.maxMarks),
           negativeMarks: Number(answer.negativeMarks)
         }));
-  
+
       const body = {
         quizId: Number(savedData.quizId),
         groupId: Number(savedData.groupId),
         answers: preparedAnswers
       };
-  
+
       const data = await fetchData(endpoint, method, body, headers);
-  
+
       if (!data.success) {
         throw new Error(data.message || "Submission failed");
       }
-  
+
       setSubmitSuccess(true);
       localStorage.removeItem(STORAGE_KEY);
-  
+
       await swalInstance.close();
-  
+
       navigate('/quiz-result', {
         state: {
           quiz: quiz,
@@ -414,9 +419,9 @@ const Quiz = () => {
     } catch (error) {
       console.error("Quiz submission error:", error);
       setSubmitError(error.message);
-  
+
       await swalInstance.close();
-  
+
       Swal.fire({
         icon: 'error',
         title: 'Submission Failed',
@@ -489,24 +494,34 @@ const Quiz = () => {
             <div className="p-6 border-b border-gray-300">
               <p className="text-lg mb-6">{questions[currentQuestion]?.question_text}</p>
               <div className="space-y-2">
-                {questions[currentQuestion]?.options?.map((option) => (
-                  <label
-                    key={option.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition
-                      ${selectedAnswers[currentQuestion]?.selectedOptionId === option.id
-                        ? 'bg-blue-100 border border-blue-300'
-                        : 'hover:bg-gray-50'}`}
-                  >
-                    <input
-                      type="radio"
-                      name="answer"
-                      checked={selectedAnswers[currentQuestion]?.selectedOptionId === option.id}
-                      onChange={() => handleAnswerClick(option.id)}
-                      className="w-4 h-4"
-                    />
-                    <span>{option.option_text}</span>
-                  </label>
-                ))}
+                {questions[currentQuestion]?.options?.map((option) => {
+                  const optionId = Number(option.id); // Ensure numeric ID
+                  const isSelected = Number(selectedAnswers[currentQuestion]?.selectedOptionId) === optionId;
+
+                  return (
+                    <label
+                      key={optionId}
+                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition
+          ${isSelected
+                          ? 'bg-blue-100 border-2 border-blue-500'
+                          : 'hover:bg-gray-50 border border-transparent'}`}
+                    >
+                      <input
+                        type="radio"
+                        name={`answer-${currentQuestion}`}
+                        checked={isSelected}
+                        onChange={() => handleAnswerClick(optionId)}
+                        className="w-4 h-4"
+                      />
+                      <span>{option.option_text}</span>
+                      {isSelected && (
+                        <span className="ml-auto text-blue-600">
+                          {selectedAnswers[currentQuestion]?.isCorrect ? '✓' : '✗'}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
             </div>
 

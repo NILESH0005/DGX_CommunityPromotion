@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm";
+import ApiContext from '../../../context/ApiContext';
 
 const Handson = () => {
+    const navigate = useNavigate();
+    const { userToken } = useContext(ApiContext); // Get user token
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [selectedFileType, setSelectedFileType] = useState(null);
     const [expandedSubcategory, setExpandedSubcategory] = useState(null);
@@ -14,40 +17,40 @@ const Handson = () => {
             id: 1,
             title: "1. Linear Regression - Multiple Variables",
             nested: [
-                { 
-                    id: 11, 
-                    title: "equation.jpg", 
-                    fileId: "1B9ucXC7eCDfjDZaSAR_5yRuYz2l8gYzs", 
-                    type: "jpg" 
+                {
+                    id: 11,
+                    title: "equation.jpg",
+                    fileId: "1B9ucXC7eCDfjDZaSAR_5yRuYz2l8gYzs",
+                    type: "jpg"
                 },
-                { 
-                    id: 12, 
-                    title: "Diagram 2.jpg", 
-                    fileId: "YOUR_IMG2_ID", 
-                    type: "jpg" 
+                {
+                    id: 12,
+                    title: "Diagram 2.jpg",
+                    fileId: "YOUR_IMG2_ID",
+                    type: "jpg"
                 },
-                { 
-                    id: 13, 
-                    title: "Diagram 3.jpg", 
-                    fileId: "YOUR_IMG3_ID", 
-                    type: "jpg" 
+                {
+                    id: 13,
+                    title: "Diagram 3.jpg",
+                    fileId: "YOUR_IMG3_ID",
+                    type: "jpg"
                 },
-                { 
-                    id: 14, 
-                    title: "Diagram 4.jpg", 
-                    fileId: "YOUR_IMG4_ID", 
-                    type: "jpg" 
+                {
+                    id: 14,
+                    title: "Diagram 4.jpg",
+                    fileId: "YOUR_IMG4_ID",
+                    type: "jpg"
                 },
-                { 
-                    id: 15, 
-                    title: "Implementation.ipynb", 
-                    fileId: "YOUR_NB1_ID", 
-                    type: "ipynb" 
+                {
+                    id: 15,
+                    title: "Implementation.ipynb",
+                    fileId: "YOUR_NB1_ID",
+                    type: "ipynb"
                 },
-                { 
-                    id: 16, 
-                    title: "Dataset.csv", 
-                    fileId: "YOUR_CSV1_ID", 
+                {
+                    id: 16,
+                    title: "Dataset.csv",
+                    fileId: "YOUR_CSV1_ID",
                     type: "csv",
                     download: true
                 }
@@ -57,49 +60,49 @@ const Handson = () => {
             id: 2,
             title: "2. Linear Regression - Single Variable",
             nested: [
-                { 
-                    id: 21, 
-                    title: "Graph 1.jpg", 
-                    fileId: "YOUR_IMG5_ID", 
-                    type: "jpg" 
+                {
+                    id: 21,
+                    title: "Graph 1.jpg",
+                    fileId: "YOUR_IMG5_ID",
+                    type: "jpg"
                 },
-                { 
-                    id: 22, 
-                    title: "Graph 2.jpg", 
-                    fileId: "YOUR_IMG6_ID", 
-                    type: "jpg" 
+                {
+                    id: 22,
+                    title: "Graph 2.jpg",
+                    fileId: "YOUR_IMG6_ID",
+                    type: "jpg"
                 },
-                { 
-                    id: 23, 
-                    title: "Implementation.ipynb", 
-                    fileId: "YOUR_NB2_ID", 
-                    type: "ipynb" 
+                {
+                    id: 23,
+                    title: "Implementation.ipynb",
+                    fileId: "YOUR_NB2_ID",
+                    type: "ipynb"
                 },
-                { 
-                    id: 24, 
-                    title: "Training Data.csv", 
-                    fileId: "YOUR_CSV2_ID", 
+                {
+                    id: 24,
+                    title: "Training Data.csv",
+                    fileId: "YOUR_CSV2_ID",
                     type: "csv",
                     download: true
                 },
-                { 
-                    id: 25, 
-                    title: "Test Data.csv", 
-                    fileId: "YOUR_CSV3_ID", 
+                {
+                    id: 25,
+                    title: "Test Data.csv",
+                    fileId: "YOUR_CSV3_ID",
                     type: "csv",
                     download: true
                 },
-                { 
-                    id: 26, 
-                    title: "Results.png", 
-                    fileId: "YOUR_PNG1_ID", 
-                    type: "png" 
+                {
+                    id: 26,
+                    title: "Results.png",
+                    fileId: "YOUR_PNG1_ID",
+                    type: "png"
                 },
-                { 
-                    id: 27, 
-                    title: "Comparison.png", 
-                    fileId: "YOUR_PNG2_ID", 
-                    type: "png" 
+                {
+                    id: 27,
+                    title: "Comparison.png",
+                    fileId: "YOUR_PNG2_ID",
+                    type: "png"
                 }
             ]
         },
@@ -107,16 +110,16 @@ const Handson = () => {
             id: 3,
             title: "3. Logistic Regression - Singleclass",
             nested: [
-                { 
-                    id: 31, 
-                    title: "Implementation.ipynb", 
-                    fileId: "YOUR_NB3_ID", 
-                    type: "ipynb" 
+                {
+                    id: 31,
+                    title: "Implementation.ipynb",
+                    fileId: "YOUR_NB3_ID",
+                    type: "ipynb"
                 },
-                { 
-                    id: 32, 
-                    title: "Dataset.csv", 
-                    fileId: "YOUR_CSV4_ID", 
+                {
+                    id: 32,
+                    title: "Dataset.csv",
+                    fileId: "YOUR_CSV4_ID",
                     type: "csv",
                     download: true
                 }
@@ -126,14 +129,23 @@ const Handson = () => {
             id: 4,
             title: "4. Logistic Regression - Multiclass",
             nested: [
-                { 
-                    id: 41, 
-                    title: "Implementation.ipynb", 
-                    fileId: "YOUR_NB4_ID", 
-                    type: "ipynb" 
+                {
+                    id: 41,
+                    title: "Implementation.ipynb",
+                    fileId: "YOUR_NB4_ID",
+                    type: "ipynb"
                 }
             ]
-        }
+        },
+        {
+            id: 3,
+            title: "Assessment",
+            type: "quiz",
+            quizId: 1,
+            groupId: 456,
+            icon: "📝",
+            description: "Test your knowledge with this assessment"
+        },
     ];
 
     const handleFeedbackSubmit = (fileId, rating, comment) => {
@@ -149,8 +161,29 @@ const Handson = () => {
         sendFeedbackToServer(newFeedback);
     };
 
+    const handleFileClick = (file) => {
+        if (file.type === "quiz") {
+            if (!userToken) {
+                alert("Please login to access the quiz");
+                return;
+            }
+            navigate(`/quiz/${file.quizId}`, {
+                state: {
+                    quiz: {
+                        QuizID: file.quizId,
+                        group_id: file.groupId,
+                        title: file.title
+                    }
+                }
+            });
+        } else {
+            setSelectedFileId(file.fileId);
+            setSelectedFileType(file.type);
+        }
+    };
+
     const getEmbedURL = (fileId, type) => {
-        switch(type) {
+        switch (type) {
             case "ipynb":
                 return `https://nbviewer.jupyter.org/urls/docs.google.com/uc?export=download&id=${fileId}`;
             case "jpg":
@@ -163,17 +196,16 @@ const Handson = () => {
         }
     };
 
-    const getDownloadURL = (fileId) => {
-        return `https://drive.google.com/uc?export=download&id=${fileId}`;
-    };
+    // const getDownloadURL = (fileId) => {
+    //     return `https://drive.google.com/uc?export=download&id=${fileId}`;
+    // };
 
     useEffect(() => {
-        if (modules.length > 0 && !selectedFileId) {
-            const firstModule = modules[0];
-            if (firstModule.nested && firstModule.nested.length > 0) {
-                setSelectedFileId(firstModule.nested[0].fileId);
-                setSelectedFileType(firstModule.nested[0].type);
-            }
+        // Initialize with the first available file
+        const firstFile = modules.find(m => m.nested && m.nested.length > 0)?.nested[0];
+        if (firstFile && !selectedFileId) {
+            setSelectedFileId(firstFile.fileId);
+            setSelectedFileType(firstFile.type);
         }
 
         // Security measures
@@ -204,46 +236,45 @@ const Handson = () => {
                     {modules.map(module => (
                         <li key={module.id}>
                             <div
-                                className={`flex items-center justify-between p-3 rounded cursor-pointer hover:bg-gray-700 ${
-                                    expandedSubcategory === module.id ? "bg-gray-700" : ""
-                                }`}
-                                onClick={() => toggleModule(module.id)}
+                                className={`flex items-center justify-between p-3 rounded cursor-pointer hover:bg-gray-700 ${expandedSubcategory === module.id ? "bg-gray-700" : ""
+                                    }`}
+                                onClick={() => {
+                                    if (module.type === "quiz") {
+                                        handleFileClick(module);
+                                    } else {
+                                        toggleModule(module.id);
+                                    }
+                                }}
                             >
-                                <span className="font-medium">{module.title}</span>
-                                <span className="text-sm">
-                                    {expandedSubcategory === module.id ? '▼' : '▶'}
-                                </span>
+                                <div className="flex items-center">
+                                    {module.icon && <span className="mr-2">{module.icon}</span>}
+                                    <span className="font-medium">{module.title}</span>
+                                </div>
+                                {module.nested && (
+                                    <span className="text-sm">
+                                        {expandedSubcategory === module.id ? '▼' : '▶'}
+                                    </span>
+                                )}
                             </div>
-                            
-                            {expandedSubcategory === module.id && (
+
+                            {module.nested && expandedSubcategory === module.id && (
                                 <ul className="pl-4 mt-2 space-y-1">
                                     {module.nested.map(item => (
                                         <li key={item.id}>
                                             <button
-                                                onClick={() => {
-                                                    setSelectedFileId(item.fileId);
-                                                    setSelectedFileType(item.type);
-                                                }}
-                                                className={`flex items-center w-full p-2 rounded text-left hover:bg-gray-600 ${
-                                                    selectedFileId === item.fileId ? "bg-gray-600" : ""
-                                                }`}
+                                                onClick={() => handleFileClick(item)}
+                                                className={`flex items-center w-full p-2 rounded text-left hover:bg-gray-700 ${selectedFileId === item.fileId ? "bg-gray-700" : ""
+                                                    }`}
                                             >
-                                                <span className="mr-2">
-                                                    {item.type === "ipynb" ? "📓" : 
-                                                     item.type === "csv" ? "📊" : 
-                                                     item.type === "jpg" || item.type === "png" ? "🖼️" : "📄"}
-                                                </span>
-                                                <span>{item.title}</span>
-                                                {item.download && (
-                                                    <a 
-                                                        href={getDownloadURL(item.fileId)}
-                                                        onClick={e => e.stopPropagation()}
-                                                        className="ml-auto text-blue-300 hover:text-blue-100"
-                                                        download
-                                                    >
-                                                        ⬇️
-                                                    </a>
-                                                )}
+                                                {item.icon && <span className="mr-2">{item.icon}</span>}
+                                                <div>
+                                                    <div className="font-medium">{item.title}</div>
+                                                    {item.description && (
+                                                        <div className="text-xs text-gray-300 mt-1">
+                                                            {item.description}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </button>
                                         </li>
                                     ))}
@@ -257,16 +288,16 @@ const Handson = () => {
             {/* Main Content */}
             <div className="flex-1 p-6 flex flex-col">
                 <h1 className="text-3xl font-bold mb-6">Hands-on Regression Exercises</h1>
-                
-                {selectedFileId && selectedFileType && (
+
+                {selectedFileId && selectedFileType ? (
                     <>
                         <div className="flex-1 w-full border rounded-xl shadow-lg overflow-hidden bg-white relative"
                             onContextMenu={e => e.preventDefault()}>
                             {/* Block pop-out buttons */}
                             <div className="absolute top-0 right-0 w-14 h-14 z-10" />
-                            
+
                             {["jpg", "png"].includes(selectedFileType) ? (
-                                <img 
+                                <img
                                     src={getEmbedURL(selectedFileId, selectedFileType)}
                                     className="w-full h-full object-contain"
                                     alt="Preview"
@@ -294,6 +325,10 @@ const Handson = () => {
                             />
                         </div>
                     </>
+                ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                        <p className="text-gray-500">Select a file to view</p>
+                    </div>
                 )}
             </div>
         </div>

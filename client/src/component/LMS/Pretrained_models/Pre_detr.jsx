@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm";
+import ApiContext from '../../../context/ApiContext';
 
 const Pre_detr = () => {
+    const navigate = useNavigate();
+    const { userToken } = useContext(ApiContext); // Get user token
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [selectedFileType, setSelectedFileType] = useState("pdf");
     const [isDownloading, setIsDownloading] = useState(false);
@@ -12,7 +16,7 @@ const Pre_detr = () => {
         {
             id: 1,
             title: "Pre-DETR Guide (PDF)",
-            fileId: "1JF2V3YpDATDaxmZVH2okoD5N92ireQnc", // Replace with actual PDF ID
+            fileId: "1JF2V3YpDATDaxmZVH2okoD5N92ireQnc",
             type: "pdf",
             icon: "📄",
             description: "Preparation guide for DETR implementation"
@@ -20,7 +24,7 @@ const Pre_detr = () => {
         {
             id: 2,
             title: "Pre-Processing Notebook (IPYNB)",
-            fileId: "Y1PXz4IWYG5r70oyR30vU0tQNHvWawu0xG", // Replace with actual notebook ID
+            fileId: "Y1PXz4IWYG5r70oyR30vU0tQNHvWawu0xG",
             type: "ipynb",
             icon: "📓",
             description: "Jupyter notebook with data preprocessing steps"
@@ -28,11 +32,20 @@ const Pre_detr = () => {
         {
             id: 3,
             title: "Dataset (TAR)",
-            fileId: "1g368MTzqE0xmUdsp0HTR2dZGzpe0nFaU", // Replace with actual TAR ID
+            fileId: "1g368MTzqE0xmUdsp0HTR2dZGzpe0nFaU",
             type: "tar",
             icon: "📦",
             description: "Compressed dataset for DETR preparation",
-            size: "~150MB" // Example size
+            size: "~150MB"
+        },
+        {
+            id: 4,
+            title: "Assessment",
+            type: "quiz",
+            quizId: 2, // Different quiz ID than Handson component
+            groupId: 789, // Different group ID
+            icon: "📝",
+            description: "Test your knowledge of Pre-DETR concepts"
         }
     ];
 
@@ -47,6 +60,29 @@ const Pre_detr = () => {
         localStorage.setItem("preDetrFeedback", JSON.stringify(updatedFeedback));
         setFeedback(updatedFeedback);
         sendFeedbackToServer(newFeedback);
+    };
+
+    const handleFileClick = (file) => {
+        if (file.type === "quiz") {
+            if (!userToken) {
+                alert("Please login to access the quiz");
+                return;
+            }
+            navigate(`/quiz/${file.quizId}`, {
+                state: {
+                    quiz: {
+                        QuizID: file.quizId,
+                        group_id: file.groupId,
+                        title: file.title
+                    }
+                }
+            });
+        } else if (file.type === "tar") {
+            handleDownload(file.fileId, 'detr_dataset.tar');
+        } else {
+            setSelectedFileId(file.fileId);
+            setSelectedFileType(file.type);
+        }
     };
 
     const getEmbedURL = (fileId, type) => {
@@ -91,12 +127,10 @@ const Pre_detr = () => {
 
     // Set first file as default on component mount
     useEffect(() => {
-        if (preDetrFiles.length > 0 && !selectedFileId) {
-            const firstFile = preDetrFiles.find(f => f.type !== "tar");
-            if (firstFile) {
-                setSelectedFileId(firstFile.fileId);
-                setSelectedFileType(firstFile.type);
-            }
+        const firstFile = preDetrFiles.find(f => f.type === "pdf");
+        if (firstFile && !selectedFileId) {
+            setSelectedFileId(firstFile.fileId);
+            setSelectedFileType(firstFile.type);
         }
 
         // Security measures
@@ -117,43 +151,25 @@ const Pre_detr = () => {
     return (
         <div className="flex h-screen bg-background text-foreground">
             {/* Sidebar */}
-            <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700">
+            <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700 overflow-y-auto">
                 <h2 className="text-lg font-semibold mb-4">Pre-DETR Materials</h2>
                 <ul className="space-y-2">
                     {preDetrFiles.map((file) => (
                         <li key={file.id}>
-                            {file.type === "tar" ? (
-                                <button
-                                    onClick={() => handleDownload(file.fileId, 'detr_dataset.tar')}
-                                    disabled={isDownloading}
-                                    className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 ${
-                                        isDownloading ? 'bg-gray-600' : ''
-                                    }`}
-                                >
-                                    <span className="mr-3 text-lg">{file.icon}</span>
-                                    <div>
-                                        <div className="font-medium">{file.title}</div>
-                                        <div className="text-xs text-gray-300 mt-1">{file.description}</div>
-                                        <div className="text-xs text-gray-400 mt-1">Size: {file.size}</div>
-                                    </div>
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => {
-                                        setSelectedFileId(file.fileId);
-                                        setSelectedFileType(file.type);
-                                    }}
-                                    className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 ${
-                                        selectedFileId === file.fileId ? "bg-gray-700" : ""
-                                    }`}
-                                >
-                                    <span className="mr-3 text-lg">{file.icon}</span>
-                                    <div>
-                                        <div className="font-medium">{file.title}</div>
-                                        <div className="text-xs text-gray-300 mt-1">{file.description}</div>
-                                    </div>
-                                </button>
-                            )}
+                            <button
+                                onClick={() => handleFileClick(file)}
+                                disabled={isDownloading && file.type === "tar"}
+                                className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 ${
+                                    (selectedFileId === file.fileId || (file.type === "tar" && isDownloading)) ? "bg-gray-700" : ""
+                                }`}
+                            >
+                                <span className="mr-3 text-lg">{file.icon}</span>
+                                <div>
+                                    <div className="font-medium">{file.title}</div>
+                                    <div className="text-xs text-gray-300 mt-1">{file.description}</div>
+                                    {file.size && <div className="text-xs text-gray-400 mt-1">Size: {file.size}</div>}
+                                </div>
+                            </button>
                         </li>
                     ))}
                 </ul>
@@ -168,7 +184,9 @@ const Pre_detr = () => {
                         <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
                             <div className="text-6xl mb-4">📦</div>
                             <h2 className="text-2xl font-semibold mb-2">Dataset Download</h2>
-                            <p className="text-gray-600 mb-4">Click the download button in the sidebar to get the TAR file</p>
+                            <p className="text-gray-600 mb-4">
+                                {isDownloading ? "Downloading..." : "Click the download button in the sidebar to get the TAR file"}
+                            </p>
                             <div className="bg-gray-100 rounded-lg p-4 mb-6 text-left">
                                 <h3 className="font-medium mb-2">File Information:</h3>
                                 <ul className="text-sm space-y-1">
@@ -203,7 +221,11 @@ const Pre_detr = () => {
                             />
                         </div>
                     </>
-                ) : null}
+                ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                        <p className="text-gray-500">Select a file to view</p>
+                    </div>
+                )}
             </div>
         </div>
     );

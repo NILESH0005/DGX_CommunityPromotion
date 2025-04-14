@@ -134,12 +134,13 @@ const QuizList = () => {
             }
         });
     };
+    
 
-    const scrollToQuizzes = () => {
-        if (quizCategoriesRef.current) {
-            quizCategoriesRef.current.scrollIntoView({ behavior: "smooth" });
-        }
-    };
+    // const scrollToQuizzes = () => {
+    //     if (quizCategoriesRef.current) {
+    //         quizCategoriesRef.current.scrollIntoView({ behavior: "smooth" });
+    //     }
+    // };
 
     if (loading) {
         return (

@@ -129,6 +129,7 @@ const QuizMapping = () => {
       if (data.success) {
         const questions = data.data?.questions || [];
         console.log('Received questions:', questions.length);
+        setMappedQuestions([]);
 
         const hasNegativeMarking = questions.some(q => q.negativeMarking);
         setQuizHasNegativeMarking(hasNegativeMarking);
@@ -498,13 +499,20 @@ const QuizMapping = () => {
   const handleQuizChange = (e) => {
     const quizId = e.target.value;
     console.log('Quiz changed to:', quizId);
-    setSelectedQuiz(quizId);
-    setSelectedGroup("");
-    setSelectedLevel("");
+    
+    // Immediately clear all question-related states
     setMappedQuestions([]);
     setSelectedQuestions([]);
     setSelectedMappedQuestions([]);
     setQuestions([]);
+    setQuestionMarks({});
+    
+    // Then update the selected quiz
+    setSelectedQuiz(quizId);
+    
+    // Reset other selections
+    setSelectedGroup("");
+    setSelectedLevel("");
   };
 
   return (
@@ -633,7 +641,7 @@ const QuizMapping = () => {
               </div>
             ) : (
               <div className="text-center py-4 text-gray-500">
-                No questions currently mapped to this quiz
+               {selectedQuiz ? "No questions currently mapped to this quiz" : "Please select a quiz"}
               </div>
             )}
           </div>

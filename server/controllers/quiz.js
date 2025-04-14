@@ -766,20 +766,20 @@ export const getUserQuizCategory = async (req, res) => {
       }
 
       try {
-        const query = `select  
-          QuizDetails.QuizName, 
-          QuizDetails.QuizImage, 
-          GroupMaster.group_name,
-          count(distinct QuestionsID) as Total_Question_No, 
-          SUM(distinct QuizMapping.totalMarks) as MaxScore, 
-          group_id, 
-          QuizDetails.QuizID
-        from QuizMapping
-        left join QuizDetails on QuizMapping.quizId = QuizDetails.QuizID
-        left join GroupMaster on QuizDetails.QuizCategory = GroupMaster.group_id
-        Left join quiz_score on QuizMapping.quizId = quiz_score.quizID
-        where isnull(QuizMapping.delStatus,0)=0
-        group by GroupMaster.group_name, QuizDetails.QuizName, GroupMaster.group_id, QuizDetails.QuizID, QuizDetails.QuizImage`;
+        const query = `SELECT 
+    QuizDetails.QuizID,
+    QuizDetails.QuizName,
+	QuizDetails.QuizImage,
+	GroupMaster.group_name,
+	GroupMaster.group_id, 
+    SUM(QuizMapping.totalMarks) AS MaxScore,
+    COUNT(DISTINCT QuizMapping.QuestionsID) AS Total_Question_No
+FROM QuizMapping
+LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
+left join GroupMaster on QuizDetails.QuizCategory = GroupMaster.group_id
+AND ISNULL(QuizMapping.delStatus, 0) = 0
+GROUP BY QuizDetails.QuizID, QuizDetails.QuizImage, QuizDetails.QuizName, 	GroupMaster.group_id, 
+ GroupMaster.group_name`;
 
         const quizzes = await queryAsync(conn, query);
 
@@ -887,7 +887,7 @@ export const getQuizQuestions = async (req, res) => {
           LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
           LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
           LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
-          WHERE QuizMapping.quizId = ? AND QuizMapping.delStatus = 0`;
+          WHERE QuizMapping.quizId = ? AND QuizMapping.delStatus = 0 AND QuestionOptions.delStatus = 0`;
 
         const questions = await queryAsync(conn, query, [quizId]);
 
@@ -926,6 +926,7 @@ export const getQuizQuestions = async (req, res) => {
           // Add option if it exists
           if (q.option_text) {
             questionMap[q.QuestionsID].options.push({
+              id: q.optionId,
               option_text: q.option_text,
               is_correct: q.is_correct === 1,
             });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import FeedbackForm from "../FeedBackForm";
 
 const Tutorials = () => {
@@ -11,54 +11,53 @@ const Tutorials = () => {
         {
             id: 1,
             title: "Artificial Intelligence Tutorial",
-            fileId: "1GHPX9neaLZrs484zk2jF11msR6ADBbMa", // Replace with actual Google Drive file ID
-            duration: "32:15",
-            description: "Introduction to fundamental AI concepts"
+            videoId: "1GHPX9neaLZrs484zk2jF11msR6ADBbMa", // Replace with actual video ID
+            description: "Comprehensive introduction to Artificial Intelligence concepts"
         },
         {
             id: 2,
             title: "Convolutional Neural Networks Explained",
-            fileId: "XaUrSyoYCKjpDgqO4c6G4gAn3jtZv56p",
-            duration: "28:42",
-            description: "Understanding CNNs for image processing"
+            videoId: "1XaUrSyoYCKjpDgqO4c6G4gAn3jtZv56p", // Replace with actual video ID
+            description: "Detailed explanation of CNN architecture and applications"
         },
         {
             id: 3,
             title: "Deep Learning Crash Course",
-            fileId: "1MoZ-CgCAIIeCxeroA6-Woaj1PpRgMpEH",
-            duration: "45:30",
-            description: "Comprehensive deep learning overview"
+            videoId: "1MoZ-CgCAIIeCxeroA6-Woaj1PpRgMpEH", // Replace with actual video ID
+            description: "Quick-start guide to Deep Learning fundamentals"
         },
         {
             id: 4,
             title: "Machine Learning Crash Course",
-            fileId: "1LvvCE3k8ubVQvmtIzVoU-gsu4_z06jEF",
-            duration: "38:55",
-            description: "Essential ML concepts and techniques"
+            videoId: "1LvvCE3k8ubVQvmtIzVoU-gsu4_z06jEF", // Replace with actual video ID
+            description: "Essential Machine Learning concepts in under 1 hour"
         },
         {
             id: 5,
             title: "Neural Network Explained",
-            fileId: "10OTiefIKXQIaXb7sOPIsSZvYDCnyUq_6",
-            duration: "25:18",
-            description: "Fundamentals of neural networks"
+            videoId: "10OTiefIKXQIaXb7sOPIsSZvYDCnyUq_6", // Replace with actual video ID
+            description: "Understanding the building blocks of Neural Networks"
         },
         {
             id: 6,
             title: "Recurrent Neural Network Explained",
-            fileId: "1B00MK2-ZnW3PT_dySsEVjUy6dPBc4OJh",
-            duration: "31:27",
-            description: "Understanding RNNs for sequence data"
+            videoId: "1B00MK2-ZnW3PT_dySsEVjUy6dPBc4OJh", // Replace with actual video ID
+            description: "Complete guide to RNNs and their applications"
+        },
+        {
+            id: 7,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 
-    const handleFeedbackSubmit = (fileId, rating, comment) => {
+    const handleFeedbackSubmit = (videoId, rating, comment) => {
         const newFeedback = {
-            fileId,
+            videoId,
+            videoTitle: selectedVideoTitle,
             rating,
             comment,
-            timestamp: new Date().toISOString(),
-            videoTitle: selectedVideoTitle
+            timestamp: new Date().toISOString()
         };
         const updatedFeedback = [...feedback, newFeedback];
         localStorage.setItem("tutorialsFeedback", JSON.stringify(updatedFeedback));
@@ -66,94 +65,88 @@ const Tutorials = () => {
         sendFeedbackToServer(newFeedback);
     };
 
-    const getVideoUrl = (fileId) => {
-        return `https://drive.google.com/uc?export=download&id=${fileId}`;
-    };
-
     // Set first video as default on component mount
-    useEffect(() => {
+    useState(() => {
         if (tutorialVideos.length > 0 && !selectedVideoId) {
-            setSelectedVideoId(tutorialVideos[0].fileId);
+            setSelectedVideoId(tutorialVideos[0].videoId);
             setSelectedVideoTitle(tutorialVideos[0].title);
         }
 
         // Security measures
         const disableRightClick = (e) => e.preventDefault();
-        const disableKeys = (e) => {
-            if (e.ctrlKey && (e.key === 's' || e.key === 'p')) e.preventDefault();
+        const disableShortcuts = (e) => {
+            if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'c')) e.preventDefault();
         };
 
         document.addEventListener('contextmenu', disableRightClick);
-        document.addEventListener('keydown', disableKeys);
+        document.addEventListener('keydown', disableShortcuts);
 
         return () => {
             document.removeEventListener('contextmenu', disableRightClick);
-            document.removeEventListener('keydown', disableKeys);
+            document.removeEventListener('keydown', disableShortcuts);
         };
     }, []);
 
     return (
         <div className="flex h-screen bg-background text-foreground">
-            {/* Sidebar */}
-            <div className="w-72 bg-gray-800 text-white p-4 border-r border-gray-700 overflow-y-auto">
+            {/* Navigation Sidebar */}
+            <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700">
                 <h2 className="text-xl font-bold mb-6">AI Tutorial Videos</h2>
-                <ul className="space-y-3">
-                    {tutorialVideos.map((video) => (
+                <ul className="space-y-3 max-h-[calc(100vh-8rem)] overflow-y-auto">
+                    {tutorialVideos.map(video => (
                         <li key={video.id}>
                             <button
                                 onClick={() => {
-                                    setSelectedVideoId(video.fileId);
+                                    setSelectedVideoId(video.videoId);
                                     setSelectedVideoTitle(video.title);
                                 }}
                                 className={`flex flex-col w-full p-3 rounded text-left hover:bg-gray-700 transition-colors ${
-                                    selectedVideoId === video.fileId ? "bg-gray-700 ring-2 ring-blue-500" : ""
+                                    selectedVideoId === video.videoId ? "bg-gray-700 border-l-4 border-blue-500" : ""
                                 }`}
                             >
                                 <span className="font-medium">{video.title}</span>
-                                <div className="flex justify-between mt-1">
-                                    <span className="text-xs text-gray-300">{video.duration}</span>
-                                    <span className="text-xs text-gray-400">{video.id}/6</span>
-                                </div>
-                                <p className="text-xs text-gray-300 mt-2">{video.description}</p>
+                                <span className="text-sm text-gray-300 mt-1">{video.description}</span>
                             </button>
                         </li>
                     ))}
                 </ul>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 p-6 flex flex-col">
-                <h1 className="text-3xl font-bold mb-6 text-center">AI & Machine Learning Tutorials</h1>
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col p-6">
+                <div className="mb-6">
+                    <h1 className="text-3xl font-bold text-gray-800">
+                        {selectedVideoTitle || "Select a Tutorial"}
+                    </h1>
+                    <p className="text-gray-600 mt-2">
+                        {tutorialVideos.find(v => v.videoId === selectedVideoId)?.description || ""}
+                    </p>
+                </div>
                 
                 {selectedVideoId && (
                     <>
-                        <div className="flex-1 flex flex-col items-center">
-                            <div className="w-full max-w-4xl bg-black rounded-xl overflow-hidden shadow-2xl">
-                                <div className="relative pt-[56.25%]"> {/* 16:9 aspect ratio */}
-                                    <video
-                                        key={selectedVideoId}
-                                        src={getVideoUrl(selectedVideoId)}
-                                        controls
-                                        controlsList="nodownload"
-                                        className="absolute top-0 left-0 w-full h-full"
-                                        disablePictureInPicture
-                                    >
-                                        Your browser does not support the video tag.
-                                    </video>
-                                </div>
-                            </div>
+                        <div className="flex-1 w-full border rounded-xl shadow-lg relative overflow-hidden bg-white"
+                            onContextMenu={(e) => e.preventDefault()}>
+                            {/* Block Google Drive pop-out button */}
+                            <div className="absolute top-0 right-0 w-14 h-14 z-10" />
                             
-                            <div className="w-full max-w-4xl mt-4">
-                                <h2 className="text-xl font-semibold">{selectedVideoTitle}</h2>
-                                <p className="text-gray-600">
-                                    {tutorialVideos.find(v => v.fileId === selectedVideoId)?.description}
-                                </p>
+                            <div className="w-full h-full flex items-center justify-center">
+                                <iframe
+                                    key={selectedVideoId}
+                                    src={`https://drive.google.com/file/d/${selectedVideoId}/preview`}
+                                    className="w-full h-full max-w-4xl"
+                                    allowFullScreen
+                                    title={`${selectedVideoTitle} Video Player`}
+                                    sandbox="allow-scripts allow-same-origin"
+                                />
                             </div>
                         </div>
 
-                        <div className="mt-8 w-full max-w-4xl mx-auto">
-                            <FeedbackForm
+                        <div className="mt-8 w-full max-w-3xl mx-auto">
+                            <FeedbackForm 
                                 fileId={selectedVideoId}
+                                fileName={selectedVideoTitle}
+                                fileType="video"
                                 onSubmit={handleFeedbackSubmit}
                             />
                         </div>
@@ -165,8 +158,8 @@ const Tutorials = () => {
 };
 
 const sendFeedbackToServer = (feedback) => {
-    // Implement your feedback submission logic here
-    console.log("Submitting feedback:", feedback);
+    // Implement your feedback submission logic
+    console.log("Submitting Tutorial feedback:", feedback);
     // Example: axios.post('/api/feedback/tutorials', feedback)
 };
 

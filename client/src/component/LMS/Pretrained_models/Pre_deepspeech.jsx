@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm";
+import ApiContext from '../../../context/ApiContext';
 
 const Pre_deepspeech = () => {
+    const navigate = useNavigate();
+    const { userToken } = useContext(ApiContext); // Get user token
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [selectedFileType, setSelectedFileType] = useState("pdf");
     const [feedback, setFeedback] = useState([]);
@@ -19,11 +23,20 @@ const Pre_deepspeech = () => {
         {
             id: 2,
             title: "Pre-Processing Notebook (IPYNB)",
-            fileId: "1AL6Jx_XYsjktrfIUHwtYNTZne7FLY67n", // Replace with actual notebook ID
+            fileId: "1AL6Jx_XYsjktrfIUHwtYNTZne7FLY67n",
             type: "ipynb",
             icon: "📓",
             description: "Jupyter notebook with data preprocessing steps"
-        }
+        },
+        {
+            id: 3,
+            title: "Assessment",
+            type: "quiz",
+            quizId: 2, 
+            groupId: 456, 
+            icon: "📝",
+            description: "Test your knowledge with this assessment"
+        },
     ];
 
     const handleFeedbackSubmit = (fileId, rating, comment) => {
@@ -47,6 +60,27 @@ const Pre_deepspeech = () => {
                 return `https://nbviewer.jupyter.org/urls/docs.google.com/uc?export=download&id=${fileId}`;
             default:
                 return "";
+        }
+    };
+
+    const handleFileClick = (file) => {
+        if (file.type === "quiz") {
+            if (!userToken) {
+                alert("Please login to access the quiz");
+                return;
+            }
+            navigate(`/quiz/${file.quizId}`, {
+                state: {
+                    quiz: {
+                        QuizID: file.quizId,
+                        group_id: file.groupId,
+                        title: file.title
+                    }
+                }
+            });
+        } else {
+            setSelectedFileId(file.fileId);
+            setSelectedFileType(file.type);
         }
     };
 
@@ -81,10 +115,7 @@ const Pre_deepspeech = () => {
                     {preDeepSpeechFiles.map((file) => (
                         <li key={file.id}>
                             <button
-                                onClick={() => {
-                                    setSelectedFileId(file.fileId);
-                                    setSelectedFileType(file.type);
-                                }}
+                                onClick={() => handleFileClick(file)}
                                 className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 ${
                                     selectedFileId === file.fileId ? "bg-gray-700" : ""
                                 }`}
@@ -103,14 +134,14 @@ const Pre_deepspeech = () => {
             {/* Main Content */}
             <div className="flex-1 p-4 flex flex-col">
                 <h1 className="text-3xl font-bold mb-6 text-center">Pre-DeepSpeech Preparation</h1>
-                
+
                 {selectedFileId && (
                     <>
                         <div className="flex-1 w-full border rounded-xl shadow-lg overflow-hidden relative bg-white"
                             onContextMenu={(e) => e.preventDefault()}>
                             {/* Block Google Drive's pop-out button */}
                             <div className="absolute top-0 right-0 w-12 h-12 z-10" />
-                            
+
                             <iframe
                                 key={`${selectedFileId}-${selectedFileType}`}
                                 src={getEmbedURL(selectedFileId, selectedFileType)}
