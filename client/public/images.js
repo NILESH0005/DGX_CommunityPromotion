@@ -46,6 +46,7 @@ import us8 from '../public/us8.jpg'
 import us9 from '../public/us9.jpg'
 import bg1 from '../public/bg1.jpg'
 import defaultProfile from '../public/defaultProfile.jpeg'
+import teachingKit from '../public/LMS/Teaching Kit/teachingkit.jpg'
 
 
 
@@ -104,5 +105,10 @@ export default {
     us7,
     us8,
     us9,
-    defaultProfile
+    defaultProfile,
+
+
+
+    //LMS
+    teachingKit
 }   
