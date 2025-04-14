@@ -329,7 +329,7 @@ const QuizBank = () => {
                 <th className="border p-2">#</th>
                 <th className="border p-2">Question</th>
                 <th className="border p-2">Correct Answer</th>
-                <th className="border p-2">Answer Images</th>
+                {/* <th className="border p-2">Answer Images</th> */}
                 <th className="border p-2">Group</th>
                 <th className="border p-2">Level</th>
                 <th className="border p-2">Count</th>
@@ -342,7 +342,7 @@ const QuizBank = () => {
                   <td className="border p-2 text-center">{index + 1}</td>
                   <td className="border p-2">{q.question_text || q.text}</td>
                   <td className="border p-2">{q.correctAnswer}</td>
-                  <td className="border p-2">
+                  {/* <td className="border p-2">
                     {q.images && q.images.length > 0 ? (
                       q.images.map((img, i) => (
                         <img
@@ -355,7 +355,7 @@ const QuizBank = () => {
                     ) : (
                       <span className="text-gray-400">No images</span>
                     )}
-                  </td>
+                  </td> */}
                   <td className="border p-2 text-center">{q.group}</td>
                   <td className="border p-2 text-center">
                     {q.Ques_level || q.level}
@@ -398,4 +398,4 @@ const QuizBank = () => {
     </div>
   );
 };
-export default QuizBank;
+export default QuizBank;  

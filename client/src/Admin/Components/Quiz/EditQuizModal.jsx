@@ -21,7 +21,8 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
     StartDateAndTime: '',
-    EndDateTime: ''
+    EndDateTime: '',
+    QuizDuration: ''
   });
 
   useEffect(() => {
@@ -49,7 +50,7 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
   }, [quiz, user]);
 
   const validateTimes = (startTime, endTime) => {
-    const newErrors = { StartDateAndTime: '', EndDateTime: '' };
+    const newErrors = { ...errors, StartDateAndTime: '', EndDateTime: '' };
     let isValid = true;
     const now = new Date();
     const startDate = new Date(startTime);
@@ -77,6 +78,22 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
     return isValid;
   };
 
+  const validateDuration = (duration) => {
+    const newErrors = { ...errors, QuizDuration: '' };
+    let isValid = true;
+    
+    if (duration < 10) {
+      newErrors.QuizDuration = 'Duration must be at least 10 minutes';
+      isValid = false;
+    } else if (duration > 180) {
+      newErrors.QuizDuration = 'Duration cannot exceed 180 minutes';
+      isValid = false;
+    }
+    
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     const newFormData = {
@@ -93,17 +110,25 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
         name === 'EndDateTime' ? value : newFormData.EndDateTime
       );
     }
+    
+    // Validate duration when it changes
+    if (name === 'QuizDuration') {
+      validateDuration(value);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     
-    // Final validation before submission
-    if (!validateTimes(formData.StartDateAndTime, formData.EndDateTime)) {
+    // Validate all fields before submission
+    const isTimesValid = validateTimes(formData.StartDateAndTime, formData.EndDateTime);
+    const isDurationValid = validateDuration(formData.QuizDuration);
+    
+    if (!isTimesValid || !isDurationValid) {
       Swal.fire({
-        title: 'Please check the date',
-        text: 'Please fix the time and date before submitting',
+        title: 'Validation Error',
+        text: 'Please fix the validation errors before submitting',
         icon: 'error',
         confirmButtonText: 'OK'
       });
@@ -240,9 +265,13 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
                 value={formData.QuizDuration}
                 onChange={handleChange}
                 className="w-full p-2 border rounded"
-                min="1"
+                min="10"
+                max="180"
                 required
               />
+              {errors.QuizDuration && (
+                <p className="text-red-500 text-xs mt-1">{errors.QuizDuration}</p>
+              )}
             </div>
 
             <div className="flex items-center">
