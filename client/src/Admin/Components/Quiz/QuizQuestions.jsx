@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useContext } from "react";
-// import { v4 as uuidv4 } from "uuid";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import {
@@ -10,16 +9,14 @@ import {
   FiChevronDown,
   FiChevronUp,
 } from "react-icons/fi";
-import QuizQuestionTable from "./QuizQuestionTable";
 import ApiContext from "../../../context/ApiContext";
 
-const QuizQuestions = ({ onBackToBank }) => {
+const QuizQuestions = ({ onBackToBank, onQuestionCreated }) => {
   const { userToken, fetchData } = useContext(ApiContext);
-  const [questions, setQuestions] = useState([]);
   const [questionText, setQuestionText] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [correctAnswers, setCorrectAnswers] = useState([]);
-  const [group, setGroup] = useState("General");
+  const [group, setGroup] = useState("");
   const [image, setImage] = useState(null);
   const [optionImages, setOptionImages] = useState([null, null]);
   const [categories, setCategories] = useState([]);
@@ -48,6 +45,9 @@ const QuizQuestions = ({ onBackToBank }) => {
             a.group_name.localeCompare(b.group_name)
           );
           setCategories(sortedCategories);
+          if (sortedCategories.length > 0) {
+            setGroup(sortedCategories[0].group_id.toString());
+          }
         } else {
           Swal.fire("Error", "Failed to fetch quiz categories.", "error");
         }
@@ -216,10 +216,9 @@ const QuizQuestions = ({ onBackToBank }) => {
       Ques_level: selectedLevel || null,
       image: image || null,
       group_id: Number(group) || 0,
+      question_type: questionType === "multiple" ? 1 : 0,
       options: validOptions
     };
-  
-    console.log("Final payload:", payload);
   
     try {
       const response = await fetchData(
@@ -234,14 +233,17 @@ const QuizQuestions = ({ onBackToBank }) => {
   
       if (response?.success) {
         Swal.fire("Success", "Question added successfully!", "success");
-        // Properly reset the form
+        // Reset form
         setQuestionText("");
-        setOptions(["", ""]); // Start with 2 empty options
+        setOptions(["", ""]);
         setCorrectAnswers([]);
-        setGroup(categories[0]?.group_id || ""); // Reset to first category
         setImage(null);
         setOptionImages([null, null]);
         setSelectedLevel("");
+        // Notify parent component
+        if (onQuestionCreated) {
+          onQuestionCreated();
+        }
       } else {
         Swal.fire("Error", response?.message || "Failed to add question", "error");
       }
@@ -249,22 +251,6 @@ const QuizQuestions = ({ onBackToBank }) => {
       console.error("Question creation error:", error);
       Swal.fire("Error", "Failed to create question. Please try again.", "error");
     }
-  };
-
-  const handleDelete = (id) => {
-    setQuestions(questions.filter((q) => q.id !== id));
-    Swal.fire("Deleted", "Question removed successfully!", "success");
-  };
-
-  const handleEdit = (id) => {
-    const question = questions.find((q) => q.id === id);
-    setQuestionText(question.text);
-    setOptions(question.options);
-    setCorrectAnswers(question.correctAnswers);
-    setGroup(question.group);
-    setImage(question.image || null);
-    setOptionImages(question.optionImages || [null, null]);
-    setQuestions(questions.filter((q) => q.id !== id));
   };
 
   return (
@@ -298,7 +284,6 @@ const QuizQuestions = ({ onBackToBank }) => {
                   value={group}
                   onChange={(e) => setGroup(e.target.value)}
                 >
-                  <option value="">Select Group</option>
                   {categories.map((cat) => (
                     <option key={cat.group_id} value={cat.group_id}>
                       {cat.group_name}
@@ -388,20 +373,7 @@ const QuizQuestions = ({ onBackToBank }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Question Image (Optional)
                 </label>
-                <label className="flex items-center justify-center space-x-2 cursor-pointer bg-gray-50 p-2 rounded border border-dashed border-gray-300 hover:border-blue-500 transition-colors">
-                  <FiUpload className="text-blue-500" size={16} />
-                  <span className="text-blue-500 font-medium text-sm">
-                    Upload Image
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                </label>
-
-                {image && (
+                {image ? (
                   <div className="mt-2 relative flex justify-center items-center border border-gray-200 rounded overflow-hidden bg-gray-50 p-2">
                     <img
                       src={image}
@@ -415,6 +387,19 @@ const QuizQuestions = ({ onBackToBank }) => {
                       <FiX size={12} />
                     </button>
                   </div>
+                ) : (
+                  <label className="flex items-center justify-center space-x-2 cursor-pointer bg-gray-50 p-2 rounded border border-dashed border-gray-300 hover:border-blue-500 transition-colors">
+                    <FiUpload className="text-blue-500" size={16} />
+                    <span className="text-blue-500 font-medium text-sm">
+                      Upload Image
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
                 )}
               </div>
             </div>
