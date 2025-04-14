@@ -109,7 +109,7 @@ const QuizResult = () => {
   };
 
   const handleBackToQuizzes = () => {
-    navigate("/QuizInterface");
+    navigate("/QuizList");
   };
 
   return (

@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm";
+import ApiContext from '../../../context/ApiContext';
 
 const Pre_lstm = () => {
+    const navigate = useNavigate();
+    const { userToken } = useContext(ApiContext);
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [selectedFileType, setSelectedFileType] = useState("pdf");
     const [fileContent, setFileContent] = useState("");
@@ -12,7 +16,7 @@ const Pre_lstm = () => {
         {
             id: 1,
             title: "LSTM Documentation (PDF)",
-            fileId: "1vTzUkVtWJmDKiSdFocLrDvUKmZ71RSxp", // Replace with actual PDF ID
+            fileId: "1vTzUkVtWJmDKiSdFocLrDvUKmZ71RSxp",
             type: "pdf",
             icon: "📄",
             description: "Complete guide to LSTM implementation"
@@ -20,7 +24,7 @@ const Pre_lstm = () => {
         {
             id: 2,
             title: "Preprocessing Notebook (IPYNB)",
-            fileId: "WUMm8uBZVYbAr-mF5cvoZp87PaznifVf", // Replace with actual notebook ID
+            fileId: "WUMm8uBZVYbAr-mF5cvoZp87PaznifVf",
             type: "ipynb",
             icon: "📓",
             description: "Jupyter notebook with data preprocessing steps"
@@ -28,10 +32,19 @@ const Pre_lstm = () => {
         {
             id: 3,
             title: "Configuration File (TXT)",
-            fileId: "18h0UlqKLHuDBRv-2Eh7jtT2DAE1-9RnM", // Replace with actual TXT ID
+            fileId: "18h0UlqKLHuDBRv-2Eh7jtT2DAE1-9RnM",
             type: "txt",
             icon: "📝",
             description: "Text configuration file for LSTM setup"
+        },
+        {
+            id: 4,
+            title: "LSTM Assessment",
+            type: "quiz",
+            quizId: 3, // Unique quiz ID
+            groupId: 101, // Unique group ID
+            icon: "🧠",
+            description: "Test your understanding of LSTM concepts"
         }
     ];
 
@@ -46,6 +59,27 @@ const Pre_lstm = () => {
         localStorage.setItem("preLstmFeedback", JSON.stringify(updatedFeedback));
         setFeedback(updatedFeedback);
         sendFeedbackToServer(newFeedback);
+    };
+
+    const handleFileClick = (file) => {
+        if (file.type === "quiz") {
+            if (!userToken) {
+                alert("Please login to access the quiz");
+                return;
+            }
+            navigate(`/quiz/${file.quizId}`, {
+                state: {
+                    quiz: {
+                        QuizID: file.quizId,
+                        group_id: file.groupId,
+                        title: file.title
+                    }
+                }
+            });
+        } else {
+            setSelectedFileId(file.fileId);
+            setSelectedFileType(file.type);
+        }
     };
 
     const getEmbedURL = (fileId, type) => {
@@ -72,9 +106,10 @@ const Pre_lstm = () => {
 
     // Set first file as default on component mount
     useEffect(() => {
-        if (preLstmFiles.length > 0 && !selectedFileId) {
-            setSelectedFileId(preLstmFiles[0].fileId);
-            setSelectedFileType(preLstmFiles[0].type);
+        const firstFile = preLstmFiles.find(f => f.type === "pdf");
+        if (firstFile && !selectedFileId) {
+            setSelectedFileId(firstFile.fileId);
+            setSelectedFileType(firstFile.type);
         }
 
         // Security measures
@@ -103,16 +138,13 @@ const Pre_lstm = () => {
     return (
         <div className="flex h-screen bg-background text-foreground">
             {/* Sidebar */}
-            <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700">
+            <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700 overflow-y-auto">
                 <h2 className="text-lg font-semibold mb-4">Pre-LSTM Materials</h2>
                 <ul className="space-y-2">
                     {preLstmFiles.map((file) => (
                         <li key={file.id}>
                             <button
-                                onClick={() => {
-                                    setSelectedFileId(file.fileId);
-                                    setSelectedFileType(file.type);
-                                }}
+                                onClick={() => handleFileClick(file)}
                                 className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 ${
                                     selectedFileId === file.fileId ? "bg-gray-700" : ""
                                 }`}
@@ -180,7 +212,11 @@ const Pre_lstm = () => {
                             />
                         </div>
                     </>
-                ) : null}
+                ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                        <p className="text-gray-500">Select a file to view</p>
+                    </div>
+                )}
             </div>
         </div>
     );

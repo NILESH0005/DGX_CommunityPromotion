@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm";
+import ApiContext from '../../../context/ApiContext';
 
 const Pre_resnet = () => {
+    const navigate = useNavigate();
+    const { userToken } = useContext(ApiContext);
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [selectedFileType, setSelectedFileType] = useState("pdf");
     const [isDownloading, setIsDownloading] = useState(false);
@@ -12,7 +16,7 @@ const Pre_resnet = () => {
         {
             id: 1,
             title: "ResNet Guide (PDF)",
-            fileId: "1j4-WIz0YJnqTAS4Eh3VuFbXPrJUxQEfL", // Replace with actual PDF ID
+            fileId: "1j4-WIz0YJnqTAS4Eh3VuFbXPrJUxQEfL",
             type: "pdf",
             icon: "📄",
             description: "Implementation guide for ResNet"
@@ -20,7 +24,7 @@ const Pre_resnet = () => {
         {
             id: 2,
             title: "Training Notebook (IPYNB)",
-            fileId: "1FAYpq27JJoK3ZYtkbiuZmOhfoPKI3MpZ", // Replace with actual notebook ID
+            fileId: "1FAYpq27JJoK3ZYtkbiuZmOhfoPKI3MpZ",
             type: "ipynb",
             icon: "📓",
             description: "Jupyter notebook with training code"
@@ -28,11 +32,20 @@ const Pre_resnet = () => {
         {
             id: 3,
             title: "Pre-trained Weights (H5)",
-            fileId: "1Qr7MY5wMpCCRnb9XokJDx2mXRIgvE9f0/", // Replace with actual weights file ID
+            fileId: "1Qr7MY5wMpCCRnb9XokJDx2mXRIgvE9f0/",
             type: "h5",
             icon: "⚖️",
             description: "Pre-trained model weights",
-            size: "~90MB" // Example size
+            size: "~90MB"
+        },
+        {
+            id: 4,
+            title: "ResNet Assessment",
+            type: "quiz",
+            quizId: 4, // Unique quiz ID
+            groupId: 112, // Unique group ID
+            icon: "🧠",
+            description: "Test your ResNet knowledge"
         }
     ];
 
@@ -47,6 +60,29 @@ const Pre_resnet = () => {
         localStorage.setItem("preResnetFeedback", JSON.stringify(updatedFeedback));
         setFeedback(updatedFeedback);
         sendFeedbackToServer(newFeedback);
+    };
+
+    const handleFileClick = (file) => {
+        if (file.type === "quiz") {
+            if (!userToken) {
+                alert("Please login to access the quiz");
+                return;
+            }
+            navigate(`/quiz/${file.quizId}`, {
+                state: {
+                    quiz: {
+                        QuizID: file.quizId,
+                        group_id: file.groupId,
+                        title: file.title
+                    }
+                }
+            });
+        } else if (file.type === "h5") {
+            handleDownload(file.fileId, 'resnet_weights.h5');
+        } else {
+            setSelectedFileId(file.fileId);
+            setSelectedFileType(file.type);
+        }
     };
 
     const getEmbedURL = (fileId, type) => {
@@ -91,12 +127,10 @@ const Pre_resnet = () => {
 
     // Set first file as default on component mount
     useEffect(() => {
-        if (preResnetFiles.length > 0 && !selectedFileId) {
-            const firstFile = preResnetFiles.find(f => f.type !== "h5");
-            if (firstFile) {
-                setSelectedFileId(firstFile.fileId);
-                setSelectedFileType(firstFile.type);
-            }
+        const firstFile = preResnetFiles.find(f => f.type === "pdf");
+        if (firstFile && !selectedFileId) {
+            setSelectedFileId(firstFile.fileId);
+            setSelectedFileType(firstFile.type);
         }
 
         // Security measures
@@ -117,43 +151,25 @@ const Pre_resnet = () => {
     return (
         <div className="flex h-screen bg-background text-foreground">
             {/* Sidebar */}
-            <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700">
+            <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700 overflow-y-auto">
                 <h2 className="text-lg font-semibold mb-4">Pre-ResNet Materials</h2>
                 <ul className="space-y-2">
                     {preResnetFiles.map((file) => (
                         <li key={file.id}>
-                            {file.type === "h5" ? (
-                                <button
-                                    onClick={() => handleDownload(file.fileId, 'resnet_weights.h5')}
-                                    disabled={isDownloading}
-                                    className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 ${
-                                        isDownloading ? 'bg-gray-600' : ''
-                                    }`}
-                                >
-                                    <span className="mr-3 text-lg">{file.icon}</span>
-                                    <div>
-                                        <div className="font-medium">{file.title}</div>
-                                        <div className="text-xs text-gray-300 mt-1">{file.description}</div>
-                                        <div className="text-xs text-gray-400 mt-1">Size: {file.size}</div>
-                                    </div>
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => {
-                                        setSelectedFileId(file.fileId);
-                                        setSelectedFileType(file.type);
-                                    }}
-                                    className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 ${
-                                        selectedFileId === file.fileId ? "bg-gray-700" : ""
-                                    }`}
-                                >
-                                    <span className="mr-3 text-lg">{file.icon}</span>
-                                    <div>
-                                        <div className="font-medium">{file.title}</div>
-                                        <div className="text-xs text-gray-300 mt-1">{file.description}</div>
-                                    </div>
-                                </button>
-                            )}
+                            <button
+                                onClick={() => handleFileClick(file)}
+                                disabled={isDownloading && file.type === "h5"}
+                                className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 ${
+                                    (selectedFileId === file.fileId || (file.type === "h5" && isDownloading)) ? "bg-gray-700" : ""
+                                }`}
+                            >
+                                <span className="mr-3 text-lg">{file.icon}</span>
+                                <div>
+                                    <div className="font-medium">{file.title}</div>
+                                    <div className="text-xs text-gray-300 mt-1">{file.description}</div>
+                                    {file.size && <div className="text-xs text-gray-400 mt-1">Size: {file.size}</div>}
+                                </div>
+                            </button>
                         </li>
                     ))}
                 </ul>
@@ -168,7 +184,9 @@ const Pre_resnet = () => {
                         <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
                             <div className="text-6xl mb-4">⚖️</div>
                             <h2 className="text-2xl font-semibold mb-2">Model Weights Download</h2>
-                            <p className="text-gray-600 mb-4">Click the download button in the sidebar to get the weights file</p>
+                            <p className="text-gray-600 mb-4">
+                                {isDownloading ? "Downloading..." : "Click the download button in the sidebar to get the weights file"}
+                            </p>
                             <div className="bg-gray-100 rounded-lg p-4 mb-6 text-left">
                                 <h3 className="font-medium mb-2">File Information:</h3>
                                 <ul className="text-sm space-y-1">
@@ -178,15 +196,6 @@ const Pre_resnet = () => {
                                     <li>• Framework: TensorFlow/Keras</li>
                                 </ul>
                             </div>
-                            <button
-                                onClick={() => handleDownload(preResnetFiles[2].fileId, 'resnet_weights.h5')}
-                                disabled={isDownloading}
-                                className={`px-4 py-2 rounded-lg font-medium text-white ${
-                                    isDownloading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-                                } transition-colors`}
-                            >
-                                {isDownloading ? 'Downloading...' : 'Download Weights'}
-                            </button>
                         </div>
                     </div>
                 ) : selectedFileId ? (
@@ -212,7 +221,11 @@ const Pre_resnet = () => {
                             />
                         </div>
                     </>
-                ) : null}
+                ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                        <p className="text-gray-500">Select a file to view</p>
+                    </div>
+                )}
             </div>
         </div>
     );
