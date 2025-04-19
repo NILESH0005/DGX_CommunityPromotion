@@ -931,6 +931,8 @@ export const getUserQuizCategory = async (req, res) => {
     QuizDetails.QuizID,
     QuizDetails.QuizName,
 	QuizDetails.QuizImage,
+	QuizDetails.StartDateAndTime,
+	QuizDetails.EndDateTime,
 	GroupMaster.group_name,
 	GroupMaster.group_id, 
     SUM(QuizMapping.totalMarks) AS MaxScore,
@@ -940,7 +942,7 @@ LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
 left join GroupMaster on QuizDetails.QuizCategory = GroupMaster.group_id
 AND ISNULL(QuizMapping.delStatus, 0) = 0
 GROUP BY QuizDetails.QuizID, QuizDetails.QuizImage, QuizDetails.QuizName, 	GroupMaster.group_id, 
- GroupMaster.group_name`;
+ GroupMaster.group_name, QuizDetails.StartDateAndTime, QuizDetails.EndDateTime`;
 
         const quizzes = await queryAsync(conn, query);
 

@@ -228,7 +228,7 @@ export const databaseUserVerification = async (req, res) => {
 
 //Route 1) create a User using : POST '/api/auth/createuser'. Doesn't require Auth
 
-export const registration = async (req, res) => {
+export const registration = async (req, res) => { 
   let success = false;
 
   // Validate request body
@@ -587,7 +587,6 @@ export const changePassword = async (req, res) => {
   }
 };
 
-//Route 4) Get loggedin user detail using POST "/getuser"  - Login required
 
 export const getuser = async (req, res) => {
   let success = false;
@@ -769,7 +768,6 @@ WHERE delStatus = 0 OR delStatus IS NULL;`;
   }
 };
 
-//Route 5) Sending Invite to mail "/sendinvite" - Login required
 
 export const sendInvite = async (req, res) => {
   let success = false;
@@ -908,7 +906,6 @@ export const sendInvite = async (req, res) => {
   }
 };
 
-//Route 6) Sending password recovery mail "/passwordrecovery"
 
 export const passwordRecovery = async (req, res) => {
   let success = false;
@@ -1065,7 +1062,6 @@ export const passwordRecovery = async (req, res) => {
   }
 };
 
-//Route 7) Reset Password from password recovery mail "/resetpassword"
 export const resetPassword = async (req, res) => {
   let success = false;
 
