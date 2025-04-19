@@ -22,6 +22,11 @@ const Mnist = () => {
             fileId: "14ntQf8fpVMKEW0mWbqKf527PXJ_t1Vd3", // Replace with actual notebook ID
             type: "notebook",
             description: "Practical implementation using the MNIST dataset"
+        },
+        {
+            id: 3,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

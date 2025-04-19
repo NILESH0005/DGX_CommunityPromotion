@@ -22,6 +22,11 @@ const Faster_rcnn = () => {
             fileId: "1fwWd58YFeo2MA_vWJXdG3YDN9wyYc072", // Replace with actual notebook ID
             type: "notebook",
             description: "Practical implementation of Faster R-CNN model"
+        },
+        {
+            id: 3,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

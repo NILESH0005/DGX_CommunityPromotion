@@ -19,9 +19,14 @@ const Vision_trans = () => {
         {
             id: 2,
             title: "Vision Transformers (Jupyter Notebook)",
-            fileId: "1RDzc7lpfOhU3QO_QdkpuPrbvFCUrFwzY  ", // Replace with actual notebook ID
+            fileId: "1RDzc7lpfOhU3QO_QdkpuPrbvFCUrFwzY", // Replace with actual notebook ID
             type: "notebook",
             description: "Practical implementation of Vision Transformers (ViTs)"
+        },
+        {
+            id: 3,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

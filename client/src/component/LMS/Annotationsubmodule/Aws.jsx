@@ -1,35 +1,19 @@
-import React, { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm";
-import ApiContext from '../../../context/ApiContext';
 
 const Aws = () => {
     const navigate = useNavigate();
-    const { userToken } = useContext(ApiContext); // Get user token
-    const [selectedFileId, setSelectedFileId] = useState(null);
-    const [selectedFileType, setSelectedFileType] = useState("pdf");
     const [feedback, setFeedback] = useState([]);
+    
+    // AWS PDF file details
+    const awsPdf = {
+        fileId: "1WR7LWoYswjAjqAjeLD4s14d6p-T7ej9i", // Replace with your actual Google Drive file ID
+        title: "AWS Learning Resources",
+        type: "pdf"
+    };
 
-    // AWS learning files
-    const awsFiles = [
-        {
-            id: 1,
-            title: "AWS Learning Resources (PDF)",
-            fileId: "1WR7LWoYswjAjqAjeLD4s14d6p-T7ej9i",
-            type: "pdf",
-            icon: "📄",
-            description: "Comprehensive guide to AWS services and concepts"
-        },
-        {
-            id: 2,
-            title: "AWS Assessment",
-            type: "quiz",
-            quizId: 2, 
-            groupId: 789, 
-            icon: "📝",
-            description: "Test your AWS knowledge with this assessment"
-        },
-    ];
+       
 
     const handleFeedbackSubmit = (fileId, rating, comment) => {
         const newFeedback = {
@@ -38,13 +22,14 @@ const Aws = () => {
             comment,
             timestamp: new Date().toISOString(),
         };
+
         const updatedFeedback = [...feedback, newFeedback];
-        localStorage.setItem("awsFeedback", JSON.stringify(updatedFeedback));
+        localStorage.setItem("userFeedback", JSON.stringify(updatedFeedback));
         setFeedback(updatedFeedback);
         sendFeedbackToServer(newFeedback);
     };
 
-    const getEmbedURL = (fileId, type) => {
+    const getEmbedURL = (fileId, type = "pdf") => {
         switch (type) {
             case "pdf":
                 return `https://drive.google.com/file/d/${fileId}/preview`;
@@ -53,111 +38,78 @@ const Aws = () => {
         }
     };
 
-    const handleFileClick = (file) => {
-        if (file.type === "quiz") {
-            if (!userToken) {
-                alert("Please login to access the quiz");
-                return;
+    // Disable right-click and keyboard shortcuts
+    useState(() => {
+        const disableRightClick = (e) => {
+            e.preventDefault();
+        };
+
+        const disableKeyboardShortcuts = (e) => {
+            if (e.ctrlKey && (e.key === 's' || e.key === 'p')) {
+                e.preventDefault();
             }
-            navigate(`/quiz/${file.quizId}`, {
-                state: {
-                    quiz: {
-                        QuizID: file.quizId,
-                        group_id: file.groupId,
-                        title: file.title
-                    }
-                }
-            });
-        } else {
-            setSelectedFileId(file.fileId);
-            setSelectedFileType(file.type);
-        }
-    };
-
-    // Set first file as default on component mount
-    useEffect(() => {
-        if (awsFiles.length > 0 && !selectedFileId) {
-            setSelectedFileId(awsFiles[0].fileId);
-            setSelectedFileType(awsFiles[0].type);
-        }
-
-        // Security measures
-        const disableRightClick = (e) => e.preventDefault();
-        const disableKeys = (e) => {
-            if (e.ctrlKey && (e.key === 's' || e.key === 'p')) e.preventDefault();
         };
 
         document.addEventListener('contextmenu', disableRightClick);
-        document.addEventListener('keydown', disableKeys);
+        document.addEventListener('keydown', disableKeyboardShortcuts);
 
         return () => {
             document.removeEventListener('contextmenu', disableRightClick);
-            document.removeEventListener('keydown', disableKeys);
+            document.removeEventListener('keydown', disableKeyboardShortcuts);
         };
     }, []);
 
     return (
         <div className="flex h-screen bg-background text-foreground">
-            {/* Sidebar */}
+            {/* Sidebar - Simplified since there's only one file */}
             <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700">
-                <h2 className="text-lg font-semibold mb-4">AWS Learning Materials</h2>
+                <h2 className="text-lg font-semibold mb-4">AWS Resources</h2>
                 <ul className="space-y-2">
-                    {awsFiles.map((file) => (
-                        <li key={file.id}>
-                            <button
-                                onClick={() => handleFileClick(file)}
-                                className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 ${
-                                    selectedFileId === file.fileId ? "bg-gray-700" : ""
-                                }`}
-                            >
-                                <span className="mr-3 text-lg">{file.icon}</span>
-                                <div>
-                                    <div className="font-medium">{file.title}</div>
-                                    <div className="text-xs text-gray-300 mt-1">{file.description}</div>
-                                </div>
-                            </button>
-                        </li>
-                    ))}
+                    <li>
+                        <div className="flex items-center hover:bg-gray-700 hover:text-white p-2 rounded cursor-pointer bg-gray-700 text-white">
+                            <span>{awsPdf.title}</span>
+                        </div>
+                    </li>
                 </ul>
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 p-4 flex flex-col">
-                <h1 className="text-3xl font-bold mb-6 text-center">AWS Learning Resources</h1>
-
-                {selectedFileId && (
-                    <>
-                        <div className="flex-1 w-full border rounded-xl shadow-lg overflow-hidden relative bg-white"
-                            onContextMenu={(e) => e.preventDefault()}>
-                            {/* Block Google Drive's pop-out button */}
-                            <div className="absolute top-0 right-0 w-12 h-12 z-10" />
-
-                            <iframe
-                                key={`${selectedFileId}-${selectedFileType}`}
-                                src={getEmbedURL(selectedFileId, selectedFileType)}
-                                className="w-full h-full"
-                                allowFullScreen
-                                title={awsFiles.find(f => f.fileId === selectedFileId)?.title || "AWS Content Viewer"}
-                            />
-                        </div>
-
-                        <div className="mt-6 w-full max-w-2xl mx-auto">
-                            <FeedbackForm
-                                fileId={selectedFileId}
-                                onSubmit={handleFeedbackSubmit}
-                            />
-                        </div>
-                    </>
-                )}
+            <div className="flex-1 p-4 flex flex-col items-center justify-center">
+                <h1 className="text-4xl font-bold mb-4 text-center">AWS Learning Materials</h1>
+                <div className="w-full max-w-7xl h-[90vh] border rounded-lg shadow overflow-hidden relative"
+                    onContextMenu={(e) => e.preventDefault()}>
+                    {/* Transparent overlay to block the pop-out button */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: 0,
+                            right: 0,
+                            width: "50px",
+                            height: "50px",
+                            backgroundColor: "transparent",
+                            zIndex: 10,
+                        }}
+                    />
+                    <iframe
+                        src={getEmbedURL(awsPdf.fileId, awsPdf.type)}
+                        className="w-full h-full"
+                        allowFullScreen
+                    />
+                </div>
+                
+                <FeedbackForm
+                    fileId={awsPdf.fileId}
+                    onSubmit={handleFeedbackSubmit}
+                />
             </div>
         </div>
     );
 };
 
+// Helper function to send feedback to server (same as in AiRoboticsKit)
 const sendFeedbackToServer = (feedback) => {
     // Implement your feedback submission logic here
-    console.log("Submitting feedback:", feedback);
-    // Example: axios.post('/api/feedback/aws', feedback)
+    console.log("Feedback submitted:", feedback);
 };
 
 export default Aws;

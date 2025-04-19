@@ -10,7 +10,7 @@ const QuizBank = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("All");
   const [showQuizQuestions, setShowQuizQuestions] = useState(false);
-  const [finalQuestions, setFinalQuestions] = useState([]);
+  const [questionMap, setFinalQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
@@ -73,7 +73,7 @@ const QuizBank = () => {
     };
 
     try {
-      const [questionsData, categoriesData, levelsData] = await Promise.all([
+      const [questionsData] = await Promise.all([
         fetchData(endpoint, method, {}, headers),
         fetchCategories(),
         fetchQuestionLevels(),
@@ -82,64 +82,52 @@ const QuizBank = () => {
         const questionMap = new Map();
 
         questionsData.data.quizzes.forEach((quiz) => {
-          // Only process correct answers
-          if (quiz.is_correct === 1) {
-            const questionKey = `${quiz.question_text}_${quiz.id}`;
-            const existingQuestion = questionMap.get(questionKey);
+          const questionKey = `${quiz.question_text}_${quiz.id}`;
+          const existingQuestion = questionMap.get(questionKey);
+          console.log("chuuhhhh", questionsData);
 
-            if (existingQuestion) {
-              const existingAnswers = Array.isArray(
-                existingQuestion.correctAnswer
-              )
-                ? existingQuestion.correctAnswer
-                : [existingQuestion.correctAnswer];
-
-              const newAnswers = Array.isArray(quiz.option_text)
-                ? quiz.option_text
-                : [quiz.option_text];
-
-              const combinedAnswers = [
-                ...new Set([...existingAnswers, ...newAnswers]),
-              ];
-
-              questionMap.set(questionKey, {
-                ...existingQuestion,
-                correctAnswer: combinedAnswers,
-                id: existingQuestion.id,
-                count: existingQuestion.count + (quiz.quiz_count || 0),
-                images:
-                  existingQuestion.images ||
-                  (quiz.image_url ? [quiz.image_url] : []),
-                options: [
-                  ...(existingQuestion.options || []),
-                  {
-                    option_text: quiz.option_text,
-                    is_correct: quiz.is_correct,
-                    image: quiz.image_url || null,
-                  },
-                ],
-              });
-            } else {
-              questionMap.set(questionKey, {
-                id: quiz.id,
-                question_id: quiz.id,
-                question_text: quiz.question_text,
-                correctAnswer: quiz.option_text,
-                group: quiz.group_name,
-                group_id: quiz.group_id,
-                Ques_level: quiz.ddValue,
-                count: quiz.quiz_count || 0,
-                images: quiz.image_url ? [quiz.image_url] : [],
-                image: quiz.question_image || null,
-                options: [
-                  {
-                    option_text: quiz.option_text,
-                    is_correct: quiz.is_correct,
-                    image: quiz.image_url || null,
-                  },
-                ],
-              });
-            }
+          if (existingQuestion) {
+            questionMap.set(questionKey, {
+              ...existingQuestion,
+              options: [
+                ...(existingQuestion.options || []),
+                {
+                  option_text: quiz.option_text,
+                  is_correct: quiz.is_correct === 1,
+                  image: quiz.image_url || null,
+                },
+              ],
+              correctAnswer:
+                quiz.is_correct === 1
+                  ? [
+                      ...(Array.isArray(existingQuestion.correctAnswer)
+                        ? existingQuestion.correctAnswer
+                        : [existingQuestion.correctAnswer]),
+                      quiz.option_text,
+                    ]
+                  : existingQuestion.correctAnswer,
+              count: existingQuestion.count + (quiz.quiz_count || 0),
+            });
+          } else {
+            // Create new question entry
+            questionMap.set(questionKey, {
+              id: quiz.id,
+              question_id: quiz.id,
+              question_text: quiz.question_text,
+              correctAnswer: quiz.is_correct === 1 ? quiz.option_text : [],
+              group: quiz.group_name,
+              group_id: quiz.group_id,
+              Ques_level: quiz.ddValue,
+              count: quiz.quiz_count || 0,
+              image: quiz.question_image || null,
+              options: [
+                {
+                  option_text: quiz.option_text,
+                  is_correct: quiz.is_correct === 1,
+                  image: quiz.image_url || null,
+                },
+              ],
+            });
           }
         });
 
@@ -175,7 +163,6 @@ const QuizBank = () => {
     }
   };
 
-  
   const handleDelete = async (questionId) => {
     const result = await Swal.fire({
       title: "Are you sure?",
@@ -222,23 +209,62 @@ const QuizBank = () => {
     }
   };
 
-  const handleEdit = (question) => {
-    // Transform the question data to match the EditQuestionModal's expected format
-    const questionData = {
-      question_id: question.id,
-      question_text: question.question_text || question.text,
-      Ques_level: question.Ques_level || question.level,
-      group_id: question.group_id?.toString() || "",
-      image: question.image || null,
-      options: question.options || [
-        { option_text: "", is_correct: 0, image: null },
-        { option_text: "", is_correct: 0, image: null },
-      ],
+  const handleEdit = (questionId) => {
+    const questionToEdit = questionMap.find((q) => q.id === questionId);
+
+    if (!questionToEdit) {
+      Swal.fire("Error", "Question not found in local data", "error");
+      return;
+    }
+
+    const transformedQuestion = {
+      id: questionToEdit.id,
+      question_text: questionToEdit.question_text,
+      group_id: questionToEdit.group_id?.toString(),
+      group_name: questionToEdit.group,
+      Ques_level: questionToEdit.Ques_level,
+      question_type: 0, 
+      image: questionToEdit.image,
+      options: questionToEdit.options.map(option => ({
+        option_text: option.option_text,
+        is_correct: option.is_correct,
+        image: option.image
+      }))
     };
 
-    setSelectedQuestion(questionData);
-
+    setSelectedQuestion(transformedQuestion);
     setShowEditModal(true);
+  };
+
+  const transformQuestionData = (apiData) => {
+    if (!apiData || apiData.length === 0) return null;
+
+    const questionMap = {};
+
+    apiData.forEach((item) => {
+      if (!questionMap[item.question_id]) {
+        questionMap[item.question_id] = {
+          id: item.question_id,
+          question_text: item.question_text,
+          group_id: item.group_id?.toString(),
+          group_name: item.group_name,
+          Ques_level: item.ddValue,
+          question_type: item.question_type || 0,
+          image: item.question_image || null,
+          options: [],
+        };
+      }
+
+      if (item.option_text) {
+        questionMap[item.question_id].options.push({
+          option_text: item.option_text,
+          is_correct: item.is_correct === 1,
+          image: item.option_image || null,
+        });
+      }
+    });
+
+    return Object.values(questionMap)[0];
   };
 
   const handleCloseModal = (isUpdated = false) => {
@@ -246,7 +272,7 @@ const QuizBank = () => {
     setSelectedQuestion(null);
 
     if (isUpdated) {
-      fetchQuestions(); // Refresh the questions list
+      fetchQuestions();
     }
   };
 
@@ -260,9 +286,9 @@ const QuizBank = () => {
     fetchQuestions();
   }, []);
 
-  const groups = ["All", ...new Set(finalQuestions.map((q) => q.group))];
+  const groups = ["All", ...new Set(questionMap.map((q) => q.group))];
 
-  const filteredQuestions = finalQuestions.filter((question) => {
+  const filteredQuestions = questionMap.filter((question) => {
     return (
       (selectedGroup === "All" || question.group === selectedGroup) &&
       (question.question_text || question.text)
@@ -363,7 +389,7 @@ const QuizBank = () => {
                   <td className="border p-2 text-center">{q.count}</td>
                   <td className="border p-2 space-x-1 text-center">
                     <button
-                      onClick={() => handleEdit(q)}
+                      onClick={() => handleEdit(q.id)}
                       className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition text-sm"
                     >
                       Edit
@@ -392,10 +418,9 @@ const QuizBank = () => {
           onUpdateSuccess={() => handleCloseModal(true)}
           categories={categories}
           questionLevels={questionLevels}
-          userToken={userToken}
         />
       )}
     </div>
   );
 };
-export default QuizBank;  
+export default QuizBank;
