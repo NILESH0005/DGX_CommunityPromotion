@@ -55,6 +55,11 @@ const Imageclass = () => {
             fileId: "1N5sk8jHh6qYERsPNOeT5WHqx099gn4jY",
             type: "pdf",
             description: "Documentation for image classification project"
+        },
+        {
+            id: 7,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

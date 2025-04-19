@@ -14,7 +14,7 @@ export const Lms = () => {
       description: "Access and render text files, PowerPoints, and Jupyter Notebooks",
       category: "teaching-kits",
       subcategory: "teaching-kits",
-      image: "Teaching kit.jpg",
+      image: "Teaching kit.avif",
     },
     {
       id: 2,
@@ -38,7 +38,7 @@ export const Lms = () => {
       description: "Access and utilize various pre-trained machine learning models",
       category: "pretrained-models",
       subcategory: "pretrained-models",
-      image: "pre-trained.jpg",
+      image: "pre-trained.avif",
     },
     {
       id: 5,
@@ -54,7 +54,7 @@ export const Lms = () => {
       description: "Explore generative AI and large language models",
       category: "generative-ai",
       subcategory: "generative-ai",
-      image: "generativeai.png",
+      image: "generativeai.avif",
     },
     {
       id: 7,
@@ -62,7 +62,7 @@ export const Lms = () => {
       description: "Interactive digital learning resources and tools",
       category: "digital-learning",
       subcategory: "digital-learning",
-      image: "digitalImage.jpeg",
+      image: "digital.avif",
     },
     {
       id: 8,
@@ -70,7 +70,7 @@ export const Lms = () => {
       description: "Learn about image processing and computer vision techniques",
       category: "computer-vision",
       subcategory: "computer-vision",
-      image: "computerVision.jpg",
+      image: "computerVision.jpeg",
     },
     {
       id: 9,
@@ -78,7 +78,7 @@ export const Lms = () => {
       description: "Tools and techniques for data annotation and labeling",
       category: "annotation",
       subcategory: "annotation",
-      image: "annotation.jpg",
+      image: "annotation.jpeg",
     },
     {
       id: 10,
@@ -86,7 +86,7 @@ export const Lms = () => {
       description: "Study various algorithms and their implementations",
       category: "algorithms",
       subcategory: "algorithms",
-      image: "algorithms.jpg",
+      image: "algorithms.avif",
     },
   ];
 

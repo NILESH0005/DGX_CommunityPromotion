@@ -14,6 +14,7 @@ const EditQuestionModal = ({
 }) => {
   const { fetchData, userToken, user } = useContext(ApiContext);
   const [formData, setFormData] = useState({
+    id: "",
     question_text: "",
     Ques_level: "",
     group_id: "",
@@ -25,59 +26,110 @@ const EditQuestionModal = ({
   const [optionImages, setOptionImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Predefined question levels
+  const predefinedLevels = [
+    { idCode: "23", ddValue: "Easy" },
+    { idCode: "24", ddValue: "Medium" },
+    { idCode: "25", ddValue: "Hard" },
+  ];
+
   useEffect(() => {
     if (questionData && isOpen) {
-      // Determine question type based on number of correct answers
-      const correctAnswersCount = questionData.options?.filter(opt => opt.is_correct).length || 0;
-      const questionType = correctAnswersCount > 1 ? 1 : 0;
-
-      // Ensure we have at least 2 options
-      const initialOptions = questionData.options?.length >= 2 
-        ? questionData.options 
-        : [
-            ...questionData.options,
-            ...Array(2 - questionData.options.length).fill({
-              option_text: "",
-              is_correct: false,
-              image: null
-            })
-          ];
-
-      setFormData({
-        id: questionData.question_id || questionData.id,
+      // Find the category ID that matches the group_name from the API
+      const matchedCategory = categories.find(
+        (cat) => cat.group_name === questionData.group_name
+      );
+  
+      // Find the question level ID that matches the ddValue from the API
+      const matchedLevel =
+        predefinedLevels.find((level) => level.ddValue === questionData.Ques_level) ||
+        questionLevels.find((level) => level.ddValue === questionData.Ques_level);
+  
+      // Count correct answers to determine question type
+      const correctAnswersCount = questionData.options
+        ? questionData.options.filter((opt) => opt.is_correct).length
+        : 0;
+  
+      // Transform the API data into our form structure
+      const transformedData = {
+        id: questionData.id,
         question_text: questionData.question_text || "",
-        Ques_level: questionData.Ques_level || questionData.level || "",
-        group_id: questionData.group_id?.toString() || "",
-        image: questionData.image || questionData.question_image || null,
-        question_type: questionType,
-        options: initialOptions,
-      });
-
-      setImagePreview(questionData.image || questionData.question_image || null);
-      setOptionImages(initialOptions.map(opt => opt.image || null));
+        Ques_level: matchedLevel ? matchedLevel.idCode : "",
+        group_id: matchedCategory ? matchedCategory.group_id : "",
+        image: questionData.image || null,
+        question_type: correctAnswersCount > 1 ? 1 : 0,
+        options: questionData.options || [],
+      };
+  
+      // Ensure we have at least 2 options
+      if (transformedData.options.length < 2) {
+        while (transformedData.options.length < 2) {
+          transformedData.options.push({
+            option_text: "",
+            is_correct: false,
+            image: null,
+          });
+        }
+      }
+  
+      setFormData(transformedData);
+      setImagePreview(transformedData.image || null);
+      setOptionImages(transformedData.options.map((opt) => opt.image || null));
     }
-  }, [questionData, isOpen]);
-
+  }, [questionData, isOpen, categories, questionLevels]);
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleOptionChange = (index, field, value) => {
     const updatedOptions = [...formData.options];
     updatedOptions[index] = {
       ...updatedOptions[index],
-      [field]: field === "is_correct" ? (value === "true" || value === true) : value
+      [field]:
+        field === "is_correct" ? value === "true" || value === true : value,
     };
 
+    // Count how many options are marked as correct
+    const correctCount = updatedOptions.filter((opt) => opt.is_correct).length;
+
+    // Determine the question type based on correct answers
+    let newQuestionType = formData.question_type;
+    if (correctCount > 1) {
+      newQuestionType = 1; // Multiple
+    }
+
     // If single correct answer type, ensure only one option is marked correct
-    if (field === "is_correct" && value && formData.question_type === 0) {
+    if (field === "is_correct" && value && newQuestionType === 0) {
       updatedOptions.forEach((opt, i) => {
         if (i !== index) opt.is_correct = false;
       });
     }
 
-    setFormData(prev => ({ ...prev, options: updatedOptions }));
+    setFormData((prev) => ({
+      ...prev,
+      options: updatedOptions,
+      question_type: newQuestionType,
+    }));
+  };
+
+  const handleQuestionTypeChange = (type) => {
+    const updatedOptions = [...formData.options];
+
+    // If switching to single choice and multiple options are correct, keep only the first correct one
+    if (type === 0) {
+      const firstCorrectIndex = updatedOptions.findIndex((opt) => opt.is_correct);
+      updatedOptions.forEach((opt, i) => {
+        opt.is_correct = i === firstCorrectIndex;
+      });
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      question_type: type,
+      options: updatedOptions,
+    }));
   };
 
   const handleOptionImageUpload = (event, index) => {
@@ -93,10 +145,10 @@ const EditQuestionModal = ({
         const newOptionImages = [...optionImages];
         newOptionImages[index] = reader.result;
         setOptionImages(newOptionImages);
-        
+
         const updatedOptions = [...formData.options];
         updatedOptions[index].image = reader.result;
-        setFormData(prev => ({ ...prev, options: updatedOptions }));
+        setFormData((prev) => ({ ...prev, options: updatedOptions }));
       };
       reader.readAsDataURL(file);
     }
@@ -106,18 +158,21 @@ const EditQuestionModal = ({
     const newOptionImages = [...optionImages];
     newOptionImages[index] = null;
     setOptionImages(newOptionImages);
-    
+
     const updatedOptions = [...formData.options];
     updatedOptions[index].image = null;
-    setFormData(prev => ({ ...prev, options: updatedOptions }));
+    setFormData((prev) => ({ ...prev, options: updatedOptions }));
   };
 
   const addOption = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      options: [...prev.options, { option_text: "", is_correct: false, image: null }]
+      options: [
+        ...prev.options,
+        { option_text: "", is_correct: false, image: null },
+      ],
     }));
-    setOptionImages(prev => [...prev, null]);
+    setOptionImages((prev) => [...prev, null]);
   };
 
   const removeOption = (index) => {
@@ -126,11 +181,11 @@ const EditQuestionModal = ({
       return;
     }
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      options: prev.options.filter((_, i) => i !== index)
+      options: prev.options.filter((_, i) => i !== index),
     }));
-    setOptionImages(prev => prev.filter((_, i) => i !== index));
+    setOptionImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleImageUpload = (event) => {
@@ -144,7 +199,7 @@ const EditQuestionModal = ({
       const reader = new FileReader();
       reader.onload = () => {
         setImagePreview(reader.result);
-        setFormData(prev => ({ ...prev, image: reader.result }));
+        setFormData((prev) => ({ ...prev, image: reader.result }));
       };
       reader.readAsDataURL(file);
     }
@@ -152,7 +207,7 @@ const EditQuestionModal = ({
 
   const removeImage = () => {
     setImagePreview(null);
-    setFormData(prev => ({ ...prev, image: null }));
+    setFormData((prev) => ({ ...prev, image: null }));
   };
 
   const validateForm = () => {
@@ -171,20 +226,33 @@ const EditQuestionModal = ({
       return false;
     }
 
-    const validOptions = formData.options.filter(opt => opt.option_text.trim() !== "");
+    const validOptions = formData.options.filter(
+      (opt) => opt.option_text.trim() !== ""
+    );
     if (validOptions.length < 2) {
-      Swal.fire("Error", "You must have at least 2 valid answer options!", "error");
+      Swal.fire(
+        "Error",
+        "You must have at least 2 valid answer options!",
+        "error"
+      );
       return false;
     }
 
-    const hasCorrectAnswer = formData.options.some(opt => opt.is_correct);
+    const hasCorrectAnswer = formData.options.some((opt) => opt.is_correct);
     if (!hasCorrectAnswer) {
       Swal.fire("Error", "Please select at least one correct answer!", "error");
       return false;
     }
 
-    if (formData.question_type === 1 && formData.options.filter(opt => opt.is_correct).length < 2) {
-      Swal.fire("Error", "Multiple choice questions require at least 2 correct answers!", "error");
+    if (
+      formData.question_type === 1 &&
+      formData.options.filter((opt) => opt.is_correct).length < 2
+    ) {
+      Swal.fire(
+        "Error",
+        "Multiple choice questions require at least 2 correct answers!",
+        "error"
+      );
       return false;
     }
 
@@ -200,11 +268,11 @@ const EditQuestionModal = ({
     try {
       // Prepare the payload with only valid options
       const validOptions = formData.options
-        .filter(opt => opt.option_text.trim() !== "")
-        .map(opt => ({
+        .filter((opt) => opt.option_text.trim() !== "")
+        .map((opt) => ({
           option_text: opt.option_text.trim(),
           is_correct: opt.is_correct ? 1 : 0,
-          image: opt.image || null
+          image: opt.image || null,
         }));
 
       const payload = {
@@ -215,29 +283,30 @@ const EditQuestionModal = ({
         image: formData.image || null,
         question_type: formData.question_type,
         options: validOptions,
-        AuthLstEdit: user?.email || "Unknown"
+        AuthLstEdit: user?.email || "Unknown",
       };
 
-      const response = await fetchData(
-        "quiz/updateQuestion",
-        "POST",
-        payload,
-        {
-          "Content-Type": "application/json",
-          "auth-token": userToken,
-        }
-      );
+      const response = await fetchData("quiz/updateQuestion", "POST", payload, {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      });
       if (response?.success) {
-        Swal.fire("Success", "Question updated successfully!", "success").then(() => {
-          onUpdateSuccess();
-          onClose();
-        });
+        Swal.fire("Success", "Question updated successfully!", "success").then(
+          () => {
+            onUpdateSuccess();
+            onClose();
+          }
+        );
       } else {
         throw new Error(response?.message || "Failed to update question");
       }
     } catch (error) {
       console.error("Error updating question:", error);
-      Swal.fire("Error", error.message || "Failed to update question. Please try again.", "error");
+      Swal.fire(
+        "Error",
+        error.message || "Failed to update question. Please try again.",
+        "error"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -251,7 +320,7 @@ const EditQuestionModal = ({
         <div className="p-4 sticky top-0 bg-white z-10 border-b">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Edit Question</h2>
-            <button 
+            <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700"
             >
@@ -264,7 +333,9 @@ const EditQuestionModal = ({
           {/* Question Settings */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="p-4">
-              <h3 className="text-lg font-bold text-blue-700 mb-4">Question Settings</h3>
+              <h3 className="text-lg font-bold text-blue-700 mb-4">
+                Question Settings
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Group Selection */}
                 <div>
@@ -298,7 +369,7 @@ const EditQuestionModal = ({
                     onChange={handleInputChange}
                   >
                     <option value="">Select Question Level</option>
-                    {questionLevels.map((level) => (
+                    {predefinedLevels.map((level) => (
                       <option key={level.idCode} value={level.idCode}>
                         {level.ddValue}
                       </option>
@@ -317,7 +388,11 @@ const EditQuestionModal = ({
                         type="radio"
                         className="w-4 h-4 text-blue-600"
                         checked={formData.question_type === 0}
-                        onChange={() => setFormData(prev => ({ ...prev, question_type: 0 }))}
+                        onChange={() => handleQuestionTypeChange(0)}
+                        disabled={
+                          formData.options.filter((opt) => opt.is_correct)
+                            .length > 1
+                        }
                       />
                       <span className="text-sm">Single Choice</span>
                     </label>
@@ -326,12 +401,20 @@ const EditQuestionModal = ({
                         type="radio"
                         className="w-4 h-4 text-blue-600"
                         checked={formData.question_type === 1}
-                        onChange={() => setFormData(prev => ({ ...prev, question_type: 1 }))}
+                        onChange={() => handleQuestionTypeChange(1)}
                       />
                       <span className="text-sm">Multiple Choice</span>
                     </label>
                   </div>
+                  {formData.options.filter((opt) => opt.is_correct).length >
+                    1 && (
+                    <p className="mt-1 text-sm text-blue-600">
+                      Multiple correct answers detected. Question type has been
+                      set to "Multiple Choice".
+                    </p>
+                  )}
                 </div>
+             
               </div>
             </div>
           </div>
@@ -339,7 +422,9 @@ const EditQuestionModal = ({
           {/* Question Content */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="p-4">
-              <h3 className="text-lg font-bold text-blue-700 mb-4">Question Content</h3>
+              <h3 className="text-lg font-bold text-blue-700 mb-4">
+                Question Content
+              </h3>
               <div className="space-y-4">
                 {/* Question Text */}
                 <div>
@@ -416,15 +501,27 @@ const EditQuestionModal = ({
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                       <div className="flex items-center space-x-2 min-w-[120px]">
                         <input
-                          type={formData.question_type === 0 ? "radio" : "checkbox"}
+                          type={
+                            formData.question_type === 0 ? "radio" : "checkbox"
+                          }
                           checked={option.is_correct}
-                          onChange={(e) => handleOptionChange(index, "is_correct", e.target.checked)}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              index,
+                              "is_correct",
+                              e.target.checked
+                            )
+                          }
                           className={`w-4 h-4 cursor-pointer ${
                             formData.question_type === 0
                               ? "text-blue-600"
                               : "accent-blue-500"
                           }`}
-                          name={formData.question_type === 0 ? "correctAnswer" : undefined}
+                          name={
+                            formData.question_type === 0
+                              ? "correctAnswer"
+                              : undefined
+                          }
                         />
                         <label className="text-sm font-medium">
                           {String.fromCharCode(65 + index)}
@@ -436,7 +533,9 @@ const EditQuestionModal = ({
                         className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
                         placeholder={`Option ${String.fromCharCode(65 + index)}`}
                         value={option.option_text}
-                        onChange={(e) => handleOptionChange(index, "option_text", e.target.value)}
+                        onChange={(e) =>
+                          handleOptionChange(index, "option_text", e.target.value)
+                        }
                       />
 
                       <div className="flex items-center space-x-1">

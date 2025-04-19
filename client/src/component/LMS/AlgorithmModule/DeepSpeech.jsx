@@ -1,151 +1,185 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
 import FeedbackForm from "../FeedBackForm";
 
 const DeepSpeech = () => {
-    const navigate = useNavigate();
     const [selectedFileId, setSelectedFileId] = useState(null);
-    const [selectedFileType, setSelectedFileType] = useState("pdf");
+    const [selectedFileName, setSelectedFileName] = useState("");
+    const [selectedFileType, setSelectedFileType] = useState("");
     const [feedback, setFeedback] = useState([]);
 
     // DeepSpeech files
     const deepSpeechFiles = [
         {
             id: 1,
-            title: "DeepSpeech Documentation",
-            fileId: "1hUz_72VxUZmQNW2Pyd0-GrgjBWNEwlqJ", // Replace with your PDF file ID
-            type: "pdf"
+            title: "DeepSpeech Documentation (PDF)",
+            fileId: "1hUz_72VxUZmQNW2Pyd0-GrgjBWNEwlqJ",
+            type: "pdf",
+            icon: "📄",
+            description: "Official DeepSpeech documentation and guide"
         },
         {
             id: 2,
-            title: "DeepSpeech Notebook",
-            fileId: "1TrikRjxiop2kQ_xQye1H06HYy8Pz0V_o", // Replace with your IPYNB file ID
-            type: "ipynb"
+            title: "DeepSpeech Notebook (IPYNB)",
+            fileId: "1TrikRjxiop2kQ_xQye1H06HYy8Pz0V_o",
+            type: "ipynb",
+            icon: "📓",
+            description: "Jupyter notebook with DeepSpeech implementation"
+        },
+        {
+            id: 3,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 
     const handleFeedbackSubmit = (fileId, rating, comment) => {
         const newFeedback = {
             fileId,
+            fileName: selectedFileName,
+            fileType: selectedFileType,
             rating,
             comment,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString()
         };
-
         const updatedFeedback = [...feedback, newFeedback];
-        localStorage.setItem("userFeedback", JSON.stringify(updatedFeedback));
+        localStorage.setItem("deepSpeechFeedback", JSON.stringify(updatedFeedback));
         setFeedback(updatedFeedback);
         sendFeedbackToServer(newFeedback);
     };
 
-    const getEmbedURL = (fileId, type = "pdf") => {
-        switch (type) {
-            case "pdf":
-                return `https://drive.google.com/file/d/${fileId}/preview`;
-            case "ipynb":
-                // For IPYNB files, we'll use nbviewer
-                return `https://nbviewer.jupyter.org/urls/docs.google.com/uc?export=download&id=${fileId}`;
-            default:
-                return "";
-        }
+    const handleDownload = (fileId, fileName, fileType) => {
+        const link = document.createElement('a');
+        link.href = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        link.setAttribute('download', `${fileName.toLowerCase().replace(/\s+/g, '_')}.${fileType}`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
-    // Set default file on initial render
+    // Set first file as default on component mount
     useState(() => {
         if (deepSpeechFiles.length > 0 && !selectedFileId) {
             setSelectedFileId(deepSpeechFiles[0].fileId);
+            setSelectedFileName(deepSpeechFiles[0].title);
             setSelectedFileType(deepSpeechFiles[0].type);
         }
 
-        const disableRightClick = (e) => {
-            e.preventDefault();
-        };
-
-        const disableKeyboardShortcuts = (e) => {
-            if (e.ctrlKey && (e.key === 's' || e.key === 'p')) {
-                e.preventDefault();
-            }
+        // Security measures
+        const disableRightClick = (e) => e.preventDefault();
+        const disableShortcuts = (e) => {
+            if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'c')) e.preventDefault();
         };
 
         document.addEventListener('contextmenu', disableRightClick);
-        document.addEventListener('keydown', disableKeyboardShortcuts);
+        document.addEventListener('keydown', disableShortcuts);
 
         return () => {
             document.removeEventListener('contextmenu', disableRightClick);
-            document.removeEventListener('keydown', disableKeyboardShortcuts);
+            document.removeEventListener('keydown', disableShortcuts);
         };
     }, []);
 
-    const handleFileSelect = (fileId, type) => {
-        setSelectedFileId(fileId);
-        setSelectedFileType(type);
+    const renderFileContent = () => {
+        if (!selectedFileId) return null;
+
+        const currentFile = deepSpeechFiles.find(f => f.fileId === selectedFileId);
+
+        switch(currentFile.type) {
+            case "pdf":
+                return (
+                    <iframe
+                        key={selectedFileId}
+                        src={`https://drive.google.com/file/d/${selectedFileId}/preview`}
+                        className="w-full h-full"
+                        allowFullScreen
+                        title={`${selectedFileName} Viewer`}
+                        sandbox="allow-scripts allow-same-origin"
+                    />
+                );
+            case "ipynb":
+                return (
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                        <div className="text-6xl mb-4">{currentFile.icon}</div>
+                        <h3 className="text-xl font-semibold mb-2">{currentFile.title}</h3>
+                        <p className="text-gray-500 mb-6">{currentFile.description}</p>
+                        <button
+                            onClick={() => handleDownload(currentFile.fileId, currentFile.title, "ipynb")}
+                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Download Notebook
+                        </button>
+                    </div>
+                );
+            default:
+                return null;
+        }
     };
 
     return (
         <div className="flex h-screen bg-background text-foreground">
-            {/* Sidebar */}
+            {/* Navigation Sidebar */}
             <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700">
-                <h2 className="text-lg font-semibold mb-4">DeepSpeech Resources</h2>
-                <ul className="space-y-2">
-                    {deepSpeechFiles.map((file) => (
+                <h2 className="text-xl font-bold mb-6">DeepSpeech Resources</h2>
+                <ul className="space-y-3">
+                    {deepSpeechFiles.map(file => (
                         <li key={file.id}>
                             <button
-                                onClick={() => handleFileSelect(file.fileId, file.type)}
-                                className={`flex items-center hover:bg-gray-700 hover:text-white p-2 rounded w-full text-left ${
-                                    selectedFileId === file.fileId ? "bg-gray-700 text-white" : ""
+                                onClick={() => {
+                                    setSelectedFileId(file.fileId);
+                                    setSelectedFileName(file.title);
+                                    setSelectedFileType(file.type);
+                                }}
+                                className={`flex items-center w-full p-3 rounded text-left hover:bg-gray-700 transition-colors ${
+                                    selectedFileId === file.fileId ? "bg-gray-700 border-l-4 border-blue-500" : ""
                                 }`}
                             >
-                                <span className="mr-2">
-                                    {file.type === "pdf" ? "📄" : "📓"}
-                                </span>
-                                <span>{file.title}</span>
+                                <span className="text-xl mr-2">{file.icon}</span>
+                                <div className="flex flex-col">
+                                    <span className="font-medium">{file.title}</span>
+                                    <span className="text-sm text-gray-300 mt-1">{file.description}</span>
+                                </div>
                             </button>
                         </li>
                     ))}
                 </ul>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 p-4 flex flex-col items-center justify-center">
-                <h1 className="text-4xl font-bold mb-4 text-center">DeepSpeech Materials</h1>
-                {selectedFileId && (
-                    <div className="w-full max-w-7xl h-[90vh] border rounded-lg shadow overflow-hidden relative"
-                        onContextMenu={(e) => e.preventDefault()}>
-                        {/* Transparent overlay to block the pop-out button */}
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: 0,
-                                right: 0,
-                                width: "50px",
-                                height: "50px",
-                                backgroundColor: "transparent",
-                                zIndex: 10,
-                            }}
-                        />
-                        <iframe
-                            key={selectedFileId}
-                            src={getEmbedURL(selectedFileId, selectedFileType)}
-                            className="w-full h-full"
-                            allowFullScreen
-                        />
-                    </div>
-                )}
-                {selectedFileId && (
-                    <FeedbackForm
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col p-6">
+                <div className="mb-6">
+                    <h1 className="text-3xl font-bold text-gray-800">
+                        {selectedFileName || "Select a Resource"}
+                    </h1>
+                    <p className="text-gray-600 mt-2">
+                        {deepSpeechFiles.find(f => f.fileId === selectedFileId)?.description || ""}
+                    </p>
+                </div>
+                
+                <div className="flex-1 w-full border rounded-xl shadow-lg relative overflow-hidden bg-white"
+                    onContextMenu={(e) => e.preventDefault()}>
+                    {/* Block Google Drive pop-out button */}
+                    <div className="absolute top-0 right-0 w-14 h-14 z-10" />
+                    
+                    {renderFileContent()}
+                </div>
+
+                <div className="mt-8 w-full max-w-3xl mx-auto">
+                    <FeedbackForm 
                         fileId={selectedFileId}
+                        fileName={selectedFileName}
+                        fileType={selectedFileType}
                         onSubmit={handleFeedbackSubmit}
                     />
-                )}
+                </div>
             </div>
         </div>
     );
 };
 
-// Helper function to send feedback to server
 const sendFeedbackToServer = (feedback) => {
-    // Implement your feedback submission logic here
-    console.log("Feedback submitted:", feedback);
+    // Implement your feedback submission logic
+    console.log("Submitting DeepSpeech feedback:", feedback);
+    // Example: axios.post('/api/feedback/deepspeech', feedback)
 };
 
 export default DeepSpeech;

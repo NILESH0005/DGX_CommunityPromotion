@@ -29,6 +29,11 @@ const Humanevol = () => {
             fileId: "1ZLJwcsukkxGLDCotkYvmhQlL21KLwES8", // Replace with actual PDF ID
             type: "pdf",
             description: "Project documentation and instructions"
+        },
+        {
+            id: 4,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

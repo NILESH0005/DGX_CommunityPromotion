@@ -1,37 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
+import { format } from "date-fns";
 import ApiContext from "../../../context/ApiContext";
 import { useContext } from "react";
 
 const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
   const { fetchData, userToken, user } = useContext(ApiContext);
   const [formData, setFormData] = useState({
-    QuizID: '',
-    QuizCategory: '',
-    QuizName: '',
-    QuizLevel: '',
-    QuizDuration: '',
+    QuizID: "",
+    QuizCategory: "",
+    QuizName: "",
+    QuizLevel: "",
+    QuizDuration: "",
     NegativeMarking: false,
-    StartDateAndTime: '',
-    EndDateTime: '',
-    QuizVisibility: 'Public',
-    AuthLstEdit: ''
+    StartDateAndTime: "",
+    EndDateTime: "",
+    QuizVisibility: "Public",
+    AuthLstEdit: "",
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
-    StartDateAndTime: '',
-    EndDateTime: '',
-    QuizDuration: ''
+    StartDateAndTime: "",
+    EndDateTime: "",
+    QuizDuration: "",
   });
 
   useEffect(() => {
     if (quiz) {
+      // const formatDateForInput = (dateString) => {
+      //   if (!dateString) return '';
+      //   // console.log("date 1",dateString)
+      //   // const date = new Date(dateString);
+      //   // console.log("date 2",dateString)
+      //   // const adjustedDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+      //   // console.log("date 1",dateString)
+      //   return format(dateString, "yyyy-MM-dd'T'HH:mm");
+
+      // };
+
       const formatDateForInput = (dateString) => {
-        if (!dateString) return '';
+        if (!dateString) return "";
+
+        // Parse the ISO string directly as UTC
         const date = new Date(dateString);
-        const adjustedDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-        return format(adjustedDate, "yyyy-MM-dd'T'HH:mm");
+
+        // Get UTC components
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(date.getUTCDate()).padStart(2, "0");
+        const hours = String(date.getUTCHours()).padStart(2, "0");
+        const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+        // Format as yyyy-MM-ddTHH:mm
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
       };
 
       setFormData({
@@ -43,14 +64,14 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
         NegativeMarking: quiz.NegativeMarking || false,
         StartDateAndTime: formatDateForInput(quiz.StartDateAndTime),
         EndDateTime: formatDateForInput(quiz.EndDateTime),
-        QuizVisibility: quiz.QuizVisibility || 'Public',
-        AuthLstEdit: user?.username || '' // Use the username from user context
+        QuizVisibility: quiz.QuizVisibility || "Public",
+        AuthLstEdit: user?.username || "",
       });
     }
   }, [quiz, user]);
 
   const validateTimes = (startTime, endTime) => {
-    const newErrors = { ...errors, StartDateAndTime: '', EndDateTime: '' };
+    const newErrors = { ...errors, StartDateAndTime: "", EndDateTime: "" };
     let isValid = true;
     const now = new Date();
     const startDate = new Date(startTime);
@@ -58,18 +79,19 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
 
     // Validate start time
     if (startDate < now) {
-      newErrors.StartDateAndTime = 'Start time cannot be in the past';
+      newErrors.StartDateAndTime = "Start time cannot be in the past";
       isValid = false;
     }
 
     // Validate end time
     if (endDate <= startDate) {
-      newErrors.EndDateTime = 'End time must be after start time';
+      newErrors.EndDateTime = "End time must be after start time";
       isValid = false;
     } else {
       const timeDiff = (endDate - startDate) / (1000 * 60); // difference in minutes
       if (timeDiff < 30) {
-        newErrors.EndDateTime = 'There must be at least 30 minutes between start and end times';
+        newErrors.EndDateTime =
+          "There must be at least 30 minutes between start and end times";
         isValid = false;
       }
     }
@@ -79,17 +101,17 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
   };
 
   const validateDuration = (duration) => {
-    const newErrors = { ...errors, QuizDuration: '' };
+    const newErrors = { ...errors, QuizDuration: "" };
     let isValid = true;
-    
+
     if (duration < 10) {
-      newErrors.QuizDuration = 'Duration must be at least 10 minutes';
+      newErrors.QuizDuration = "Duration must be at least 10 minutes";
       isValid = false;
     } else if (duration > 180) {
-      newErrors.QuizDuration = 'Duration cannot exceed 180 minutes';
+      newErrors.QuizDuration = "Duration cannot exceed 180 minutes";
       isValid = false;
     }
-    
+
     setErrors(newErrors);
     return isValid;
   };
@@ -98,21 +120,21 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
     const { name, value, type, checked } = e.target;
     const newFormData = {
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     };
-    
+
     setFormData(newFormData);
 
     // Validate times when either changes
-    if (name === 'StartDateAndTime' || name === 'EndDateTime') {
+    if (name === "StartDateAndTime" || name === "EndDateTime") {
       validateTimes(
-        name === 'StartDateAndTime' ? value : newFormData.StartDateAndTime,
-        name === 'EndDateTime' ? value : newFormData.EndDateTime
+        name === "StartDateAndTime" ? value : newFormData.StartDateAndTime,
+        name === "EndDateTime" ? value : newFormData.EndDateTime
       );
     }
-    
+
     // Validate duration when it changes
-    if (name === 'QuizDuration') {
+    if (name === "QuizDuration") {
       validateDuration(value);
     }
   };
@@ -120,17 +142,20 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     // Validate all fields before submission
-    const isTimesValid = validateTimes(formData.StartDateAndTime, formData.EndDateTime);
+    const isTimesValid = validateTimes(
+      formData.StartDateAndTime,
+      formData.EndDateTime
+    );
     const isDurationValid = validateDuration(formData.QuizDuration);
-    
+
     if (!isTimesValid || !isDurationValid) {
       Swal.fire({
-        title: 'Validation Error',
-        text: 'Please fix the validation errors before submitting',
-        icon: 'error',
-        confirmButtonText: 'OK'
+        title: "Validation Error",
+        text: "Please fix the validation errors before submitting",
+        icon: "error",
+        confirmButtonText: "OK",
       });
       setLoading(false);
       return;
@@ -143,41 +168,63 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
         "Content-Type": "application/json",
         "auth-token": userToken,
       };
-  
+
       // Format dates for SQL Server and include username in AuthLstEdit
       const formattedData = {
         ...formData,
-        StartDateAndTime: new Date(formData.StartDateAndTime).toISOString(),
-        EndDateTime: new Date(formData.EndDateTime).toISOString(),
-        AuthLstEdit: user?.username || 'Unknown' // Ensure we have a username
+        StartDateAndTime: convertToUTCIsoString(formData.StartDateAndTime),
+        EndDateTime: convertToUTCIsoString(formData.EndDateTime),
+        AuthLstEdit: user?.username || "Unknown",
       };
-  
-      const response = await fetchData(endpoint, method, formattedData, headers);
-      
+
+      function convertToUTCIsoString(dateString) {
+        if (!dateString) return null;
+
+        // Parse the date string as local time
+        const date = new Date(dateString);
+
+        // Convert to UTC ISO string without timezone conversion
+        const pad = (num) => String(num).padStart(2, "0");
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        const day = pad(date.getDate());
+        const hours = pad(date.getHours());
+        const minutes = pad(date.getMinutes());
+        const seconds = pad(date.getSeconds());
+
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
+      }
+      const response = await fetchData(
+        endpoint,
+        method,
+        formattedData,
+        headers
+      );
+
       if (response.success) {
         Swal.fire({
-          title: 'Success!',
-          text: 'Quiz updated successfully',
-          icon: 'success',
-          confirmButtonText: 'OK'
+          title: "Success!",
+          text: "Quiz updated successfully",
+          icon: "success",
+          confirmButtonText: "OK",
         }).then(() => {
           onClose(true, formattedData);
         });
       } else {
         Swal.fire({
-          title: 'Error!',
-          text: response.message || 'Failed to update quiz',
-          icon: 'error',
-          confirmButtonText: 'OK'
+          title: "Error!",
+          text: response.message || "Failed to update quiz",
+          icon: "error",
+          confirmButtonText: "OK",
         });
       }
     } catch (error) {
-      console.error('Error updating quiz:', error);
+      console.error("Error updating quiz:", error);
       Swal.fire({
-        title: 'Error!',
-        text: 'Something went wrong while updating the quiz',
-        icon: 'error',
-        confirmButtonText: 'OK'
+        title: "Error!",
+        text: "Something went wrong while updating the quiz",
+        icon: "error",
+        confirmButtonText: "OK",
       });
     } finally {
       setLoading(false);
@@ -189,7 +236,7 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
       <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Edit Quiz</h2>
-          <button 
+          <button
             onClick={() => onClose(false)}
             className="text-gray-500 hover:text-gray-700"
           >
@@ -213,7 +260,7 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
                 required
               >
                 <option value="">Select Category</option>
-                {categories.map(category => (
+                {categories.map((category) => (
                   <option key={category.group_id} value={category.group_id}>
                     {category.group_name}
                   </option>
@@ -247,7 +294,7 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
                 required
               >
                 <option value="">Select Level</option>
-                {quizLevels.map(level => (
+                {quizLevels.map((level) => (
                   <option key={level.idCode} value={level.idCode}>
                     {level.ddValue}
                   </option>
@@ -270,7 +317,9 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
                 required
               />
               {errors.QuizDuration && (
-                <p className="text-red-500 text-xs mt-1">{errors.QuizDuration}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.QuizDuration}
+                </p>
               )}
             </div>
 
@@ -283,7 +332,10 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
                 className="mr-2"
                 id="negativeMarking"
               />
-              <label htmlFor="negativeMarking" className="text-sm font-medium text-gray-700">
+              <label
+                htmlFor="negativeMarking"
+                className="text-sm font-medium text-gray-700"
+              >
                 Negative Marking
               </label>
             </div>
@@ -317,7 +369,9 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
                 required
               />
               {errors.StartDateAndTime && (
-                <p className="text-red-500 text-xs mt-1">{errors.StartDateAndTime}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.StartDateAndTime}
+                </p>
               )}
             </div>
 
@@ -334,7 +388,9 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
                 required
               />
               {errors.EndDateTime && (
-                <p className="text-red-500 text-xs mt-1">{errors.EndDateTime}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.EndDateTime}
+                </p>
               )}
             </div>
           </div>
@@ -353,7 +409,7 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
               disabled={loading}
             >
-              {loading ? 'Updating...' : 'Update Quiz'}
+              {loading ? "Updating..." : "Update Quiz"}
             </button>
           </div>
         </form>

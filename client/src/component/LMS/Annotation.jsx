@@ -11,42 +11,42 @@ export const Annotation = () => {
       title: "AWS SageMaker",
       description: "Cloud-powered labeling with built-in workforce management and auto-labeling (Active Learning).",
       progress: 70,
-      thumbnail: "AWS Sagemaker.jpg",
+      thumbnail: "AWS Sagemaker.avif",
     },
     {
       id: 2,
       title: "CVAT",
       description: "Open-source, web-based tool for efficient image/video annotation with AI-assisted labeling.",
       progress: 65,
-      thumbnail: "cvat2.jpeg",
+      thumbnail: "cvat2.avif",
     },
     {
       id: 3,
       title: "LabelImg",
       description: "Fast, offline bounding-box annotation tool with PascalVOC/YOLO export.",
       progress: 65,
-      thumbnail: "labelimg.png",
+      thumbnail: "labelimg.avif",
     },
     {
       id: 4,
       title: "VOTT(Visual Object Tagging Tool)",
       description: "Microsoft’s lightweight tool for building computer vision datasets with export to popular formats.",
       progress: 65,
-      thumbnail: "vott.jpeg",
+      thumbnail: "vott.avif",
     },
     {
       id: 5,
       title: "LabelMe",
       description: "MIT’s web-based tool for polygon/RGB-D annotation with crowdsourcing support.",
       progress: 65,
-      thumbnail: "labelme.jpeg",
+      thumbnail: "labelme.avif",
     },
     {
       id: 6,
       title: "VGG",
       description: "Simple, offline annotation tool from Oxford’s VGG group for polygons and keypoints.",
       progress: 65,
-      thumbnail: "VGG.png",
+      thumbnail: "VGG.jpg",
     }
     
   ];

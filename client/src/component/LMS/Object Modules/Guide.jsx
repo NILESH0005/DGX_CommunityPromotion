@@ -19,6 +19,11 @@ const Guide = () => {
             title: "Support for Supervised & Unsupervised Learning",
             fileId: "1BTJ95cIA0JTVuvF-zzDoppR2wn3oNpgb", // Replace with actual PDF ID
             description: "Detailed documentation on supervised and unsupervised learning approaches"
+        },
+        {
+            id: 3,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

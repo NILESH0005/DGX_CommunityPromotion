@@ -22,6 +22,11 @@ const Mask_Rcnn = () => {
             fileId: "1TvTnkt0rl5zaXkX453pnF4GkB6sa7AHp", // Replace with actual notebook ID
             type: "notebook",
             description: "Practical implementation of Mask R-CNN model"
+        },
+        {
+            id: 3,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

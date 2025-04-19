@@ -45,6 +45,11 @@ const Hands = () => {
                     driveId: "1ldz8A_PrDo-NXEgsFGWUv70gvqGYVgY9" // Same as id
                 }
             ]
+        },
+        {
+            id: 3,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

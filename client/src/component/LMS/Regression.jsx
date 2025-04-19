@@ -11,14 +11,14 @@ export const Regression = () => {
        title: "Guides",
        description: "Master the theory: Learn how regression models map relationships between variables to predict continuous outcomes, from assumptions to interpretation.",
        progress: 70,
-       thumbnail: "Regression.png",
+       thumbnail: "Regression.avif",
      },
      {
        id: 2,
        title: "Practical Implementation",
        description: "Code it live: Implement regression models using scikit-learn (LinearRegression, SGDRegressor) on real datasets, with end-to-end evaluation (MSE/R²) and visualization.",
        progress: 65,
-       thumbnail: "Regression2.png",
+       thumbnail: "Regression2.avif",
      }
    ];
  

@@ -30,6 +30,11 @@ const Make_Blobs = () => {
             fileId: "15bl8oC1apTyE8RcR64OATnmR1scqnplV", // Replace with actual PDF ID
             type: "pdf",
             description: "README on unsupervised learning techniques"
+        },
+        {
+            id: 4,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

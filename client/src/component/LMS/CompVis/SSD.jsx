@@ -22,6 +22,11 @@ const SSD = () => {
             fileId: "18FqxxIFz7OKV_2vJlw0ZhUUEqo-TeFFp", // Replace with actual notebook ID
             type: "notebook",
             description: "Practical implementation of SSD for object detection tasks"
+        },
+        {
+            id: 3,
+            title: "Assignment",
+            icon: "📓"
         }
     ];
 

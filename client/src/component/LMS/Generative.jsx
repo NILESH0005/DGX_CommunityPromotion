@@ -10,14 +10,14 @@ export const Generative = () => {
        title: "Guides",
        description: "Explore generative AI fundamentals: Learn how LLMs (GPT, Claude, Gemini) and diffusion models (Stable Diffusion, DALL·E) create text, images, and code using transformer architectures and attention mechanisms.",
        progress: 70,
-       thumbnail: "generativellm.jpeg",
+       thumbnail: "generativellm.jpg",
      },
      {
        id: 2,
        title: "Models",
        description: "Generative AI models like GPT-4, Claude 3, Gemini, Llama 3, Stable Diffusion, and DALL·E revolutionize content creation through advanced text, image, and multimodal generation capabilities.",
        progress: 65,
-       thumbnail: "generativellm1.jpeg",
+       thumbnail: "generativellm1.jpg",
      }
    ];
  

@@ -326,29 +326,65 @@ export const createQuestion = async (req, res) => {
   const userId = req.user.id;
   console.log("User ID:", userId);
 
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success,
-      data: errors.array(),
-      message: "Data is not in the right format",
-    });
-  }
-
   try {
-    const { question_text, Ques_level, image, group_id, options } = req.body;
+    const {
+      question_text,
+      Ques_level,
+      image,
+      group_id,
+      question_type,
+      options,
+    } = req.body;
 
+    // Validation
     if (
       !question_text ||
-      !Ques_level ||
       !group_id ||
       !options ||
-      options.length < 2
+      options.length < 2 ||
+      question_type === undefined
     ) {
       return res.status(400).json({
         success,
         message: "Missing required fields or insufficient options.",
       });
+    }
+
+    // Validate question_type is either 0 or 1
+    if (question_type !== 0 && question_type !== 1) {
+      return res.status(400).json({
+        success,
+        message:
+          "question_type must be either 0 (single answer) or 1 (multiple answers).",
+      });
+    }
+
+    // Validate that single-answer questions have exactly one correct option
+    if (question_type === 0) {
+      const correctOptionsCount = options.filter(
+        (opt) => opt.is_correct
+      ).length;
+      if (correctOptionsCount !== 1) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Single-answer questions must have exactly one correct option.",
+        });
+      }
+    }
+
+    // Validate that multiple-answer questions have at least two correct options
+    if (question_type === 1) {
+      const correctOptionsCount = options.filter(
+        (opt) => opt.is_correct
+      ).length;
+      if (correctOptionsCount < 2) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Multiple-answer questions must have at least two correct options.",
+        });
+      }
     }
 
     connectToDatabase(async (err, conn) => {
@@ -361,19 +397,22 @@ export const createQuestion = async (req, res) => {
       }
 
       try {
+        // Insert the question
         const insertQuestionQuery = `
           INSERT INTO Questions 
-          (question_text, Ques_level, image, group_id, AuthAdd, AddOnDt, delStatus) 
-          VALUES (?, ?, ?, ?, ?, GETDATE(), 0);
+          (question_text, Ques_level, image, group_id, question_type, AuthAdd, AddOnDt, delStatus) 
+          VALUES (?, ?, ?, ?, ?, ?, GETDATE(), 0);
         `;
         const questionResult = await queryAsync(conn, insertQuestionQuery, [
           question_text,
-          Ques_level,
-          image,
+          Ques_level || null,
+          image || null,
           group_id,
+          question_type,
           userId,
         ]);
 
+        // Get the inserted question ID
         const lastQuestionIdQuery = `SELECT TOP 1 id FROM Questions ORDER BY id DESC;`;
         const lastQuestionIdResult = await queryAsync(
           conn,
@@ -381,8 +420,13 @@ export const createQuestion = async (req, res) => {
         );
         const questionId = lastQuestionIdResult[0].id;
 
+        // Insert all options
         for (const option of options) {
           const { option_text, is_correct, image } = option;
+
+          // Skip empty options
+          if (!option_text || option_text.trim() === "") continue;
+
           const insertOptionQuery = `
             INSERT INTO QuestionOptions 
             (question_id, option_text, is_correct, image, AuthAdd, AddOnDt, delStatus) 
@@ -392,7 +436,7 @@ export const createQuestion = async (req, res) => {
             questionId,
             option_text,
             is_correct ? 1 : 0,
-            image,
+            image || null,
             userId,
           ]);
         }
@@ -461,41 +505,48 @@ export const getQuestion = async (req, res) => {
         // where  QuestionOptions.is_correct = 1
 
         // GROUP BY Questions.id, question_text,QuestionOptions.question_id,QuizDetails.QuizID, GroupMaster.group_name, tblDDReferences.ddValue, option_text,Questions.AddOnDt`;
-        const query = `SELECT DISTINCT Questions.id AS question_id, QuizDetails.QuizID,
-		                  Questions.id, question_text,
-		GroupMaster.group_name,
-		tblDDReferences.ddValue,
-		option_text,
-		QuestionOptions.is_correct, --question_type,
-		COUNT(CASE 
-				 WHEN ISNULL(QuizMapping.delStatus, 0) = 0 
-				 THEN QuizMapping.QuestionsID 
-			 END) AS quiz_count
-	FROM Questions
-	LEFT JOIN GroupMaster 
-		ON Questions.group_id = GroupMaster.group_id
-	LEFT JOIN tblDDReferences 
-		ON Questions.Ques_level = tblDDReferences.idCode
-	LEFT JOIN QuestionOptions 
-		ON Questions.id = QuestionOptions.question_id 
-		AND ISNULL(QuestionOptions.delStatus, 0) = 0 
-	LEFT JOIN QuizMapping 
-		ON Questions.id = QuizMapping.QuestionsID
-	LEFT JOIN QuizDetails 
-		ON Questions.id = QuizDetails.QuizID
-		where Questions.delStatus = 0
-	GROUP BY 
-		Questions.id,
-		QuizDetails.QuizID,
-		question_text,
-		GroupMaster.group_name,
-		tblDDReferences.ddValue,
-		option_text,
-		QuestionOptions.question_id,
-		QuestionOptions.is_correct,
-		Questions.AddOnDt
-		--question_type
-		`;
+        const query = `
+  SELECT DISTINCT 
+    Questions.id AS question_id,
+    QuizDetails.QuizID,
+    Questions.id,
+    question_text,
+    GroupMaster.group_name,
+    tblDDReferences.ddValue,
+    tblDDReferences.idCode, -- Added here
+    option_text,
+    QuestionOptions.is_correct,
+    --question_type,
+    COUNT(CASE 
+             WHEN ISNULL(QuizMapping.delStatus, 0) = 0 
+             THEN QuizMapping.QuestionsID 
+         END) AS quiz_count
+FROM Questions
+LEFT JOIN GroupMaster 
+    ON Questions.group_id = GroupMaster.group_id
+LEFT JOIN tblDDReferences 
+    ON Questions.Ques_level = tblDDReferences.idCode
+LEFT JOIN QuestionOptions 
+    ON Questions.id = QuestionOptions.question_id 
+    AND ISNULL(QuestionOptions.delStatus, 0) = 0 
+LEFT JOIN QuizMapping 
+    ON Questions.id = QuizMapping.QuestionsID
+LEFT JOIN QuizDetails 
+    ON Questions.id = QuizDetails.QuizID
+WHERE Questions.delStatus = 0
+GROUP BY 
+    Questions.id,
+    QuizDetails.QuizID,
+    question_text,
+    GroupMaster.group_name,
+    tblDDReferences.ddValue,
+    tblDDReferences.idCode, -- Added here
+    option_text,
+    QuestionOptions.question_id,
+    QuestionOptions.is_correct,
+    Questions.AddOnDt
+    --question_type;
+`;
         const quizzes = await queryAsync(conn, query);
 
         success = true;
@@ -539,6 +590,7 @@ export const deleteQuestion = async (req, res) => {
   }
 
   const { id } = req.body; // Extract the question ID from the request body
+  const adminName = req.user?.id; // Get the admin name from the authenticated user
 
   try {
     connectToDatabase(async (err, conn) => {
@@ -551,19 +603,82 @@ export const deleteQuestion = async (req, res) => {
         return;
       }
 
+      let transactionStarted = false;
+
       try {
+        // Begin transaction
+        await queryAsync(conn, "BEGIN TRANSACTION");
+        transactionStarted = true;
+
+        // First, check if the question exists and isn't already deleted
+        const checkQuestionQuery = `SELECT id FROM Questions WHERE id = ? AND (delStatus IS NULL OR delStatus = 0)`;
+        const questionResult = await queryAsync(conn, checkQuestionQuery, [id]);
+
+        if (questionResult.length === 0) {
+          await queryAsync(conn, "ROLLBACK");
+          closeConnection(conn);
+          return res.status(404).json({
+            success: false,
+            message: "Question not found or already deleted.",
+          });
+        }
+
         // Query to soft delete the question by updating the delStatus field
-        const query = `UPDATE Questions SET delStatus = 1 WHERE id = ?`;
-        await queryAsync(conn, query, [id]);
+        const deleteQuestionQuery = `
+          UPDATE Questions 
+          SET 
+            delStatus = 1, 
+            delOnDt = GETDATE(), 
+            AuthDel = ?,
+            AuthLstEdit = ?
+          WHERE id = ? AND (delStatus IS NULL OR delStatus = 0)`;
+        
+        const questionDeleteResult = await queryAsync(conn, deleteQuestionQuery, [
+          adminName,
+          adminName,
+          id
+        ]);
+
+        // Query to soft delete all options associated with this question
+        const deleteOptionsQuery = `
+          UPDATE QuestionOptions 
+          SET 
+            delStatus = 1, 
+            delOnDt = GETDATE(), 
+            AuthDel = ?,
+            AuthLstEdit = ?
+          WHERE question_id = ? AND (delStatus IS NULL OR delStatus = 0)`;
+        
+        const optionsDeleteResult = await queryAsync(conn, deleteOptionsQuery, [
+          adminName,
+          adminName,
+          id
+        ]);
+
+        // Commit transaction
+        await queryAsync(conn, "COMMIT");
+        transactionStarted = false;
+        closeConnection(conn);
 
         success = true;
-        closeConnection();
-        const infoMessage = "Question deleted successfully";
+        const infoMessage = "Question and associated options deleted successfully";
         logInfo(infoMessage);
-        res.status(200).json({ success, data: { id }, message: infoMessage });
+        res.status(200).json({ 
+          success, 
+          data: { 
+            questionId: id,
+            optionsDeleted: optionsDeleteResult.affectedRows 
+          }, 
+          message: infoMessage 
+        });
+
       } catch (queryErr) {
+        // Rollback transaction if error occurs
+        if (transactionStarted) {
+          await queryAsync(conn, "ROLLBACK");
+        }
         logError(queryErr);
-        closeConnection();
+        closeConnection(conn);
         res.status(500).json({
           success: false,
           data: queryErr,
@@ -1363,252 +1478,263 @@ export const unmappQuestion = (req, res) => {
 
 export const updateQuestion = async (req, res) => {
   console.log("Incoming question update request:", req.body);
-  let success = false;
   const userId = req.user.id;
 
+  // Validate request
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res
-      .status(400)
-      .json({
-        success,
-        errors: errors.array(),
-        message: "Invalid data format",
-      });
+    return res.status(400).json({
+      success: false,
+      errors: errors.array(),
+      message: "Validation failed",
+    });
   }
 
   try {
     const {
-      id,
+      id, 
       question_text,
       Ques_level,
       group_id,
       image,
-      question_type = 0,
+      question_type = 0, 
       options = [],
       AuthLstEdit,
     } = req.body;
 
-    if (!id || !question_text?.trim() || !group_id || !options.length) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing required fields" });
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Question ID is required",
+      });
+    }
+
+    if (!question_text?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Question text is required",
+      });
+    }
+
+    if (!group_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Group ID is required",
+      });
+    }
+
+    if (options.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: "At least 2 options are required",
+      });
     }
 
     const correctOptions = options.filter((opt) => opt.is_correct);
     if (correctOptions.length === 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "At least one correct answer is required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "At least one correct answer is required",
+      });
     }
 
     if (question_type === 1 && correctOptions.length < 2) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "Multiple choice questions require at least 2 correct answers",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Multiple choice requires at least 2 correct answers",
+      });
     }
 
     connectToDatabase(async (err, conn) => {
       if (err) {
-        console.error("DB connection error:", err);
-        return res
-          .status(500)
-          .json({ success: false, message: "Database connection failed" });
+        console.error("Database connection error:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection failed",
+        });
       }
 
+      let transactionStarted = false;
+
       try {
-        // Verify question exists
-        const questionRows = await queryAsync(
+        const [question] = await queryAsync(
           conn,
           `
-          SELECT id FROM Questions WHERE id = ? AND ISNULL(delStatus, 0) = 0
+          SELECT id FROM Questions 
+          WHERE id = ? AND ISNULL(delStatus, 0) = 0
         `,
           [id]
         );
 
-        if (!questionRows.length) {
+        if (!question) {
           closeConnection(conn);
-          return res
-            .status(404)
-            .json({ success: false, message: "Question not found" });
+          return res.status(404).json({
+            success: false,
+            message: "Question not found or has been deleted",
+          });
+        }
+
+        const [group] = await queryAsync(
+          conn,
+          `
+          SELECT group_id FROM GroupMaster 
+          WHERE group_id = ? AND ISNULL(delStatus, 0) = 0
+        `,
+          [group_id]
+        );
+
+        if (!group) {
+          closeConnection(conn);
+          return res.status(404).json({
+            success: false,
+            message: "Question group not found",
+          });
         }
 
         // Get existing options
         const existingOptions = await queryAsync(
           conn,
           `
-          SELECT id, option_text  FROM QuestionOptions 
-          WHERE question_id = 1 AND ISNULL(delStatus, 0) = 0 
+          SELECT id FROM QuestionOptions 
+          WHERE question_id = ? AND ISNULL(delStatus, 0) = 0
           ORDER BY id ASC
         `,
           [id]
         );
 
         await queryAsync(conn, "BEGIN TRANSACTION");
+        transactionStarted = true;
 
-        try {
-          // Update the question
+        await queryAsync(
+          conn,
+          `
+          UPDATE Questions SET
+            question_text = ?,
+            Ques_level = ?,
+            group_id = ?,
+            image = ?,
+            question_type = ?,
+            AuthLstEdit = ?,
+            editOnDt = GETDATE()
+          WHERE id = ?
+        `,
+          [
+            question_text.trim(),
+            Ques_level || null,
+            group_id,
+            image || null,
+            question_type,
+            AuthLstEdit || req.user.email || "Unknown",
+            id,
+          ]
+        );
+
+        // Process options
+        const existingOptionIds = existingOptions.map((opt) => opt.id);
+        const newOptions = [];
+        const optionsToUpdate = [];
+        const optionsToDelete = [...existingOptionIds];
+
+        options.forEach((option, index) => {
+          if (index < existingOptions.length) {
+            optionsToUpdate.push({
+              id: existingOptions[index].id,
+              ...option,
+            });
+            optionsToDelete.splice(
+              optionsToDelete.indexOf(existingOptions[index].id),
+              1
+            );
+          } else {
+            newOptions.push(option);
+          }
+        });
+
+        // Update existing options
+        for (const option of optionsToUpdate) {
           await queryAsync(
             conn,
             `
-            UPDATE Questions 
-            SET 
-              question_text = ?,
-              Ques_level = ?,
-              group_id = ?,
+            UPDATE QuestionOptions SET
+              option_text = ?,
+              is_correct = ?,
               image = ?,
-              question_type = ?,
               AuthLstEdit = ?,
               editOnDt = GETDATE()
-            WHERE id = ? AND ISNULL(delStatus, 0) = 0
+            WHERE id = ? AND question_id = ?
           `,
             [
-              question_text.trim(),
-              Ques_level || null,
-              group_id,
-              image || null,
-              question_type,
+              option.option_text.trim(),
+              option.is_correct ? 1 : 0,
+              option.image || null,
               AuthLstEdit || req.user.email || "Unknown",
+              option.id,
               id,
             ]
           );
-
-          // Process options
-          const existingOptionIds = existingOptions.map((opt) => opt.id);
-          const newOptions = [];
-          const optionsToUpdate = [];
-          const optionsToDelete = [...existingOptionIds];
-
-          // Classify options
-          options.forEach((option, index) => {
-            if (index < existingOptions.length) {
-              // Update existing option
-              optionsToUpdate.push({
-                id: existingOptions[index].id,
-                ...option,
-              });
-              // Remove from delete list
-              const indexToRemove = optionsToDelete.indexOf(
-                existingOptions[index].id
-              );
-              if (indexToRemove !== -1) {
-                optionsToDelete.splice(indexToRemove, 1);
-              }
-            } else {
-              // Add new option
-              newOptions.push(option);
-            }
-          });
-
-          // Update existing options
-          for (const option of optionsToUpdate) {
-            await queryAsync(
-              conn,
-              `
-              UPDATE QuestionOptions
-              SET 
-                option_text = ?,
-                is_correct = ?,
-                image = ?,
-                AuthLstEdit = ?,
-                editOnDt = GETDATE()
-              WHERE id = ? AND question_id = ? AND ISNULL(delStatus, 0) = 0
-            `,
-              [
-                option.option_text.trim(),
-                option.is_correct ? 1 : 0,
-                option.image || null,
-                AuthLstEdit || req.user.email || "Unknown",
-                option.id,
-                id,
-              ]
-            );
-          }
-
-          // Add new options
-          for (const option of newOptions) {
-            await queryAsync(
-              conn,
-              `
-              INSERT INTO QuestionOptions (
-                question_id, 
-                option_text, 
-                is_correct, 
-                image, 
-                AuthAdd,
-                AuthLstEdit,
-                AddOnDt
-              ) VALUES (?, ?, ?, ?, ?, ?, GETDATE())
-            `,
-              [
-                id,
-                option.option_text.trim(),
-                option.is_correct ? 1 : 0,
-                option.image || null,
-                AuthLstEdit || req.user.email || "Unknown",
-                AuthLstEdit || req.user.email || "Unknown",
-              ]
-            );
-          }
-
-          // Soft delete removed options
-          for (const optionId of optionsToDelete) {
-            await queryAsync(
-              conn,
-              `
-              UPDATE QuestionOptions
-              SET 
-                delStatus = 1,
-                AuthDel = ?,
-                AuthLstEdit = ?,
-                delOnDt = GETDATE()
-              WHERE id = ? AND question_id = ? AND ISNULL(delStatus, 0) = 0
-            `,
-              [
-                AuthLstEdit || req.user.email || "Unknown",
-                AuthLstEdit || req.user.email || "Unknown",
-                optionId,
-                id,
-              ]
-            );
-          }
-
-          await queryAsync(conn, "COMMIT");
-          closeConnection(conn);
-
-          return res.status(200).json({
-            success: true,
-            message: "Question and options updated successfully",
-            questionId: id,
-            stats: {
-              updated: optionsToUpdate.length,
-              added: newOptions.length,
-              deleted: optionsToDelete.length,
-            },
-          });
-        } catch (queryErr) {
-          await queryAsync(conn, "ROLLBACK");
-          closeConnection(conn);
-          console.error("Query error:", queryErr);
-          return res.status(500).json({
-            success: false,
-            message: "Failed to update question",
-            error: queryErr.message,
-          });
         }
+
+        // Add new options
+        for (const option of newOptions) {
+          await queryAsync(
+            conn,
+            `
+            INSERT INTO QuestionOptions (
+              question_id, option_text, is_correct, image,
+              AuthAdd, AuthLstEdit, AddOnDt
+            ) VALUES (?, ?, ?, ?, ?, ?, GETDATE())
+          `,
+            [
+              id,
+              option.option_text.trim(),
+              option.is_correct ? 1 : 0,
+              option.image || null,
+              AuthLstEdit || req.user.email || "Unknown",
+              AuthLstEdit || req.user.email || "Unknown",
+            ]
+          );
+        }
+
+        // Delete removed options
+        for (const optionId of optionsToDelete) {
+          await queryAsync(
+            conn,
+            `
+            UPDATE QuestionOptions SET
+              delStatus = 1,
+              AuthDel = ?,
+              AuthLstEdit = ?,
+              delOnDt = GETDATE()
+            WHERE id = ?
+          `,
+            [
+              AuthLstEdit || req.user.email || "Unknown",
+              AuthLstEdit || req.user.email || "Unknown",
+              optionId,
+            ]
+          );
+        }
+        await queryAsync(conn, "COMMIT");
+        closeConnection(conn);
+        return res.status(200).json({
+          success: true,
+          message: "Question updated successfully",
+          data: {
+            questionId: id,
+            optionsUpdated: optionsToUpdate.length,
+            optionsAdded: newOptions.length,
+            optionsDeleted: optionsToDelete.length,
+          },
+        });
       } catch (error) {
+        if (transactionStarted) {
+          await queryAsync(conn, "ROLLBACK");
+        }
         closeConnection(conn);
         console.error("Database error:", error);
         return res.status(500).json({
           success: false,
-          message: "Database operation failed",
+          message: "Failed to update question",
           error: error.message,
         });
       }
@@ -1663,23 +1789,19 @@ export const getLeaderboardRanking = async (req, res) => {
       } catch (queryErr) {
         logError(queryErr);
         closeConnection();
-        res
-          .status(500)
-          .json({
-            success: false,
-            data: queryErr,
-            message: "Something went wrong please try again",
-          });
+        res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: "Something went wrong please try again",
+        });
       }
     });
   } catch (error) {
     logError(error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        data: {},
-        message: "Something went wrong please try again",
-      });
+    res.status(500).json({
+      success: false,
+      data: {},
+      message: "Something went wrong please try again",
+    });
   }
 };
