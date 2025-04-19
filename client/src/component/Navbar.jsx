@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const Navbar = () => {
     const [isSideMenuOpen, setMenu] = useState(false);
-    const { user, userToken, setUserToken } = useContext(ApiContext);
+    const { user, userToken, setUserToken, logOut  } = useContext(ApiContext);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
@@ -26,6 +26,7 @@ const Navbar = () => {
             setIsLoggedIn(false);
         }
     }, [user, userToken]);
+    
 
     const [isDropdownOpen, setDropdownOpen] = useState(false);
 

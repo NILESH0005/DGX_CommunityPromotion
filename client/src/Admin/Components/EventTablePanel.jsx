@@ -166,7 +166,7 @@ const EventTable = () => {
           onClick={() => setIsModalOpen(true)}
           className="px-4 py-2 bg-DGXblue text-white font-semibold rounded-lg w-full sm:w-auto"
         >
-          Add Event
+          Add Eventddddd
         </button>
       </div>
       {filteredEvents.length > 0 ? (
@@ -463,7 +463,7 @@ const EventTable = () => {
                   onClick={handleSubmit}
                   className="px-4 py-2 bg-DGXblue text-white rounded-md hover:bg-blue-600 transition"
                 >
-                  Add Event
+                  Add Eventdddd
                 </button>
               </div>
             </form>

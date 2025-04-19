@@ -11,13 +11,15 @@ import { ConfirmationModalProvider } from "./context/ConfirmationModalContext.js
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
-  <ConfirmationModalProvider>
-  <ApiProvider>
-    <BrowserRouter>
-       {/* Wrap with the Provider */}
+  <BrowserRouter>
+
+    <ConfirmationModalProvider>
+      <ApiProvider>
+        {/* Wrap with the Provider */}
         <App />
-      
-    </BrowserRouter>
-  </ApiProvider>
-  </ConfirmationModalProvider>
+
+      </ApiProvider>
+    </ConfirmationModalProvider>
+  </BrowserRouter>
+
 );

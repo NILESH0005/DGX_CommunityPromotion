@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import images from '../../public/images.js';
 import { FaEye } from "react-icons/fa";
@@ -10,7 +10,7 @@ import LoadPage from './LoadPage.jsx';
 import { validateRequired } from '../utils/formValidation.js';
 
 const SignIn = () => {
-  const { fetchData, logIn } = useContext(ApiContext);
+  const { fetchData, logIn, userToken  } = useContext(ApiContext);
   const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [userID, setUserID] = useState('');
@@ -82,6 +82,13 @@ const SignIn = () => {
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
   };
+
+  useEffect(() => {
+    // Redirect if already logged in
+    if (userToken) {
+      navigate('/');
+    }
+  }, [userToken, navigate]);
 
   return (
     loading ? <LoadPage /> :

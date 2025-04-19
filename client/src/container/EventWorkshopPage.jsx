@@ -13,19 +13,18 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 
-const   EventDetailsModal = ({ event, isOpen, onClose }) => {
+const EventDetailsModal = ({ event, isOpen, onClose }) => {
   console.log("the event data:", event)
- 
+
   if (!isOpen || !event || event.Status !== "Approved") return null;
 
 
-  const localizer = momentLocalizer(moment);
 
   return (
     // ----------------------------card data-------------------------------------------------------------- 
     <div id="event-detail" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded-lg shadow-lg p-5 max-w-3xl w-full max-h-[90vh] overflow-y-auto z-50">
-        <h2 className="text-4xl font-bold mb-10 flex justify-center">Event Details</h2>
+        <h2 className="text-4xl font-bold mb-10 flex justify-center">Event Detaildddddddddddddds</h2>
         <div className="mb-4">
           <strong className="text-xl underline">Title:</strong> <span>{event.EventTitle}</span>
         </div>
@@ -110,7 +109,7 @@ const EventWorkshopPage = () => {
     setSelectedEvent(null);
   };
 
-   
+
   const handleTabChange = (tab) => {
     setIsAnimating(true);
     setTimeout(() => {
@@ -123,13 +122,13 @@ const EventWorkshopPage = () => {
     const shareData = {
       title: event.EventTitle,
       text: `Check out this event: ${event.EventTitle}`,
-      url: window.location.href, 
+      url: window.location.href,
     };
-  
+
     if (navigator.share) {
       try {
         await navigator.share(shareData);
-     
+
       } catch (error) {
         console.error("Error sharing event:", error);
       }
@@ -144,7 +143,7 @@ const EventWorkshopPage = () => {
       alert("Sharing is not supported on this browser.");
     }
   };
-  
+
 
   const handleViewDetails = (event) => {
     setSelectedEvent(event);
@@ -156,16 +155,16 @@ const EventWorkshopPage = () => {
     setIsModalOpen(false);
   };
 
-  
+
 
   useEffect(() => {
     const fetchEventData = async () => {
       try {
         const endpoint = "eventandworkshop/getEvent";
         const eventData = await fetchData(endpoint);
-        console.log("eventData",eventData)
-        const approvedEvents = eventData.data.filter(event =>  event.Status === "Approved"); 
-        console.log("approvedEvents",approvedEvents)
+        console.log("eventData", eventData)
+        const approvedEvents = eventData.data.filter(event => event.Status === "Approved");
+        console.log("approvedEvents", approvedEvents)
         setDbvents(approvedEvents);
         setIsLoading(false);
       } catch (error) {
@@ -176,6 +175,15 @@ const EventWorkshopPage = () => {
 
     fetchEventData();
   }, [fetchData]);
+
+  const currentDate = new Date().toISOString();
+  const upcomingEvents = dbevents.filter(event =>
+    event.StartDate > currentDate
+  );
+  const pastEvents = dbevents.filter(event =>
+    event.EndDate < currentDate
+  );
+
 
   return (
     <div className="w-full">
@@ -200,44 +208,48 @@ const EventWorkshopPage = () => {
                 <div className="mt-2 h-6 sm:h-8 bg-DGXwhite rounded-md w-2/3"></div>
               </div>
             ))
-          ) : (
-            dbevents.filter(event => event.Status === "Approved")
-            .map((event, index) => (
-              <div
-                key={index}
-                className="border-2 border-DGXgreen bg-DGXblue rounded-lg overflow-hidden shadow-lg p-4 sm:p-6 flex flex-col justify-between"
-              >
-                <h2 className="text-lg sm:text-xl font-bold text-DGXwhite mb-4 text-center">
-                  {event.EventTitle}
-                </h2>
-                <img
-                  src={event.EventImage}
-                  alt={`Image for ${event.EventTitle}`}
-                  className="w-full h-40 sm:h-48 md:h-56 object-cover rounded-md shadow-md"
-                />
-                <div className="flex justify-between items-center mt-4">
-                  <button
-                    onClick={() => handleViewDetails(event)}
-                    className="px-4 sm:px-6 py-2 bg-DGXgreen text-DGXwhite rounded-md hover:bg-green-600 transition"
-                  >
-                    View Details
-                  </button>
-                  <button
-      onClick={handleShare}
-      className="px-4 sm:px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition flex items-center justify-center"
-    >
-      <FontAwesomeIcon icon={faShare} className="mr-2" />
-      Share
-    </button>
+          ) : upcomingEvents.length > 0 ? (
+            upcomingEvents.filter(event => event.Status === "Approved")
+              .map((event, index) => (
+                <div
+                  key={index}
+                  className="border-2 border-DGXgreen bg-DGXblue rounded-lg overflow-hidden shadow-lg p-4 sm:p-6 flex flex-col justify-between"
+                >
+                  <h2 className="text-lg sm:text-xl font-bold text-DGXwhite mb-4 text-center">
+                    {event.EventTitle}
+                  </h2>
+                  <img
+                    src={event.EventImage}
+                    alt={`Image for ${event.EventTitle}`}
+                    className="w-full h-40 sm:h-48 md:h-56 object-cover rounded-md shadow-md"
+                  />
+                  <div className="flex justify-between items-center mt-4">
+                    <button
+                      onClick={() => handleViewDetails(event)}
+                      className="px-4 sm:px-6 py-2 bg-DGXgreen text-DGXwhite rounded-md hover:bg-green-600 transition"
+                    >
+                      View Details
+                    </button>
+                    <button
+                      onClick={handleShare}
+                      className="px-4 sm:px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition flex items-center justify-center"
+                    >
+                      <FontAwesomeIcon icon={faShare} className="mr-2" />
+                      Share
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))
+          ) : (
+            <div className="col-span-full text-center py-10">
+              <p className="text-xl text-gray-600">No upcoming events scheduled</p>
+            </div>
           )}
+
         </div>
 
       </div>
       <GeneralUserCalendar events={dbevents} />
-
       <div className="relative bg-DGXblue w-full gap-4">
         {/* Content */}
         <motion.div
@@ -250,9 +262,8 @@ const EventWorkshopPage = () => {
           <p className="text-sm sm:text-lg md:text-xl mb-4 sm:mb-6 text-center">
             Discover the impactful workshops and seminars we've hosted. These events have empowered professionals and enthusiasts, offering deep dives into cutting-edge technologies and practical applications.
           </p>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-            {dbevents.map((event, index) => (
+            {upcomingEvents.map((event, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0 }}
@@ -260,7 +271,6 @@ const EventWorkshopPage = () => {
                 transition={{ duration: 1, delay: index * 0.3 }}
                 className="bg-DGXwhite bg-opacity-90 text-DGXblack rounded-lg shadow-xl flex flex-col sm:flex-row items-center sm:items-start p-4 sm:p-6"
               >
-                {/* Event Image */}
                 <div className="flex w-full md:w-1/2 mb-4 md:mb-0 sm:w-1/3 sm:mb-0">
                   <img
                     src={event.EventImage}
@@ -268,8 +278,6 @@ const EventWorkshopPage = () => {
                     className="rounded-lg object-cover w-full h-48 sm:h-48 md:h-56 lg:h-64"
                   />
                 </div>
-
-                {/* Event Details */}
                 <div className="flex flex-col sm:pl-4 w-full sm:w-2/3 lg:w-3/4">
                   <h2 className="text-lg sm:text-2xl md:text-3xl font-semibold mb-2">{event.EventTitle}</h2>
                   <p className="text-xs sm:text-sm md:text-md mb-2">
@@ -278,8 +286,6 @@ const EventWorkshopPage = () => {
                   <p className="text-xs sm:text-sm md:text-md mb-2">
                     <strong>Location:</strong> {event.Venue}
                   </p>
-
-                  {/* More Info Button */}
                   <button
                     onClick={() => handleMoreInfoClick(event)}
                     className="mt-4 text-DGXblue hover:text-DGXgreen font-semibold text-sm sm:text-base"

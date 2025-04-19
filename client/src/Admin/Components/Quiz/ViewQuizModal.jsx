@@ -1,115 +1,110 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
+import ApiContext from "../../../context/ApiContext";
+import Swal from "sweetalert2";
+
 
 const ViewQuizModal = ({ quiz, onClose, getCategoryName, getLevelName, formatDateTime }) => {
-  // Dummy data for questions and answers - expanded to have multiple groups
-  const dummyQuestions = [
-    // Group 1
-    {
-      id: 1,
-      questionText: "What is the capital of France?",
-      questionType: "Multiple Choice",
-      points: 5,
-      negativePoints: 1,
-      group: "Group A",
-      answers: [
-        { id: 1, answerText: "London", isCorrect: false },
-        { id: 2, answerText: "Paris", isCorrect: true },
-        { id: 3, answerText: "Berlin", isCorrect: false },
-        { id: 4, answerText: "Madrid", isCorrect: false }
-      ]
-    },
-    {
-      id: 2,
-      questionText: "Which of these are programming languages? (Select all that apply)",
-      questionType: "Multiple Select",
-      points: 10,
-      negativePoints: 2,
-      group: "Group A",
-      answers: [
-        { id: 1, answerText: "HTML", isCorrect: false },
-        { id: 2, answerText: "Python", isCorrect: true },
-        { id: 3, answerText: "CSS", isCorrect: false },
-        { id: 4, answerText: "JavaScript", isCorrect: true }
-      ]
-    },
-    {
-      id: 3,
-      questionText: "The Earth is flat.",
-      questionType: "True/False",
-      points: 3,
-      negativePoints: 1,
-      group: "Group A",
-      answers: [
-        { id: 1, answerText: "True", isCorrect: false },
-        { id: 2, answerText: "False", isCorrect: true }
-      ]
-    },
-    // Group 2
-    {
-      id: 4,
-      questionText: "What is 2 + 2?",
-      questionType: "Multiple Choice",
-      points: 5,
-      negativePoints: 1,
-      group: "Group B",
-      answers: [
-        { id: 1, answerText: "3", isCorrect: false },
-        { id: 2, answerText: "4", isCorrect: true },
-        { id: 3, answerText: "5", isCorrect: false }
-      ]
-    },
-    {
-      id: 5,
-      questionText: "Which of these are fruits? (Select all that apply)",
-      questionType: "Multiple Select",
-      points: 8,
-      negativePoints: 2,
-      group: "Group B",
-      answers: [
-        { id: 1, answerText: "Apple", isCorrect: true },
-        { id: 2, answerText: "Carrot", isCorrect: false },
-        { id: 3, answerText: "Banana", isCorrect: true },
-        { id: 4, answerText: "Potato", isCorrect: false }
-      ]
-    },
-    {
-      id: 6,
-      questionText: "Water boils at 100°C at sea level.",
-      questionType: "True/False",
-      points: 4,
-      negativePoints: 1,
-      group: "Group B",
-      answers: [
-        { id: 1, answerText: "True", isCorrect: true },
-        { id: 2, answerText: "False", isCorrect: false }
-      ]
-    }
-  ];
-
-  // Calculate total marks and negative marks
-  const totalQuestions = dummyQuestions.length;
-  const totalMarks = dummyQuestions.reduce((sum, question) => sum + question.points, 0);
-  const totalNegativeMarks = dummyQuestions.reduce((sum, question) => sum + question.negativePoints, 0);
-
-  // Get all unique groups
-  const allGroups = [...new Set(dummyQuestions.map(q => q.group))];
+  const { fetchData, userToken } = useContext(ApiContext);
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState("All Groups");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+
+ 
+  const allGroups = useMemo(() => {
+    const groups = [...new Set(questions.map(q => q.group))];
+    return [...groups]; // Include "All Groups" option
+  }, [questions]);
+
   // Filter questions based on selected group
-  const filteredQuestions = selectedGroup === "All Groups" 
-    ? dummyQuestions 
-    : dummyQuestions.filter(question => question.group === selectedGroup);
+  const filteredQuestions = useMemo(() => {
+    return selectedGroup === "All Groups"
+      ? questions
+      : questions.filter(question => question.group === selectedGroup);
+  }, [questions, selectedGroup]);
 
   // Group filtered questions by their group property
-  const groupedQuestions = filteredQuestions.reduce((groups, question) => {
-    const groupName = question.group;
-    if (!groups[groupName]) {
-      groups[groupName] = [];
+  const groupedQuestions = useMemo(() => {
+    return filteredQuestions.reduce((groups, question) => {
+      const groupName = question.group;
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(question);
+      return groups;
+    }, {});
+  }, [filteredQuestions]);
+ 
+  const fetchQuizQuestions = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!userToken) {
+        throw new Error("Authentication token is missing");
+      }
+
+      const endpoint = "quiz/getQuizQuestions";
+      const method = "POST";
+      const headers = {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      };
+      const body = {
+        quizGroupID: quiz.QuizCategory, // Assuming QuizCategory is the group_id
+        QuizID: quiz.QuizID
+      };
+
+      const data = await fetchData(endpoint, method, body, headers);
+      console.log("dekho isse", data)
+
+      if (!data) {
+        throw new Error("No data received from server");
+      }
+
+      if (data.success) {
+        const transformedQuestions = transformQuestions(data.data.questions || []);
+        setQuestions(transformedQuestions);
+      } else {
+        throw new Error(data.message || "Failed to fetch questions");
+      }
+    } catch (err) {
+      console.error("Error fetching questions:", err);
+      setError(err.message || "Something went wrong, please try again.");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.message || "Failed to load questions",
+      });
+    } finally {
+      setLoading(false);
     }
-    groups[groupName].push(question);
-    return groups;
-  }, {});
+  };
+
+  const transformQuestions = (apiQuestions) => {
+    return apiQuestions.map(apiQ => ({
+      id: apiQ.QuestionsID,
+      questionText: apiQ.QuestionTxt,
+      questionType: apiQ.questionType || "Nilesh", 
+      points: apiQ.totalMarks || 1,
+      negativePoints: apiQ.negativeMarks || 0,
+      group: apiQ.group_name || "General",
+      answers: apiQ.options?.map((opt) => ({
+        id: opt.id,
+        answerText: opt.option_text,
+        isCorrect: opt.is_correct
+      })) || []
+    }));
+  };
+  
+ 
+  useEffect(() => {
+    if (quiz?.QuizID) {
+      fetchQuizQuestions();
+    }
+  }, [quiz]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-8">
@@ -120,7 +115,7 @@ const ViewQuizModal = ({ quiz, onClose, getCategoryName, getLevelName, formatDat
             {quiz.QuizName || "Quiz Report"}
           </h2>
         </div>
-        
+
         {/* Quiz Metadata */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -167,19 +162,19 @@ const ViewQuizModal = ({ quiz, onClose, getCategoryName, getLevelName, formatDat
               </p>
               <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-gray-200">
                 <span className="font-semibold text-lg bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                  Total Questions: {totalQuestions}
+                  Total Questions: {quiz.QuestionMappedCount || 0}
                 </span>
                 <span className="font-semibold text-lg bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                  Total Marks: {totalMarks}
+                  Total Marks: {quiz.TotalMarksPerQuiz || 0}
                 </span>
                 <span className="font-semibold text-lg bg-red-100 text-red-800 px-3 py-1 rounded-full">
-                  Negative Marks: -{totalNegativeMarks}
+                  Negative Marks: -{quiz.NegativeMarking || 0}
                 </span>
               </div>
             </div>
           </div>
         </div>
-      
+
         {/* Questions and Answers Section */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6 pb-3 border-b-2 border-gray-200">
@@ -194,7 +189,7 @@ const ViewQuizModal = ({ quiz, onClose, getCategoryName, getLevelName, formatDat
                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </button>
-              
+
               {isDropdownOpen && (
                 <div className="absolute right-0 z-10 w-56 mt-2 origin-top-right bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                   <div className="py-1">
@@ -224,45 +219,45 @@ const ViewQuizModal = ({ quiz, onClose, getCategoryName, getLevelName, formatDat
               )}
             </div>
           </div>
-          
+
           <div className="space-y-8">
-            {Object.entries(groupedQuestions).map(([groupName, questions], groupIndex) => (
+            {Object.entries(groupedQuestions).map(([groupName, groupQuestions], groupIndex) => (
               <div key={groupName} className="border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
                 {/* Group Header */}
                 <div className="bg-blue-100 px-6 py-3 border-b">
                   <h4 className="font-bold text-xl text-blue-800">{groupName}</h4>
                 </div>
-                
+
                 {/* Questions in the group */}
                 <div className="space-y-6 p-6">
-                  {questions.map((question, qIndex) => (
+                  {groupQuestions.map((question, qIndex) => (
                     <div key={question.id} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                       <div className="flex justify-between items-start mb-3">
                         <h4 className="font-semibold text-xl">
-                          <span className="text-gray-600">Q{groupIndex * 3 + qIndex + 1}: </span>
+                          <span className="text-gray-600">Q{groupIndex * groupQuestions.length + qIndex + 1}: </span>
                           {question.questionText}
                         </h4>
                         <div className="flex flex-col items-end space-y-2">
                           <span className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
-                            {question.points} points
+                            {question.points} point{question.points !== 1 ? 's' : ''}
                           </span>
                           {quiz.NegativeMarking && (
                             <span className="bg-red-100 text-red-800 text-sm px-3 py-1 rounded-full">
-                              -{question.negativePoints} points
+                              -{question.negativePoints} point{question.negativePoints !== 1 ? 's' : ''}
                             </span>
                           )}
                         </div>
                       </div>
                       <p className="text-md text-gray-600 mb-4">Type: {question.questionType}</p>
-                      
+
                       <div className="ml-4 space-y-3">
                         {question.answers.map((answer) => (
-                          <div 
-                            key={answer.id} 
+                          <div
+                            key={answer.id}
                             className={`flex items-center p-3 rounded-lg ${answer.isCorrect ? 'bg-green-50 border-2 border-green-200' : 'bg-white border border-gray-200'}`}
                           >
-                            <input 
-                              type={question.questionType === "Multiple Select" ? "checkbox" : "radio"} 
+                            <input
+                              type={question.questionType === "Multiple Select" ? "checkbox" : "radio"}
                               checked={answer.isCorrect}
                               readOnly
                               className={`mr-3 w-5 h-5 ${answer.isCorrect ? 'accent-green-600' : 'accent-gray-400'}`}
@@ -283,7 +278,7 @@ const ViewQuizModal = ({ quiz, onClose, getCategoryName, getLevelName, formatDat
             ))}
           </div>
         </div>
-        
+
         {/* Close Button */}
         <div className="flex justify-end mt-8">
           <button

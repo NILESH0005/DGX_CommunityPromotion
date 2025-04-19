@@ -6,41 +6,7 @@ import UpcomingQuiz from "./UpcomingQuiz";
 
 const QuizPanel = () => {
   const [activeComponent, setActiveComponent] = useState('QuizTable');
-  const [quizzes, setQuizzes] = useState([
-    {
-      id: 1,
-      serialNumber: 1,
-      isPrivate: true,
-      quizName: "Geography Quiz",
-      quizLevel: "Easy",
-      duration: "10 mins",
-      negativeMarking: true,
-      startTime: "2023-10-01 10:00",
-      endTime: "2023-10-01 11:00",
-    },
-    {
-      id: 2,
-      serialNumber: 2,
-      isPrivate: false,
-      quizName: "Literature Quiz",
-      quizLevel: "Medium",
-      duration: "15 mins",
-      negativeMarking: false,
-      startTime: "2023-10-02 12:00",
-      endTime: "2023-10-02 13:00",
-    },
-    {
-      id: 3,
-      serialNumber: 3,
-      isPrivate: true,
-      quizName: "Mathematics Quiz",
-      quizLevel: "Hard",
-      duration: "20 mins",
-      negativeMarking: true,
-      startTime: "2023-10-03 14:00",
-      endTime: "2023-10-03 15:00",
-    },
-  ]);
+  const [quizzes, setQuizzes] = useState([]);
 
   const handleCreateQuiz = (newQuiz) => {
     const quizWithId = {

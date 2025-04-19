@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import BlogModal from '../../../component/BlogModal';
 import moment from 'moment';
 import ApiContext from '../../../context/ApiContext';
+import { FaEye } from 'react-icons/fa';
 
 const BlogTable = ({ blogs, userToken }) => {
   const [selectedBlog, setSelectedBlog] = useState(null);
@@ -119,7 +120,7 @@ const BlogTable = ({ blogs, userToken }) => {
                         className="bg-DGXblue text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition"
                         onClick={() => openModal(blog)}
                       >
-                        View
+                        <FaEye />
                       </button>
                     </td>
                   </tr>

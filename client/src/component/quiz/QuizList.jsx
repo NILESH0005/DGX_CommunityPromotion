@@ -11,14 +11,6 @@ const QuizList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const topPerformers = [
-        { id: 1, name: "John Doe", points: 1200, avatar: "https://randomuser.me/api/portraits/men/1.jpg" },
-        { id: 2, name: "Jane Smith", points: 1150, avatar: "https://randomuser.me/api/portraits/women/2.jpg" },
-        { id: 3, name: "Alice Johnson", points: 1100, avatar: "https://randomuser.me/api/portraits/women/3.jpg" },
-        { id: 4, name: "Bob Brown", points: 1050, avatar: "https://randomuser.me/api/portraits/men/4.jpg" },
-        { id: 5, name: "Charlie Davis", points: 1000, avatar: "https://randomuser.me/api/portraits/men/5.jpg" },
-    ];
-
     const fetchQuizzes = async () => {
         setLoading(true);
         setError(null);
@@ -77,7 +69,7 @@ const QuizList = () => {
                                 points: quiz.MaxScore,
                                 QuizID: quiz.QuizID,
                                 group_id: quiz.group_id,
-                                image: quiz.QuizImage  // Add image here
+                                image: quiz.QuizImage 
                             }]
                         });
                     }
@@ -90,21 +82,18 @@ const QuizList = () => {
             }
 
             if (leaderboardData.success) {
-                // Sort by points descending and add rank/medal emoji
                 const sortedLeaderboard = leaderboardData.data.quizzes
                     .sort((a, b) => b.totalPoints - a.totalPoints)
                     .map((user, index) => ({
                         ...user,
                         rank: index + 1,
                         medal: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`,
-                        // Add a default avatar or use user's avatar if available
                         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.Name)}&background=random`
                     }));
 
                 setLeaderboard(sortedLeaderboard);
             } else {
                 console.warn("Failed to fetch leaderboard:", leaderboardData.message);
-                // Optionally set some default leaderboard data here if you want a fallback
             }
         } catch (err) {
             console.error("Error fetching quizzes:", err);
@@ -134,8 +123,6 @@ const QuizList = () => {
             }
         });
     };
-    
-
     // const scrollToQuizzes = () => {
     //     if (quizCategoriesRef.current) {
     //         quizCategoriesRef.current.scrollIntoView({ behavior: "smooth" });
@@ -236,11 +223,7 @@ const QuizList = () => {
                                                         </span>
                                                     </div>
                                                 </div>
-
-                                                {/* Spacer to push button to bottom */}
                                                 <div className="flex-grow"></div>
-
-                                                {/* Button - always at the bottom */}
                                                 <button
                                                     className="w-full bg-DGXblue text-white py-2 px-4 rounded-lg transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:shadow-md relative z-10 mt-4"
                                                     onClick={() => handleQuizClick(quiz, subject)}

@@ -2,6 +2,7 @@ import { useState, useContext, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import ApiContext from '../../context/ApiContext';
 import LoadPage from "../../component/LoadPage";
+import { FaTrash } from 'react-icons/fa';
 
 const Discussions = () => {
   const { fetchData, userToken } = useContext(ApiContext);
@@ -116,7 +117,7 @@ const Discussions = () => {
         <input
           type="text"
           placeholder="Search by title, name, content, etc..."
-          className="p-2 border rounded w-1/2"
+          className="p-2 border rounded w-full md:w-1/2"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -134,7 +135,7 @@ const Discussions = () => {
                   <th className="p-2 border text-center min-w-[200px]">Content</th>
                   <th className="p-2 border text-center min-w-[80px]">Likes</th>
                   <th className="p-2 border text-center min-w-[100px]">Comments</th>
-                  <th className="p-2 border text-center min-w-[120px]">Actions</th>
+                  <th className="p-2 border text-center min-w-[80px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -148,13 +149,14 @@ const Discussions = () => {
                     </td>
                     <td className="p-2 border text-center min-w-[80px]">{discussion.likeCount}</td>
                     <td className="p-2 border text-center min-w-[100px]">{discussion.comment.length}</td>
-                    <td className="p-2 border text-center min-w-[120px]">
+                    <td className="p-2 border text-center min-w-[80px]">
                       {!discussion.approved && (
                         <button
                           onClick={() => handleDeleteDiscussion(discussion.DiscussionID)}
-                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition text-sm"
+                          className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition"
+                          title="Delete"
                         >
-                          Delete
+                          <FaTrash className="inline-block" />
                         </button>
                       )}
                     </td>
