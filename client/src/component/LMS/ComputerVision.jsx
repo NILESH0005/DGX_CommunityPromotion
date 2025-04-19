@@ -11,28 +11,28 @@ export const ComputerVision = () => {
        title: "Faster_RCNN",
        description: "Fast Region-based CNN for real-time object detection with region proposal networks.",
        progress: 70,
-       thumbnail: "fasterrcnn.png"
+       thumbnail: "fasterrcnn.avif"
      },
      {
        id: 2,
        title: "Mask_RCNN",
        description: "Extension of Faster RCNN that adds pixel-level segmentation capability.",
        progress: 65,
-       thumbnail: "maskrcnn.png"
+       thumbnail: "maskrcnn.avif"
      },
      {
        id: 3,
        title: "SSD",
        description: "Extension of Faster RCNN that adds pixel-level segmentation capability.",
        progress: 65,
-       thumbnail: "SSD object detection.jpg",
+       thumbnail: "SSD object detection.avif",
      },
      {
        id: 4,
        title: "Vision_Transformers",
        description: "Extension of Faster RCNN that adds pixel-level segmentation capability.",
        progress: 65,
-       thumbnail: "visiontrans.png"
+       thumbnail: "visiontrans.avif"
      },
     
      

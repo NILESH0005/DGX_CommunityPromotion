@@ -10,14 +10,14 @@ const navigate = useNavigate();
       title: "Tutorials",
       description: "Step-by-step guides and video tutorials to master AI concepts, tools, and hands-on implementation.",
       progress: 70,
-      thumbnail: "digitallearning.jpeg",
+      thumbnail: "digitallearning.avif",
     },
     {
       id: 2,
       title: "Course Resource",
       description: "Curated collection of free  courses for structured AI learning.",
       progress: 65,
-      thumbnail: "digital.jpg",
+      thumbnail: "digital1.avif",
     }
   ];
 

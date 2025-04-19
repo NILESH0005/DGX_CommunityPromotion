@@ -11,14 +11,14 @@ export const ObjectClassification = () => {
       title: "Guides",
       description: "Learn to categorize images into predefined classes using deep learning models like CNNs, covering architectures (ResNet, EfficientNet), datasets (ImageNet, CIFAR), and evaluation metrics (accuracy, confusion matrices).",
       progress: 70,
-      thumbnail: "objectclas.jpeg",
+      thumbnail: "objectclas.jpg",
     },
     {
       id: 2,
       title: "Practical Implementation",
       description: "Build and train classifiers in PyTorch/TensorFlow: Preprocess data, fine-tune pre-trained models (VGG, MobileNet), and deploy with ONNX or TFLite for real-world applications.",
       progress: 65,
-      thumbnail: "Objectclas1.jpeg",
+      thumbnail: "Objectclas1.avif",
     }
   ];
 
