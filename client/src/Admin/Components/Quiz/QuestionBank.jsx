@@ -108,7 +108,6 @@ const QuizBank = () => {
                       quiz.option_text,
                     ]
                   : existingQuestion.correctAnswer,
-              count: existingQuestion.count + (quiz.quiz_count || 0),
             });
           } else {
             // Create new question entry
@@ -124,7 +123,7 @@ const QuizBank = () => {
               image: quiz.question_image || null,
               options: [
                 {
-                  option_text: quiz.option_text,
+                  option_text: quiz.option_text,  
                   is_correct: quiz.is_correct === 1,
                   image: quiz.image_url || null,
                 },

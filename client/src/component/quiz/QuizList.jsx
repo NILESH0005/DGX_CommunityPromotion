@@ -64,8 +64,8 @@ const QuizList = () => {
                             QuizID: quiz.QuizID,
                             group_id: quiz.group_id,
                             image: quiz.QuizImage,
-                            startDate: new Date(quiz.StartDateAndTime),
-                            endDate: new Date(quiz.EndDateTime)
+                            startDate: adjustTimeZone(new Date(quiz.StartDateAndTime)),
+                            endDate: adjustTimeZone(new Date(quiz.EndDateTime))
                         });
                     } else {
                         acc.push({
@@ -80,8 +80,8 @@ const QuizList = () => {
                                 QuizID: quiz.QuizID,
                                 group_id: quiz.group_id,
                                 image: quiz.QuizImage,
-                                startDate: new Date(quiz.StartDateAndTime),
-                                endDate: new Date(quiz.EndDateTime)
+                                startDate: adjustTimeZone(new Date(quiz.StartDateAndTime)),
+                                endDate: adjustTimeZone(new Date(quiz.EndDateTime))
                             }]
                         });
                     }
@@ -135,6 +135,10 @@ const QuizList = () => {
             }
         });
     };
+    const adjustTimeZone = (date) => {
+        if (!date) return null;
+        return new Date(date.getTime() - 5 * 60 * 60 * 1000 - 30 * 60 * 1000);
+    };
 
     // Helper function to format time
     const formatTime = (time) => {
@@ -144,7 +148,7 @@ const QuizList = () => {
     // Function to calculate time remaining
     const getTimeRemaining = (startDate) => {
         const diff = startDate - now;
-        
+
         if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -223,12 +227,12 @@ const QuizList = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                                     {subject.quizzes.map((quiz) => {
                                         const status = getQuizStatus(quiz);
-                                        
+
                                         // Don't render expired quizzes
                                         if (status === 'expired') return null;
 
                                         const timeRemaining = getTimeRemaining(quiz.startDate);
-                                        
+
                                         return (
                                             <div
                                                 key={quiz.id}
@@ -265,7 +269,7 @@ const QuizList = () => {
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     {status === 'upcoming' && (
                                                         <div className="mb-4">
                                                             <p className="text-sm text-gray-500 mb-2">Starts in:</p>
@@ -291,9 +295,9 @@ const QuizList = () => {
                                                             </div>
                                                         </div>
                                                     )}
-                                                    
+
                                                     <div className="flex-grow"></div>
-                                                    
+
                                                     {status === 'active' ? (
                                                         <button
                                                             className="w-full bg-DGXblue text-white py-2 px-4 rounded-lg transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:shadow-md relative z-10 mt-4"
