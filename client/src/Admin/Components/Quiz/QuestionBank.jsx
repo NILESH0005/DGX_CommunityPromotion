@@ -4,6 +4,7 @@ import QuizQuestions from "./QuizQuestions";
 import Swal from "sweetalert2";
 import LoadPage from "../../../component/LoadPage";
 import EditQuestionModal from "./EditQuestionModal";
+import { FaEdit, FaTrash } from "react-icons/fa";
 
 const QuizBank = () => {
   const { fetchData, userToken } = useContext(ApiContext);
@@ -31,7 +32,7 @@ const QuizBank = () => {
       if (data?.success) {
         setCategories(
           data.data?.sort((a, b) => a.group_name.localeCompare(b.group_name)) ||
-            []
+          []
         );
         return data.data;
       }
@@ -65,6 +66,7 @@ const QuizBank = () => {
 
   const fetchQuestions = async () => {
     setLoading(true);
+    setError(null);
     const endpoint = "quiz/getQuestion";
     const method = "GET";
     const headers = {
@@ -106,7 +108,6 @@ const QuizBank = () => {
                       quiz.option_text,
                     ]
                   : existingQuestion.correctAnswer,
-              count: existingQuestion.count + (quiz.quiz_count || 0),
             });
           } else {
             // Create new question entry
@@ -122,7 +123,7 @@ const QuizBank = () => {
               image: quiz.question_image || null,
               options: [
                 {
-                  option_text: quiz.option_text,
+                  option_text: quiz.option_text,  
                   is_correct: quiz.is_correct === 1,
                   image: quiz.image_url || null,
                 },
@@ -387,19 +388,25 @@ const QuizBank = () => {
                     {q.Ques_level || q.level}
                   </td>
                   <td className="border p-2 text-center">{q.count}</td>
-                  <td className="border p-2 space-x-1 text-center">
-                    <button
-                      onClick={() => handleEdit(q.id)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(q.id)}
-                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition text-sm"
-                    >
-                      Delete
-                    </button>
+                  <td className="border p-2 text-center">
+                    <div className="flex flex-wrap justify-center gap-1 sm:gap-2">
+                      <button
+                        onClick={() => handleEdit(q.id)}
+                        className="bg-yellow-500 text-white p-1 sm:p-2 rounded hover:bg-yellow-600 transition"
+                        title="Edit"
+                        aria-label="Edit"
+                      >
+                        <FaEdit className="text-xs sm:text-sm" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(q.id)}
+                        className="bg-red-500 text-white p-1 sm:p-2 rounded hover:bg-red-600 transition"
+                        title="Delete"
+                        aria-label="Delete"
+                      >
+                        <FaTrash className="text-xs sm:text-sm" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

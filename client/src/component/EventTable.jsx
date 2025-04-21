@@ -9,6 +9,7 @@ import EventForm from './eventAndWorkshop/EventForm.jsx';
 import DetailsEventModal from './eventAndWorkshop/DetailsEventModal.jsx';
 import LoadPage from './LoadPage.jsx';
 import Swal from 'sweetalert2';
+import { FaEye } from 'react-icons/fa';
 
 const EventTable = (props) => {
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -29,16 +30,21 @@ const EventTable = (props) => {
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    const options = {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    };
-    return date.toLocaleString("en-US", options);
+    try {
+      const date = new Date(dateString);
+      const adjustedDate = new Date(date.getTime() - 5 * 60 * 60 * 1000 - 30 * 60 * 1000);
+      return adjustedDate.toLocaleString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }).replace(" at ", " ");
+    } catch (e) {
+      console.error("Date formatting error:", e);
+      return "Invalid Date";
+    }
   };
 
   useEffect(() => {
@@ -110,14 +116,14 @@ const EventTable = (props) => {
   const filteredEvents = props.events.filter((event) => {
     const matchesStatus = statusFilter === "" || event.Status === statusFilter;
     const matchesCategory = selectedCategory === "" || event.EventType === selectedCategory;
-    const matchesSearch = 
+    const matchesSearch =
       event.EventTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.UserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.Venue.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.Status.toLowerCase().includes(searchTerm.toLowerCase()) ||
       formatDateTime(event.StartDate).toLowerCase().includes(searchTerm.toLowerCase()) ||
       formatDateTime(event.EndDate).toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesStatus && matchesCategory && matchesSearch;
   });
 
@@ -213,9 +219,10 @@ const EventTable = (props) => {
                     <td className="p-2 border text-center">
                       <button
                         onClick={() => setSelectedEvent(event)}
-                        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition text-sm"
+                        className="bg-DGXblue text-white px-3 py-1 rounded hover:bg-blue-600 transition text-sm"
                       >
-                        View
+                        <FaEye />
+
                       </button>
                     </td>
                   </tr>

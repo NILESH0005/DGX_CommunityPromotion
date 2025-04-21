@@ -10,14 +10,15 @@ const QuizList = () => {
     const [quizzes, setQuizzes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [now, setNow] = useState(new Date());
 
-    const topPerformers = [
-        { id: 1, name: "John Doe", points: 1200, avatar: "https://randomuser.me/api/portraits/men/1.jpg" },
-        { id: 2, name: "Jane Smith", points: 1150, avatar: "https://randomuser.me/api/portraits/women/2.jpg" },
-        { id: 3, name: "Alice Johnson", points: 1100, avatar: "https://randomuser.me/api/portraits/women/3.jpg" },
-        { id: 4, name: "Bob Brown", points: 1050, avatar: "https://randomuser.me/api/portraits/men/4.jpg" },
-        { id: 5, name: "Charlie Davis", points: 1000, avatar: "https://randomuser.me/api/portraits/men/5.jpg" },
-    ];
+    // Update current time every second for countdown timers
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setNow(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     const fetchQuizzes = async () => {
         setLoading(true);
@@ -35,9 +36,8 @@ const QuizList = () => {
                 "auth-token": userToken,
             };
 
-
             const data = await fetchData(endpoint, method, {}, headers);
-            console.log("data:", data)
+            console.log("data:", data);
 
             if (!data) {
                 throw new Error("No data received from server");
@@ -63,7 +63,9 @@ const QuizList = () => {
                             points: quiz.MaxScore,
                             QuizID: quiz.QuizID,
                             group_id: quiz.group_id,
-                            image: quiz.QuizImage
+                            image: quiz.QuizImage,
+                            startDate: adjustTimeZone(new Date(quiz.StartDateAndTime)),
+                            endDate: adjustTimeZone(new Date(quiz.EndDateTime))
                         });
                     } else {
                         acc.push({
@@ -77,7 +79,9 @@ const QuizList = () => {
                                 points: quiz.MaxScore,
                                 QuizID: quiz.QuizID,
                                 group_id: quiz.group_id,
-                                image: quiz.QuizImage  // Add image here
+                                image: quiz.QuizImage,
+                                startDate: adjustTimeZone(new Date(quiz.StartDateAndTime)),
+                                endDate: adjustTimeZone(new Date(quiz.EndDateTime))
                             }]
                         });
                     }
@@ -90,21 +94,18 @@ const QuizList = () => {
             }
 
             if (leaderboardData.success) {
-                // Sort by points descending and add rank/medal emoji
                 const sortedLeaderboard = leaderboardData.data.quizzes
                     .sort((a, b) => b.totalPoints - a.totalPoints)
                     .map((user, index) => ({
                         ...user,
                         rank: index + 1,
                         medal: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`,
-                        // Add a default avatar or use user's avatar if available
                         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.Name)}&background=random`
                     }));
 
                 setLeaderboard(sortedLeaderboard);
             } else {
                 console.warn("Failed to fetch leaderboard:", leaderboardData.message);
-                // Optionally set some default leaderboard data here if you want a fallback
             }
         } catch (err) {
             console.error("Error fetching quizzes:", err);
@@ -113,15 +114,15 @@ const QuizList = () => {
             setLoading(false);
         }
     };
+
     useEffect(() => {
         if (userToken) {
             fetchQuizzes();
         } else {
             setLoading(false);
             setError("Please login to access quizzes");
-
         }
-    }, [userToken]); // 
+    }, [userToken]);
 
     const handleQuizClick = (quiz, group) => {
         navigate(`/quiz/${quiz.QuizID}`, {
@@ -134,13 +135,40 @@ const QuizList = () => {
             }
         });
     };
-    
+    const adjustTimeZone = (date) => {
+        if (!date) return null;
+        return new Date(date.getTime() - 5 * 60 * 60 * 1000 - 30 * 60 * 1000);
+    };
 
-    // const scrollToQuizzes = () => {
-    //     if (quizCategoriesRef.current) {
-    //         quizCategoriesRef.current.scrollIntoView({ behavior: "smooth" });
-    //     }
-    // };
+    // Helper function to format time
+    const formatTime = (time) => {
+        return time < 10 ? `0${time}` : time;
+    };
+
+    // Function to calculate time remaining
+    const getTimeRemaining = (startDate) => {
+        const diff = startDate - now;
+
+        if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        return { days, hours, minutes, seconds };
+    };
+
+    // Function to determine quiz status
+    const getQuizStatus = (quiz) => {
+        if (now < quiz.startDate) {
+            return 'upcoming';
+        } else if (now >= quiz.startDate && now <= quiz.endDate) {
+            return 'active';
+        } else {
+            return 'expired';
+        }
+    };
 
     if (loading) {
         return (
@@ -197,59 +225,98 @@ const QuizList = () => {
                                     </h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                                    {subject.quizzes.map((quiz) => (
-                                        <div
-                                            key={quiz.id}
-                                            className="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-blue-500 group-hover:border-purple-600 relative overflow-hidden flex flex-col h-full"
-                                        >
-                                            <div className="absolute top-0 right-0 w-16 h-16 opacity-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-bl-full"></div>
+                                    {subject.quizzes.map((quiz) => {
+                                        const status = getQuizStatus(quiz);
 
-                                            {/* Image section - will take space only when image exists */}
-                                            {quiz.image && (
-                                                <div className="mb-4 h-40 overflow-hidden rounded-lg flex-shrink-0">
-                                                    <img
-                                                        src={quiz.image}
-                                                        alt={quiz.title}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                </div>
-                                            )}
+                                        // Don't render expired quizzes
+                                        if (status === 'expired') return null;
 
-                                            {/* Content section - will grow to fill available space */}
-                                            <div className="flex flex-col flex-grow">
-                                                <h4 className="text-xl font-bold text-gray-800 mb-2 relative z-10">{quiz.title}</h4>
+                                        const timeRemaining = getTimeRemaining(quiz.startDate);
 
-                                                {/* Questions and points - positioned at the top of content area */}
-                                                <div className="mt-2 mb-4">
-                                                    <div className="flex gap-4 relative z-10">
-                                                        <span className="flex items-center text-gray-600">
-                                                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                                            </svg>
-                                                            {quiz.questions} questions
-                                                        </span>
-                                                        <span className="flex items-center text-gray-600">
-                                                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                                                            </svg>
-                                                            {quiz.points} points
-                                                        </span>
+                                        return (
+                                            <div
+                                                key={quiz.id}
+                                                className="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-blue-500 group-hover:border-purple-600 relative overflow-hidden flex flex-col h-full"
+                                            >
+                                                <div className="absolute top-0 right-0 w-16 h-16 opacity-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-bl-full"></div>
+
+                                                {quiz.image && (
+                                                    <div className="mb-4 h-40 overflow-hidden rounded-lg flex-shrink-0">
+                                                        <img
+                                                            src={quiz.image}
+                                                            alt={quiz.title}
+                                                            className="w-full h-full object-cover"
+                                                        />
                                                     </div>
+                                                )}
+
+                                                <div className="flex flex-col flex-grow">
+                                                    <h4 className="text-xl font-bold text-gray-800 mb-2 relative z-10">{quiz.title}</h4>
+
+                                                    <div className="mt-2 mb-4">
+                                                        <div className="flex gap-4 relative z-10">
+                                                            <span className="flex items-center text-gray-600">
+                                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                                </svg>
+                                                                {quiz.questions} questions
+                                                            </span>
+                                                            <span className="flex items-center text-gray-600">
+                                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                                                </svg>
+                                                                {quiz.points} points
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {status === 'upcoming' && (
+                                                        <div className="mb-4">
+                                                            <p className="text-sm text-gray-500 mb-2">Starts in:</p>
+                                                            <div className="flex gap-2">
+                                                                {timeRemaining.days > 0 && (
+                                                                    <div className="text-center bg-gray-100 p-2 rounded">
+                                                                        <span className="block text-lg font-bold">{formatTime(timeRemaining.days)}</span>
+                                                                        <span className="text-xs text-gray-500">Days</span>
+                                                                    </div>
+                                                                )}
+                                                                <div className="text-center bg-gray-100 p-2 rounded">
+                                                                    <span className="block text-lg font-bold">{formatTime(timeRemaining.hours)}</span>
+                                                                    <span className="text-xs text-gray-500">Hours</span>
+                                                                </div>
+                                                                <div className="text-center bg-gray-100 p-2 rounded">
+                                                                    <span className="block text-lg font-bold">{formatTime(timeRemaining.minutes)}</span>
+                                                                    <span className="text-xs text-gray-500">Mins</span>
+                                                                </div>
+                                                                <div className="text-center bg-gray-100 p-2 rounded">
+                                                                    <span className="block text-lg font-bold">{formatTime(timeRemaining.seconds)}</span>
+                                                                    <span className="text-xs text-gray-500">Secs</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex-grow"></div>
+
+                                                    {status === 'active' ? (
+                                                        <button
+                                                            className="w-full bg-DGXblue text-white py-2 px-4 rounded-lg transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:shadow-md relative z-10 mt-4"
+                                                            onClick={() => handleQuizClick(quiz, subject)}
+                                                        >
+                                                            Start Quiz
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="w-full bg-gray-400 text-white py-2 px-4 rounded-lg cursor-not-allowed relative z-10 mt-4"
+                                                            disabled
+                                                        >
+                                                            Quiz Not Started
+                                                        </button>
+                                                    )}
                                                 </div>
-
-                                                {/* Spacer to push button to bottom */}
-                                                <div className="flex-grow"></div>
-
-                                                {/* Button - always at the bottom */}
-                                                <button
-                                                    className="w-full bg-DGXblue text-white py-2 px-4 rounded-lg transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:shadow-md relative z-10 mt-4"
-                                                    onClick={() => handleQuizClick(quiz, subject)}
-                                                >
-                                                    Start Quiz
-                                                </button>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         ))

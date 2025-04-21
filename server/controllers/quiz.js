@@ -160,7 +160,57 @@ export const getQuizzes = async (req, res) => {
       }
 
       try {
-        const query = `SELECT QuizID, QuizCategory, QuizName, QuizLevel, QuizDuration, NegativeMarking, StartDateAndTime, EndDateTime, QuizVisibility FROM QuizDetails WHERE ISNULL(delStatus, 0) = 0 ORDER BY AddOnDt DESC`;
+        const query = `SELECT 
+    qd.QuizID,
+    qd.QuizCategory,
+    qd.QuizName,
+    qd.QuizLevel,
+    qd.QuizDuration,
+    qd.NegativeMarking,
+    qd.StartDateAndTime,
+    qd.EndDateTime,
+    qd.QuizVisibility,
+    (SELECT COUNT(*) FROM QuizMapping qm WHERE qm.quizId = qd.QuizID AND ISNULL(qm.delStatus, 0) = 0) AS QuestionMappedCount,
+    COUNT(DISTINCT qs.userID) AS UniqueParticipants,
+	(SELECT SUM(totalMarks) FROM QuizMapping qm WHERE qm.quizId = qd.QuizID AND ISNULL(qm.delStatus, 0) = 0) AS TotalMarksPerQuiz,
+    ISNULL(attempts.totalMaxAttempts, 0) AS totalMaxAttempts
+
+
+FROM  QuizDetails qd
+LEFT JOIN QuizMapping qm ON qd.QuizID = qm.quizId AND ISNULL(qm.delStatus, 0) = 0
+LEFT JOIN  quiz_score qs ON qd.QuizID = qs.quizID AND ISNULL(qs.delStatus, 0) = 0
+LEFT JOIN (
+    SELECT 
+        quizID,
+        SUM(maxAttempts) AS totalMaxAttempts
+    FROM 
+        (
+            SELECT 
+                quizID,
+                userID,
+                MAX(noOfAttempts) AS maxAttempts
+            FROM 
+                quiz_score
+            WHERE ISNULL(delStatus, 0) = 0
+            GROUP BY 
+                quizID, userID
+        ) AS subquery
+    GROUP BY 
+        quizID
+) AS attempts ON qd.QuizID = attempts.quizID
+WHERE 
+    ISNULL(qd.delStatus, 0) = 0
+GROUP BY 
+    qd.QuizID,
+    qd.QuizCategory,
+    qd.QuizName,
+    qd.QuizLevel,
+    qd.QuizDuration,
+    qd.NegativeMarking,
+    qd.StartDateAndTime,
+    qd.EndDateTime,
+    qd.QuizVisibility,
+    attempts.totalMaxAttempts`;
         const quizzes = await queryAsync(conn, query);
 
         success = true;
@@ -466,7 +516,7 @@ export const getQuestion = async (req, res) => {
     tblDDReferences.idCode, -- Added here
     option_text,
     QuestionOptions.is_correct,
-    question_type,
+    --question_type,
     COUNT(CASE 
              WHEN ISNULL(QuizMapping.delStatus, 0) = 0 
              THEN QuizMapping.QuestionsID 
@@ -494,8 +544,8 @@ GROUP BY
     option_text,
     QuestionOptions.question_id,
     QuestionOptions.is_correct,
-    Questions.AddOnDt,
-    question_type;
+    Questions.AddOnDt
+    --question_type;
 `;
         const quizzes = await queryAsync(conn, query);
 
@@ -881,6 +931,8 @@ export const getUserQuizCategory = async (req, res) => {
     QuizDetails.QuizID,
     QuizDetails.QuizName,
 	QuizDetails.QuizImage,
+	QuizDetails.StartDateAndTime,
+	QuizDetails.EndDateTime,
 	GroupMaster.group_name,
 	GroupMaster.group_id, 
     SUM(QuizMapping.totalMarks) AS MaxScore,
@@ -890,7 +942,7 @@ LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
 left join GroupMaster on QuizDetails.QuizCategory = GroupMaster.group_id
 AND ISNULL(QuizMapping.delStatus, 0) = 0
 GROUP BY QuizDetails.QuizID, QuizDetails.QuizImage, QuizDetails.QuizName, 	GroupMaster.group_id, 
- GroupMaster.group_name`;
+ GroupMaster.group_name, QuizDetails.StartDateAndTime, QuizDetails.EndDateTime`;
 
         const quizzes = await queryAsync(conn, query);
 
@@ -976,6 +1028,7 @@ export const getQuizQuestions = async (req, res) => {
         const query = `SELECT 
           QuizMapping.idCode,
           QuizMapping.quizGroupID,
+		  GroupMaster.group_name,
           QuizMapping.quizId,
           QuizMapping.QuestionsID,
           Questions.question_text AS QuestionTxt,
@@ -990,14 +1043,15 @@ export const getQuizQuestions = async (req, res) => {
 		      QuizDetails.NegativeMarking,
           tblDDReferences.ddValue AS question_level,
           Questions.image AS question_image,
+		  QuestionOptions.is_correct,
           QuestionOptions.option_text,
-          QuestionOptions.is_correct,
           QuestionOptions.id AS optionId
           FROM QuizMapping
           LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
           LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
           LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
           LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
+		  LEFT JOIN GroupMaster ON QuizMapping.quizGroupID = GroupMaster.group_id
           WHERE QuizMapping.quizId = ? AND QuizMapping.delStatus = 0 AND QuestionOptions.delStatus = 0`;
 
         const questions = await queryAsync(conn, query, [quizId]);
@@ -1016,6 +1070,7 @@ export const getQuizQuestions = async (req, res) => {
             questionMap[q.QuestionsID] = {
               idCode: q.idCode,
               quizGroupID: q.quizGroupID,
+              group_name: q.group_name,
               quizId: q.quizId,
               QuestionsID: q.QuestionsID,
               QuestionTxt: q.QuestionTxt,
@@ -1439,17 +1494,16 @@ export const updateQuestion = async (req, res) => {
 
   try {
     const {
-      id, // Question ID
+      id, 
       question_text,
       Ques_level,
       group_id,
       image,
-      question_type = 0, // 0 for single choice, 1 for multiple choice
+      question_type = 0, 
       options = [],
       AuthLstEdit,
     } = req.body;
 
-    // Validate required fields
     if (!id) {
       return res.status(400).json({
         success: false,
@@ -1478,7 +1532,6 @@ export const updateQuestion = async (req, res) => {
       });
     }
 
-    // Validate correct answers
     const correctOptions = options.filter((opt) => opt.is_correct);
     if (correctOptions.length === 0) {
       return res.status(400).json({
@@ -1506,7 +1559,6 @@ export const updateQuestion = async (req, res) => {
       let transactionStarted = false;
 
       try {
-        // Verify question exists and isn't deleted
         const [question] = await queryAsync(
           conn,
           `
@@ -1524,7 +1576,6 @@ export const updateQuestion = async (req, res) => {
           });
         }
 
-        // Verify group exists
         const [group] = await queryAsync(
           conn,
           `
@@ -1553,11 +1604,9 @@ export const updateQuestion = async (req, res) => {
           [id]
         );
 
-        // Begin transaction
         await queryAsync(conn, "BEGIN TRANSACTION");
         transactionStarted = true;
 
-        // Update question
         await queryAsync(
           conn,
           `
@@ -1667,11 +1716,8 @@ export const updateQuestion = async (req, res) => {
             ]
           );
         }
-
-        // Commit transaction
         await queryAsync(conn, "COMMIT");
         closeConnection(conn);
-
         return res.status(200).json({
           success: true,
           message: "Question updated successfully",

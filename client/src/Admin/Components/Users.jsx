@@ -2,6 +2,7 @@ import { useState, useContext, useEffect } from 'react';
 import ApiContext from '../../context/ApiContext';
 import LoadPage from "../../component/LoadPage";
 import Swal from 'sweetalert2';
+import { FaTrash } from 'react-icons/fa';
 
 const AdminUsers = () => {
   const { fetchData, userToken } = useContext(ApiContext);
@@ -242,7 +243,7 @@ const AdminUsers = () => {
                   <th className="p-2 border text-center min-w-[120px]">Designation</th>
                   <th className="p-2 border text-center min-w-[120px]">Mobile Number</th>
                   <th className="p-2 border text-center min-w-[100px]">Category</th>
-                  <th className="p-2 border text-center min-w-[120px]">Actions</th>
+                  <th className="p-2 border text-center min-w-[100px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -255,12 +256,13 @@ const AdminUsers = () => {
                     <td className="p-2 border text-center min-w-[120px]">{user.Designation}</td>
                     <td className="p-2 border text-center min-w-[120px]">{user.MobileNumber}</td>
                     <td className="p-2 border text-center min-w-[100px]">{user.Category}</td>
-                    <td className="p-2 border text-center min-w-[120px]">
+                    <td className="p-2 border text-center min-w-[100px]">
                       <button
                         onClick={() => handleDeleteUser(user.UserID)}
-                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition text-sm"
+                        className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition"
+                        title="Delete"
                       >
-                        Delete
+                        <FaTrash />
                       </button>
                     </td>
                   </tr>
