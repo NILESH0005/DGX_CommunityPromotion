@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from 'react';
 import Swal from 'sweetalert2';
 import UserProfileChart from './UserProfileChart';
 import { FaArrowRight, FaEdit, FaUsers, FaPoll, FaTrash } from 'react-icons/fa';
-// import { FaEdit } from "react-icons/fa";
 import { GoCommentDiscussion } from "react-icons/go";
 import { FaArrowTrendDown, FaArrowTrendUp, FaEllipsisVertical, FaPersonWalkingDashedLineArrowRight } from "react-icons/fa6";
 import { images } from '../../public/index.js';
@@ -20,6 +19,7 @@ import EditProfileModal from './EditProfileModal';
 import DiscussionModal from './discussion/DiscussionModal.jsx';
 import AddUserEvent from './AddUserEvent.jsx';
 import AddUserBlog from './AddUserBlog.jsx';
+import UserQuiz from './UserQuiz.jsx'; 
 
 const UserProfile = (props) => {
 
@@ -241,16 +241,6 @@ const UserProfile = (props) => {
                 <img src={images.NvidiaBackground} className="w-full h-full rounded-tl-lg rounded-tr-lg" alt="Profile background" />
               </div>
               <div className="flex flex-col items-center -mt-20">
-                {/* <div className="w-40 h-40 border-4 border-DGXgreen rounded-full">
-                  <img src={images.Glo  be} className='rounded-full' alt="Profile" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="absolute opacity-0 cursor-pointer"
-                    onChange={handleImageChange}
-                    title="Click to change background image"
-                  />
-                </div> */}
                 <div className="w-40 h-40 border-4 border-DGXgreen rounded-full">
                   <img src={user?.ProfilePicture || images.defaultProfile} className='object-contain aspect-square rounded-full' />
                   <input
@@ -280,10 +270,6 @@ const UserProfile = (props) => {
               <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
                 <div className="flex-1 bg-DGXwhite rounded-lg shadow-xl p-8 border border-DGXgreen">
                   <ul>
-                    {/* <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'profile' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('profile')}>
-                      <CgProfile className='mr-4 text-2xl' />
-                      <li className={`text-lg ${activeTab === 'profile' ? 'text-DGXblue font-bold' : ''}`}>My Profile</li>
-                    </div> */}
                     <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'posts' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('posts')}>
                       <GoCommentDiscussion className='mr-4 text-2xl' />
                       <li className={`text-lg ${activeTab === 'posts' ? 'text-DGXblue font-bold' : ''}`}>My Discussions</li>
@@ -295,6 +281,10 @@ const UserProfile = (props) => {
                     <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'blogs' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('blogs')}>
                       <LiaBlogSolid className='mr-4 text-2xl' />
                       <li className={`text-lg ${activeTab === 'blogs' ? 'text-DGXblue font-bold' : ''}`}>My Blogs</li>
+                    </div>
+                    <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'quiz' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('quiz')}>
+                      <FaPoll className='mr-4 text-2xl' />
+                      <li className={`text-lg ${activeTab === 'quiz' ? 'text-DGXblue font-bold' : ''}`}>Quiz Dashboard</li>
                     </div>
                     <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'password' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('password')}>
                       <CgPassword className='mr-4 text-2xl' />
@@ -371,87 +361,6 @@ const UserProfile = (props) => {
             </div>
           </div>
           <div className="w-full lg:w-3/4 bg-DGXwhite rounded-lg shadow-xl md:p-4 md:border border-DGXgreen mx-auto">
-            {/* {activeTab === 'profile' && (
-              <div className="flex flex-col w-full 2xl:w-3/3 ">
-                <div className="flex bg-DGXwhite rounded-lg shadow-xl p-2 md:p-4 border border-DGXgreen ">
-                  
-                </div>
-                <div className="flex-1/2 bg-DGXwhite rounded-lg shadow-xl mt-4 p-2 md:p-8 border border-DGXgreen">
-                  <h4 className="text-xl text-[#111827] font-bold">Statistics</h4>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
-                    <div className="px-6 py-6 bg-DGXwhite border border-DGXgreen rounded-lg shadow-xl">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm text-DGXblue">Discussions</span>
-                        <span className="text-xs bg-[#e5e7eb] hover:bg-[#6b7280] text-[#6b7280] hover:text-[#e5e7eb] px-2 py-1 rounded-lg transition duration-200 cursor-default">7 days</span>
-                      </div>
-                      <div className="flex items-center justify-between mt-6">
-                        <div>
-                          <div className="w-12 h-12 p-2.5 bg-[#60a5fa] bg-opacity-20 rounded-full text-DGXblue border border-DGXblue flex items-center justify-center">
-                            <GoCommentDiscussion className="w-6 h-6 text-[#4f46e5]" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col">
-                          <div className="flex items-end">
-                            <span className="text-2xl 2xl:text-3xl font-bold">532</span>
-                            <div className="flex items-center ml-2 mb-1">
-                              <FaArrowTrendUp className="w-5 h-5 text-[#22c55e]" />
-                              <span className="font-bold text-sm text-[#6b7280] ml-0.5">3%</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="px-6 py-6 bg-DGXwhite border border-DGXgreen rounded-lg shadow-xl">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm text-DGXblue">Polls</span>
-                        <span className="text-xs bg-[#e5e7eb] hover:bg-[#6b7280] text-[#6b7280] hover:text-[#e5e7eb] px-2 py-1 rounded-lg transition duration-200 cursor-default">7 days</span>
-                      </div>
-                      <div className="flex items-center justify-between mt-6">
-                        <div>
-                          <div className="w-12 h-12 p-2.5 bg-[#4ade80] bg-opacity-20 rounded-full text-[#1e40af] border border-[#16a34a] flex items-center justify-center">
-                            <FaPoll className="w-6 h-6 text-[#1e40af]" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col">
-                          <div className="flex items-end">
-                            <span className="text-2xl 2xl:text-3xl font-bold">217</span>
-                            <div className="flex items-center ml-2 mb-1">
-                              <FaArrowTrendUp className="w-5 h-5 text-[#22c55e]" />
-                              <span className="font-bold text-sm text-[#6b7280] ml-0.5">5%</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="px-6 py-6 bg-DGXwhite border border-DGXgreen rounded-lg shadow-xl">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm text-DGXblue">Connections</span>
-                        <span className="text-xs bg-[#e5e7eb] hover:bg-[#6b7280] text-[#6b7280] hover:text-[#e5e7eb] px-2 py-1 rounded-lg transition duration-200 cursor-default">7 days</span>
-                      </div>
-                      <div className="flex items-center justify-between mt-6">
-                        <div>
-                          <div className="w-12 h-12 p-2.5 bg-[#60a5fa] bg-opacity-20 rounded-full text-DGXblue border border-DGXblue flex items-center justify-center">
-                            <FaUsers className="w-6 h-6 text-DGXblue" />
-                          </div>
-                        </div>
-                        <div className="flex flex-col">
-                          <div className="flex items-end">
-                            <span className="text-2xl 2xl:text-3xl font-bold">54</span>
-                            <div className="flex items-center ml-2 mb-1">
-                              <FaArrowTrendDown className="w-5 h-5 text-[#c52238]" />
-                              <span className="font-bold text-sm text-[#6b7280] ml-0.5">7%</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex justify-center items-center">
-                    <UserProfileChart />
-                  </div>
-                </div>
-              </div>
-            )} */}
             {activeTab === 'posts' && (
               <div>
                 <div className='post_bar pt-4 flex flex-col space-y-6'>
@@ -475,8 +384,6 @@ const UserProfile = (props) => {
                                 <FaArrowRight className="ml-1 text-blue-600 dark:text-blue-400" />
                               </span>
                               <div className="flex items-center gap-x-4">
-                                {/* <FaEdit className="text-gray-600 hover:text-blue-600 cursor-pointer text-xl transition-transform transform hover:scale-110"
-                                  onClick={() => handleEditDiscussion(discussion)} /> */}
                                 <FaTrash className="text-gray-600 hover:text-red-600 cursor-pointer text-xl transition-transform transform hover:scale-110"
                                   onClick={() => handleDeleteDiscussion(discussion)} />
                               </div>
@@ -492,10 +399,10 @@ const UserProfile = (props) => {
             {activeTab === 'events' && (
               <div className='w-full'>
                 <div className='flex-col'>
-                <h4 className="text-xl text-[#0f172a] font-bold">My Events</h4>
+                  <h4 className="text-xl text-[#0f172a] font-bold">My Events</h4>
                 </div>
                 <AddUserEvent events={props.events} setEvents={props.setEvents} />
-                </div>
+              </div>
             )}
             {activeTab === 'blogs' && (
               <div className='w-full'>
@@ -503,7 +410,14 @@ const UserProfile = (props) => {
                   <h4 className="text-xl text-[#0f172a] font-bold">My Blogs</h4>
                 </div>
                 <AddUserBlog blogs={props.blogs} setBlogs={props.setBlogs}/>
-
+              </div>
+            )}
+            {activeTab === 'quiz' && (
+              <div className='w-full'>
+                <div className='flex-col'>
+                  <h4 className="text-xl text-[#0f172a] font-bold">User Quiz</h4>
+                </div>
+                <UserQuiz quiz={props.quiz} setQuiz={props.setQuiz} />
               </div>
             )}
             {activeTab === 'password' && (
@@ -513,7 +427,6 @@ const UserProfile = (props) => {
               </div>
             )}
           </div>
-
         </div>
       </div>
   );
