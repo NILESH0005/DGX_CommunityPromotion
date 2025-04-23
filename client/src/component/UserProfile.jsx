@@ -235,7 +235,7 @@ const UserProfile = (props) => {
           />
         )}
         <div className="md:my-4 flex flex-col 2xl:flex-row space-y-4 2xl:space-y-0 2xl:space-x-4">
-          <div className="w-full flex flex-col 2xl:w-1/3">
+          <div className="w-full flex flex-col 2xl:w-1/3 sticky top-4 h-[calc(100vh-2rem)] overflow-y-auto">
             <div className="bg-DGXwhite w-full rounded-lg shadow-xl  pb-6 border border-DGXgreen">
               <div className="w-full h-[250px] rounded-t-lg border border-t-0 border-l-0 border-r-0 border-b-DGXgreen border-b-4">
                 <img src={images.NvidiaBackground} className="w-full h-full rounded-tl-lg rounded-tr-lg" alt="Profile background" />

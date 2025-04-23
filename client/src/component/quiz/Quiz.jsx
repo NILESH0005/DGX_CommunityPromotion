@@ -319,30 +319,28 @@ const Quiz = () => {
       return;
     }
 
-    const correctCount = selectedAnswers.filter(answer =>
-      answer !== null && answer.isCorrect
-    ).length;
+    const validAnswers = selectedAnswers.filter(answer => answer !== null);
 
-    const incorrectCount = selectedAnswers.filter(answer =>
-      answer !== null && !answer.isCorrect
-    ).length;
+    const correctCount = validAnswers.filter(answer => answer.isCorrect).length;
+    const incorrectCount = validAnswers.filter(answer => !answer.isCorrect).length;
+    const attemptedCount = validAnswers.length;
 
-    const attemptedCount = selectedAnswers.filter(answer => answer !== null).length;
 
-    const positiveMarks = selectedAnswers.reduce((sum, answer) =>
-      sum + (answer?.isCorrect ? answer.marksAwarded : 0), 0
+    const positiveMarks = validAnswers.reduce(
+      (sum, answer) => sum + (answer.isCorrect ? answer.marksAwarded : 0),
+      0
     );
 
-    const negativeMarks = selectedAnswers.reduce((sum, answer) =>
-      sum + (!answer?.isCorrect ? Math.abs(answer.marksAwarded) : 0), 0
+    const negativeMarks = validAnswers.reduce(
+      (sum, answer) => sum + (!answer.isCorrect ? Math.abs(answer.marksAwarded) : 0),
+      0
     );
 
     const totalScore = positiveMarks - negativeMarks;
 
     const result = await Swal.fire({
       title: 'Are you sure?',
-      html: `
-        <p class="mt-4">You won't be able to change your answers after submission!</p>`,
+      html: `<p class="mt-4">You won't be able to change your answers after submission!</p>`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import ApiContext from '../context/ApiContext';
 
 // Sample quiz data
 const generateQuizData = () => {
@@ -6,20 +7,20 @@ const generateQuizData = () => {
   const quizData = [];
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 90); // Last 90 days
-  
+
   for (let i = 0; i < 90; i++) {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
-    
+
     // Random number of quizzes per day (0-3)
     const quizzesPerDay = Math.floor(Math.random() * 4);
-    
+
     for (let j = 0; j < quizzesPerDay; j++) {
       const score = Math.floor(Math.random() * 41) + 60; // Scores between 60-100
       const timeSpent = Math.floor(Math.random() * 20) + 5; // 5-25 minutes
       const category = categories[Math.floor(Math.random() * categories.length)];
       const isCompleted = Math.random() > 0.2; // 80% completion rate
-      
+
       quizData.push({
         id: `quiz-${i}-${j}`,
         date: date.toISOString().split('T')[0],
@@ -32,8 +33,6 @@ const generateQuizData = () => {
       });
     }
   }
-  
-  // Ensure some quizzes have multiple attempts for retake insights
   for (let i = 0; i < 10; i++) {
     const baseQuiz = quizData[Math.floor(Math.random() * quizData.length)];
     for (let j = 1; j <= 3; j++) {
@@ -47,11 +46,10 @@ const generateQuizData = () => {
       });
     }
   }
-  
+
   return quizData;
 };
 
-// Simple icon components to replace Heroicons
 const TrophyIcon = () => <span>🏆</span>;
 const ClockIcon = () => <span>⏱️</span>;
 const ChartBarIcon = () => <span>📊</span>;
@@ -79,94 +77,121 @@ const UserQuiz = () => {
   });
   const [loading, setLoading] = useState(true);
   const [animate, setAnimate] = useState(false);
+  const { fetchData, userToken } = useContext(ApiContext);
+
 
   useEffect(() => {
-    // Simulate data loading
-    setLoading(true);
-    setTimeout(() => {
-      const data = generateQuizData();
-      setQuizData(data);
-      setFilteredData(data);
-      setLoading(false);
-      setAnimate(true);
-      
-      // Reset animation after it completes
-      setTimeout(() => setAnimate(false), 1000);
-    }, 800);
-  }, []);
+    const fetchQuizHistory = async () => {
+      setLoading(true);
+      try {
+        const endpoint = "quiz/getUserQuizHistory";
+        const method = "GET";
+        const headers = {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        };
+
+        const result = await fetchData(endpoint, method, {}, headers);
+
+        if (result.success && result.data && result.data.quizHistory) {
+          // Transform the API data to match your component's expected format
+          const transformedData = result.data.quizHistory.map(quiz => ({
+            id: `quiz-${quiz.quizID}`,
+            date: quiz.latestAttemptDate,
+            score: quiz.percentageScore,
+            category: quiz.group_name || 'General',
+            isCompleted: true, // Assuming all fetched quizzes are completed
+            title: quiz.QuizName,
+            attempts: quiz.attemptNumber,
+            timeSpent: Math.floor(Math.random() * 20) + 5, // Random time for now
+          }));
+
+          setQuizData(transformedData);
+          setFilteredData(transformedData);
+          setAnimate(true);
+          setTimeout(() => setAnimate(false), 1000);
+        } else {
+          console.error("Failed to fetch quiz history:", result.message);
+          // Optionally set some empty state or error message
+        }
+      } catch (error) {
+        console.error("Error fetching quiz history:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (userToken) {
+      fetchQuizHistory();
+    }
+  }, [userToken, fetchData]);
 
   useEffect(() => {
-    // Apply filters
     let result = [...quizData];
-    
-    // Date range filter
     if (filters.dateRange !== 'all') {
       const days = parseInt(filters.dateRange);
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
-      
+
       result = result.filter(quiz => new Date(quiz.date) >= cutoffDate);
     }
-    
-    // Category filter
+
     if (filters.category !== 'all') {
       result = result.filter(quiz => quiz.category === filters.category);
     }
-    
-    // Score range filter
-    result = result.filter(quiz => 
-      quiz.score >= filters.scoreRange[0] && 
+
+    result = result.filter(quiz =>
+      quiz.score >= filters.scoreRange[0] &&
       quiz.score <= filters.scoreRange[1]
     );
-    
+
     setFilteredData(result);
   }, [filters, quizData]);
 
   const getStats = () => {
     if (filteredData.length === 0) return {};
-    
+
     const scores = filteredData.map(q => q.score);
     const highest = Math.max(...scores);
     const lowest = Math.min(...scores);
     const average = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
-    
+
     const completed = filteredData.filter(q => q.isCompleted).length;
     const started = filteredData.length;
     const completionRate = ((completed / started) * 100).toFixed(0);
-    
+
     // Calculate streaks
     let currentStreak = 0;
     let maxStreak = 0;
     let lastDate = null;
-    
+
     const uniqueDays = [...new Set(filteredData.map(q => q.date))].sort();
-    
+
     uniqueDays.forEach(day => {
       if (!lastDate || new Date(day).getTime() === new Date(lastDate).getTime() + 86400000) {
         currentStreak++;
       } else {
         currentStreak = 1;
       }
-      
+
       if (currentStreak > maxStreak) {
         maxStreak = currentStreak;
       }
-      
+
       lastDate = day;
     });
-    
+
     // Time spent stats
     const totalTime = filteredData.reduce((sum, q) => sum + q.timeSpent, 0);
     const avgTime = (totalTime / filteredData.length).toFixed(1);
-    
-    // Category distribution
+
     const categoryCount = filteredData.reduce((acc, q) => {
       acc[q.category] = (acc[q.category] || 0) + 1;
       return acc;
     }, {});
-    
+
     const mostFrequentCategory = Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
-    
+
     return {
       highest,
       lowest,
@@ -177,21 +202,19 @@ const UserQuiz = () => {
       totalTime,
       avgTime,
       mostFrequentCategory,
-      startDate: filteredData.length > 0 
-        ? new Date(filteredData[filteredData.length - 1].date).toLocaleDateString() 
+      startDate: filteredData.length > 0
+        ? new Date(filteredData[filteredData.length - 1].date).toLocaleDateString()
         : 'N/A',
-      endDate: filteredData.length > 0 
-        ? new Date(filteredData[0].date).toLocaleDateString() 
+      endDate: filteredData.length > 0
+        ? new Date(filteredData[0].date).toLocaleDateString()
         : 'N/A',
     };
   };
 
   const stats = getStats();
-
-  // Prepare data for retake insights
   const prepareRetakeData = () => {
     const retakeMap = {};
-    
+
     filteredData.forEach(quiz => {
       const baseId = quiz.id.split('-retake-')[0];
       if (!retakeMap[baseId]) {
@@ -199,7 +222,7 @@ const UserQuiz = () => {
       }
       retakeMap[baseId].push(quiz);
     });
-    
+
     return Object.values(retakeMap)
       .filter(quizzes => quizzes.length > 1)
       .map(quizzes => ({
@@ -211,15 +234,10 @@ const UserQuiz = () => {
         })),
       }));
   };
-
-  // Get unique categories
   const categories = [...new Set(quizData.map(q => q.category))];
-
-  // Get achievements
   const getAchievements = () => {
     const achievements = [];
     const stats = getStats();
-    
     if (stats.maxStreak >= 7) {
       achievements.push({
         name: '7-Day Streak',
@@ -228,7 +246,6 @@ const UserQuiz = () => {
         color: 'bg-red-100 text-red-800',
       });
     }
-    
     if (filteredData.length >= 20) {
       achievements.push({
         name: 'Quiz Enthusiast',
@@ -237,7 +254,6 @@ const UserQuiz = () => {
         color: 'bg-yellow-100 text-yellow-800',
       });
     }
-    
     if (stats.average >= 90) {
       achievements.push({
         name: 'High Scorer',
@@ -246,7 +262,6 @@ const UserQuiz = () => {
         color: 'bg-blue-100 text-blue-800',
       });
     }
-    
     if (stats.completionRate >= 90) {
       achievements.push({
         name: 'Completionist',
@@ -255,13 +270,12 @@ const UserQuiz = () => {
         color: 'bg-green-100 text-green-800',
       });
     }
-    
+
     return achievements;
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      {/* Welcome animation */}
       {animate && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-8 rounded-lg shadow-xl animate-bounce">
@@ -270,28 +284,24 @@ const UserQuiz = () => {
           </div>
         </div>
       )}
-      
       <div className={`max-w-7xl mx-auto transition-opacity duration-500 ${loading ? 'opacity-50' : 'opacity-100'}`}>
         <h1 className="text-3xl font-bold text-gray-800 mb-6 flex items-center">
           <TrophyIcon className="h-8 w-8 text-yellow-500 mr-2" />
           Quiz Performance Dashboard
         </h1>
-        
-        {/* Filters */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center">
               <FilterIcon className="h-5 w-5 text-gray-500 mr-2" />
               <h3 className="font-medium text-gray-700">Filters</h3>
             </div>
-            
             <div className="flex flex-wrap gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
                 <select
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   value={filters.dateRange}
-                  onChange={(e) => setFilters({...filters, dateRange: e.target.value})}
+                  onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
                 >
                   <option value="all">All Time</option>
                   <option value="7">Last 7 Days</option>
@@ -299,13 +309,13 @@ const UserQuiz = () => {
                   <option value="90">Last 90 Days</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   value={filters.category}
-                  onChange={(e) => setFilters({...filters, category: e.target.value})}
+                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                 >
                   <option value="all">All Categories</option>
                   {categories.map(cat => (
@@ -313,7 +323,7 @@ const UserQuiz = () => {
                   ))}
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Score Range</label>
                 <div className="flex items-center gap-2">
@@ -324,7 +334,7 @@ const UserQuiz = () => {
                     className="block w-16 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     value={filters.scoreRange[0]}
                     onChange={(e) => setFilters({
-                      ...filters, 
+                      ...filters,
                       scoreRange: [parseInt(e.target.value), filters.scoreRange[1]]
                     })}
                   />
@@ -336,7 +346,7 @@ const UserQuiz = () => {
                     className="block w-16 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     value={filters.scoreRange[1]}
                     onChange={(e) => setFilters({
-                      ...filters, 
+                      ...filters,
                       scoreRange: [filters.scoreRange[0], parseInt(e.target.value)]
                     })}
                   />
@@ -345,11 +355,11 @@ const UserQuiz = () => {
             </div>
           </div>
         </div>
-        
-        
+
+
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
+          {/* <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center">
               <CalendarIcon className="h-5 w-5 text-gray-500 mr-2" />
               <h3 className="font-medium text-gray-700">Activity Period</h3>
@@ -360,9 +370,9 @@ const UserQuiz = () => {
             <p className="text-sm text-gray-500 mt-1">
               {filteredData.length} quizzes attempted
             </p>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-4">
+          </div> */}
+
+          {/* <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center">
               <ChartBarIcon className="h-5 w-5 text-gray-500 mr-2" />
               <h3 className="font-medium text-gray-700">Score Overview</h3>
@@ -381,9 +391,9 @@ const UserQuiz = () => {
                 <p className="text-2xl font-bold text-blue-600">{stats.average}%</p>
               </div>
             </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-4">
+          </div> */}
+
+          {/* <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center">
               <ClockIcon className="h-5 w-5 text-gray-500 mr-2" />
               <h3 className="font-medium text-gray-700">Time Spent</h3>
@@ -394,9 +404,9 @@ const UserQuiz = () => {
             <p className="text-sm text-gray-500 mt-1">
               Avg. {stats.avgTime} min per quiz
             </p>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-4">
+          </div> */}
+
+          {/* <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center">
               <CheckCircleIcon className="h-5 w-5 text-gray-500 mr-2" />
               <h3 className="font-medium text-gray-700">Completion Rate</h3>
@@ -405,85 +415,95 @@ const UserQuiz = () => {
               {stats.completionRate}%
             </p>
             <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-              <div 
-                className="bg-green-500 h-2.5 rounded-full" 
+              <div
+                className="bg-green-500 h-2.5 rounded-full"
                 style={{ width: `${stats.completionRate}%` }}
               ></div>
             </div>
             <p className="text-sm text-gray-500 mt-1">
               {filteredData.filter(q => q.isCompleted).length} completed of {filteredData.length} started
             </p>
-          </div>
+          </div> */}
         </div>
-         {/* Quiz List */}
-         <div className="bg-white rounded-lg shadow p-4">
+        {/* Quiz List */}
+        <div className="bg-white rounded-lg shadow p-4">
           <h3 className="font-bold text-lg mb-4">Recent Quiz Attempts</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quiz</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredData.slice(0, 10).map((quiz, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(quiz.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {quiz.title}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {quiz.category}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${quiz.score >= 90 ? 'bg-green-100 text-green-800' : 
-                          quiz.score >= 70 ? 'bg-blue-100 text-blue-800' : 
-                          'bg-red-100 text-red-800'}`}>
-                        {quiz.score}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {quiz.timeSpent} min
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {quiz.isCompleted ? (
-                        <span className="flex items-center text-green-600">
-                          <CheckCircleIcon className="h-4 w-4 mr-1" /> Completed
-                        </span>
-                      ) : (
-                        <span className="flex items-center text-yellow-600">
-                          <XCircleIcon className="h-4 w-4 mr-1" /> Incomplete
-                        </span>
-                      )}
-                    </td>
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : filteredData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quiz</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempts</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredData.slice(0, 10).map((quiz, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(quiz.date).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {quiz.title}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {quiz.category}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        ${quiz.score >= 90 ? 'bg-green-100 text-green-800' :
+                            quiz.score >= 70 ? 'bg-blue-100 text-blue-800' :
+                              'bg-red-100 text-red-800'}`}>
+                          {quiz.score}%
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {quiz.attempts}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {quiz.isCompleted ? (
+                          <span className="flex items-center text-green-600">
+                            <CheckCircleIcon className="h-4 w-4 mr-1" /> Completed
+                          </span>
+                        ) : (
+                          <span className="flex items-center text-yellow-600">
+                            <XCircleIcon className="h-4 w-4 mr-1" /> Incomplete
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No quiz attempts found matching your filters
+            </div>
+          )}
         </div>
         {/* Main Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <ChartPlaceholder title="Quiz Activity Heatmap" height={200} />
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <ChartPlaceholder title="Quiz Categories" />
           </div>
-        </div>
-        
+        </div> */}
+
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <ChartPlaceholder title="Quiz Performance Over Time" />
         </div>
-        
+
         {/* Retake Insights */}
         {prepareRetakeData().length > 0 && (
           <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -499,10 +519,10 @@ const UserQuiz = () => {
                     {quiz.attempts.map((attempt, idx) => (
                       <div key={idx} className="flex flex-col items-center min-w-[80px]">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center 
-                          ${idx === 0 ? 'bg-blue-100 text-blue-800' : 
-                            attempt.score > quiz.attempts[idx-1].score ? 'bg-green-100 text-green-800' : 
-                            attempt.score < quiz.attempts[idx-1].score ? 'bg-red-100 text-red-800' : 
-                            'bg-gray-100 text-gray-800'}`}>
+                          ${idx === 0 ? 'bg-blue-100 text-blue-800' :
+                            attempt.score > quiz.attempts[idx - 1].score ? 'bg-green-100 text-green-800' :
+                              attempt.score < quiz.attempts[idx - 1].score ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'}`}>
                           <span className="font-bold">{attempt.score}%</span>
                         </div>
                         <span className="text-xs mt-1">Attempt {attempt.attempt}</span>
@@ -515,7 +535,7 @@ const UserQuiz = () => {
             </div>
           </div>
         )}
-        
+
         {/* Achievements */}
         {getAchievements().length > 0 && (
           <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -525,8 +545,8 @@ const UserQuiz = () => {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {getAchievements().map((achievement, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className={`rounded-lg p-4 flex items-start ${achievement.color}`}
                 >
                   <span className="text-2xl mr-3">{achievement.icon}</span>
@@ -539,8 +559,8 @@ const UserQuiz = () => {
             </div>
           </div>
         )}
-        
-       
+
+
       </div>
     </div>
   );

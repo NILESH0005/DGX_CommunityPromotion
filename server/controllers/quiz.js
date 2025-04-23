@@ -632,7 +632,7 @@ export const deleteQuestion = async (req, res) => {
             AuthDel = ?,
             AuthLstEdit = ?
           WHERE id = ? AND (delStatus IS NULL OR delStatus = 0)`;
-        
+
         const questionDeleteResult = await queryAsync(conn, deleteQuestionQuery, [
           adminName,
           adminName,
@@ -648,7 +648,7 @@ export const deleteQuestion = async (req, res) => {
             AuthDel = ?,
             AuthLstEdit = ?
           WHERE question_id = ? AND (delStatus IS NULL OR delStatus = 0)`;
-        
+
         const optionsDeleteResult = await queryAsync(conn, deleteOptionsQuery, [
           adminName,
           adminName,
@@ -663,13 +663,13 @@ export const deleteQuestion = async (req, res) => {
         success = true;
         const infoMessage = "Question and associated options deleted successfully";
         logInfo(infoMessage);
-        res.status(200).json({ 
-          success, 
-          data: { 
+        res.status(200).json({
+          success,
+          data: {
             questionId: id,
-            optionsDeleted: optionsDeleteResult.affectedRows 
-          }, 
-          message: infoMessage 
+            optionsDeleted: optionsDeleteResult.affectedRows
+          },
+          message: infoMessage
         });
 
       } catch (queryErr) {
@@ -909,42 +909,68 @@ export const getUserQuizCategory = async (req, res) => {
     const warningMessage = "Data is not in the right format";
     console.error(warningMessage, errors.array());
     logWarning(warningMessage);
-    res
-      .status(400)
-      .json({ success, data: errors.array(), message: warningMessage });
-    return;
+    return res.status(400).json({ success, data: errors.array(), message: warningMessage });
   }
 
   try {
+    const userEmail = req.user.id; // Assuming this contains the email from JWT
+    console.log("User email from token:", userEmail);
+
     connectToDatabase(async (err, conn) => {
       if (err) {
         const errorMessage = "Failed to connect to database";
         logError(err);
-        res
-          .status(500)
-          .json({ success: false, data: err, message: errorMessage });
-        return;
+        return res.status(500).json({ success: false, data: err, message: errorMessage });
       }
 
       try {
+        // First get the user ID from email
+        const userIdQuery = "SELECT UserID FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0";
+        const userResult = await queryAsync(conn, userIdQuery, [userEmail]);
+
+        if (!userResult || userResult.length === 0) {
+          const errorMessage = "User not found";
+          logError(errorMessage);
+          closeConnection();
+          return res.status(404).json({ success: false, message: errorMessage });
+        }
+
+        const userId = userResult[0].UserID;
+        console.log("Found user ID:", userId);
+
+        // Main query with user-specific attempt count
         const query = `SELECT 
     QuizDetails.QuizID,
     QuizDetails.QuizName,
-	QuizDetails.QuizImage,
-	QuizDetails.StartDateAndTime,
-	QuizDetails.EndDateTime,
-	GroupMaster.group_name,
-	GroupMaster.group_id, 
+    QuizDetails.QuizImage,
+    QuizDetails.StartDateAndTime,
+    QuizDetails.EndDateTime,
+    GroupMaster.group_name,
+    GroupMaster.group_id, 
     SUM(QuizMapping.totalMarks) AS MaxScore,
-    COUNT(DISTINCT QuizMapping.QuestionsID) AS Total_Question_No
+    COUNT(DISTINCT QuizMapping.QuestionsID) AS Total_Question_No,
+    ISNULL(UserAttempts.noOfAttempts, 0) AS userAttempts
 FROM QuizMapping
 LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
-left join GroupMaster on QuizDetails.QuizCategory = GroupMaster.group_id
-AND ISNULL(QuizMapping.delStatus, 0) = 0
-GROUP BY QuizDetails.QuizID, QuizDetails.QuizImage, QuizDetails.QuizName, 	GroupMaster.group_id, 
- GroupMaster.group_name, QuizDetails.StartDateAndTime, QuizDetails.EndDateTime`;
+LEFT JOIN GroupMaster ON QuizDetails.QuizCategory = GroupMaster.group_id
+LEFT JOIN (
+    SELECT quizID, MAX(noOfAttempts) AS noOfAttempts
+    FROM quiz_score
+    WHERE userID = ?
+    GROUP BY quizID
+) AS UserAttempts ON QuizMapping.quizId = UserAttempts.quizID
+WHERE ISNULL(QuizMapping.delStatus, 0) = 0
+GROUP BY 
+    QuizDetails.QuizID, 
+    QuizDetails.QuizImage, 
+    QuizDetails.QuizName,
+    GroupMaster.group_id, 
+    GroupMaster.group_name, 
+    QuizDetails.StartDateAndTime, 
+    QuizDetails.EndDateTime,
+    UserAttempts.noOfAttempts`;
 
-        const quizzes = await queryAsync(conn, query);
+        const quizzes = await queryAsync(conn, query, [userId, userId]);
 
         const validQuizzes = quizzes.filter(
           (quiz) =>
@@ -958,7 +984,7 @@ GROUP BY QuizDetails.QuizID, QuizDetails.QuizImage, QuizDetails.QuizName, 	Group
         closeConnection();
         const infoMessage = "Quizzes fetched successfully";
         logInfo(infoMessage);
-        res.status(200).json({
+        return res.status(200).json({
           success,
           data: { quizzes: validQuizzes },
           message: infoMessage,
@@ -966,7 +992,7 @@ GROUP BY QuizDetails.QuizID, QuizDetails.QuizImage, QuizDetails.QuizName, 	Group
       } catch (queryErr) {
         logError(queryErr);
         closeConnection();
-        res.status(500).json({
+        return res.status(500).json({
           success: false,
           data: queryErr,
           message: "Something went wrong please try again",
@@ -975,7 +1001,7 @@ GROUP BY QuizDetails.QuizID, QuizDetails.QuizImage, QuizDetails.QuizName, 	Group
     });
   } catch (error) {
     logError(error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       data: {},
       message: "Something went wrong please try again",
@@ -1494,12 +1520,12 @@ export const updateQuestion = async (req, res) => {
 
   try {
     const {
-      id, 
+      id,
       question_text,
       Ques_level,
       group_id,
       image,
-      question_type = 0, 
+      question_type = 0,
       options = [],
       AuthLstEdit,
     } = req.body;
@@ -1801,6 +1827,134 @@ export const getLeaderboardRanking = async (req, res) => {
   } catch (error) {
     logError(error);
     res.status(500).json({
+      success: false,
+      data: {},
+      message: "Something went wrong please try again",
+    });
+  }
+};
+
+
+export const getUserQuizHistory = async (req, res) => {
+  let success = false;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const warningMessage = "Data is not in the right format";
+    console.error(warningMessage, errors.array());
+    logWarning(warningMessage);
+    return res.status(400).json({ success, data: errors.array(), message: warningMessage });
+  }
+
+  try {
+    const userEmail = req.user.id; // Assuming this contains the email from JWT
+    console.log("User email from token:", userEmail);
+
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        const errorMessage = "Failed to connect to database";
+        logError(err);
+        return res.status(500).json({ success: false, data: err, message: errorMessage });
+      }
+
+      try {
+        // First get the user ID from email
+        const userIdQuery = "SELECT UserID FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0";
+        const userResult = await queryAsync(conn, userIdQuery, [userEmail]);
+
+        if (!userResult || userResult.length === 0) {
+          const errorMessage = "User not found";
+          logError(errorMessage);
+          closeConnection();
+          return res.status(404).json({ success: false, message: errorMessage });
+        }
+
+        const userId = userResult[0].UserID;
+        console.log("Found user ID:", userId);
+
+        // Main query to get latest quiz attempts with scores
+        const query = `
+          WITH LatestAttempts AS (
+              SELECT 
+                  quizID,
+                  MAX(noOfAttempts) AS maxAttempt
+              FROM 
+                  quiz_score
+              WHERE 
+                  userID = ?
+              GROUP BY 
+                  quizID
+          ),
+          LatestAttemptDetails AS (
+              SELECT 
+                  qs.quizID,
+                  qs.noOfAttempts,
+                  qd.QuizName,
+                  gm.group_name,
+                  SUM(qs.ObtainedMarks) AS totalObtained,
+                  MAX(qs.totalMarks) AS totalPossible,
+                  MAX(qs.AddOnDt) AS latestAttemptDate
+              FROM 
+                  quiz_score qs
+              JOIN 
+                  LatestAttempts la ON qs.quizID = la.quizID AND qs.noOfAttempts = la.maxAttempt
+              LEFT JOIN 
+                  QuizDetails qd ON qs.quizID = qd.QuizID
+              LEFT JOIN 
+                  GroupMaster gm ON qs.quizID = gm.group_id
+              WHERE 
+                  qs.userID = ?
+              GROUP BY 
+                  qs.quizID, qs.noOfAttempts, qd.QuizName, gm.group_name
+          )
+          SELECT 
+              quizID,
+              latestAttemptDate,
+              QuizName,
+              noOfAttempts AS attemptNumber,
+              group_name,
+              totalObtained,
+              totalPossible,
+              CASE 
+                  WHEN totalPossible > 0 THEN ROUND((totalObtained / totalPossible) * 100, 2)
+                  ELSE 0 
+              END AS percentageScore
+          FROM 
+              LatestAttemptDetails
+          ORDER BY 
+              latestAttemptDate DESC`;
+
+        const quizHistory = await queryAsync(conn, query, [userId, userId]);
+
+        // Filter out any invalid records (though your query structure should prevent this)
+        const validHistory = quizHistory.filter(
+          (quiz) =>
+            quiz.quizID !== null &&
+            quiz.QuizName !== null &&
+            quiz.latestAttemptDate !== null
+        );
+
+        success = true;
+        closeConnection();
+        const infoMessage = "Quiz history fetched successfully";
+        logInfo(infoMessage);
+        return res.status(200).json({
+          success,
+          data: { quizHistory: validHistory },
+          message: infoMessage,
+        });
+      } catch (queryErr) {
+        logError(queryErr);
+        closeConnection();
+        return res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: "Something went wrong please try again",
+        });
+      }
+    });
+  } catch (error) {
+    logError(error);
+    return res.status(500).json({
       success: false,
       data: {},
       message: "Something went wrong please try again",
