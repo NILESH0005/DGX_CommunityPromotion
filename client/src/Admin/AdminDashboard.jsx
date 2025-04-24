@@ -31,22 +31,28 @@ import {
 
 const AdminDashboard = (props) => {
   const [activeComp, setActiveComp] = useState("users");
-  const [quizMenuOpen, setQuizMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth >= 768) {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // On larger screens, always show sidebar
+      if (!mobile) {
         setSidebarOpen(true);
       } else {
-        setSidebarOpen(false);
+        setSidebarOpen(false); // Close sidebar by default on mobile
       }
     };
 
+    // Set initial state
     handleResize();
+    
+    // Add event listener
     window.addEventListener('resize', handleResize);
+    
+    // Clean up
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -87,21 +93,25 @@ const AdminDashboard = (props) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
       {/* Mobile Header */}
-      <div className="md:hidden bg-black text-white p-4 flex justify-between items-center">
+      <div className="md:hidden bg-black text-white p-4 flex justify-between items-center sticky top-0 z-50">
         <div className="text-2xl font-bold">Admin Dashboard</div>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
+        <button 
+          onClick={() => setSidebarOpen(!sidebarOpen)} 
+          className="text-white focus:outline-none"
+          aria-label="Toggle menu"
+        >
           {sidebarOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
         </button>
       </div>
 
-      {/* Sidebar */}
+      {/* Sidebar - Changed positioning for mobile */}
       <div 
-        className={`${sidebarOpen ? 'block' : 'hidden'} md:block bg-black text-white w-full md:w-64 flex-shrink-0 transition-all duration-300 ease-in-out`}
-        style={{ height: isMobile ? 'calc(100vh - 60px)' : '100vh' }}
+        className={`fixed md:relative top-16 md:top-0 left-0 h-[calc(100vh-64px)] md:h-auto bg-black text-white w-64 flex-shrink-0 
+        transform transition-transform duration-300 ease-in-out z-40 md:z-0
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
       >
-        <div className="p-4 text-2xl md:text-3xl font-bold hidden md:block">Admin Dashboard</div>
         <nav className="overflow-y-auto h-full">
           <ul>
             <li>
@@ -152,26 +162,23 @@ const AdminDashboard = (props) => {
                 Blogs
               </div>
             </li>
-            {/* Quiz Section */}
-            <li>
+            {/* Quiz Section with Hover-based Submenu */}
+            <li className="relative group">
               <div
-                className="py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl"
-                onClick={() => setQuizMenuOpen(!quizMenuOpen)}
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
+                  ["quizpanel", "quiz_bank", "quiz_mapping", "quiz_settings"].includes(activeComp)
+                    ? "bg-gray-700 text-yellow-300"
+                    : ""
+                }`}
               >
                 <FaBrain className="mr-4" />
                 Quiz
-                {quizMenuOpen ? (
-                  <FaAngleUp className="ml-auto" />
-                ) : (
-                  <FaAngleDown className="ml-auto" />
-                )}
+                <FaAngleDown className="ml-auto group-hover:rotate-180 transition-transform duration-200" />
               </div>
-            </li>
-            {quizMenuOpen && (
-              <ul className="ml-6">
+              <ul className="bg-gray-800 absolute hidden group-hover:block w-full left-0 top-full z-10">
                 <li>
                   <div
-                    className={`py-2 px-4 cursor-pointer flex items-center text-base md:text-lg ${
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${
                       activeComp === "quizpanel"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
@@ -184,7 +191,7 @@ const AdminDashboard = (props) => {
                 </li>
                 <li>
                   <div
-                    className={`py-2 px-4 cursor-pointer flex items-center text-base md:text-lg ${
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${
                       activeComp === "quiz_bank"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
@@ -197,7 +204,7 @@ const AdminDashboard = (props) => {
                 </li>
                 <li>
                   <div
-                    className={`py-2 px-4 cursor-pointer flex items-center text-base md:text-lg ${
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${
                       activeComp === "quiz_mapping"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
@@ -210,7 +217,7 @@ const AdminDashboard = (props) => {
                 </li>
                 <li>
                   <div
-                    className={`py-2 px-4 cursor-pointer flex items-center text-base md:text-lg ${
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${
                       activeComp === "quiz_settings"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
@@ -222,7 +229,7 @@ const AdminDashboard = (props) => {
                   </div>
                 </li>
               </ul>
-            )}
+            </li>
 
             <li>
               <div
@@ -263,9 +270,13 @@ const AdminDashboard = (props) => {
         </nav>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 p-4 overflow-x-auto">
-        {getComp(activeComp)}
+      {/* Main Content - Added margin-top for mobile */}
+      <div className={`flex-1 min-h-screen p-4 md:p-6 overflow-x-auto transition-all duration-300 mt-16 md:mt-0 ${
+        sidebarOpen && isMobile ? 'ml-64' : ''
+      }`}>
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          {getComp(activeComp)}
+        </div>
       </div>
     </div>
   );

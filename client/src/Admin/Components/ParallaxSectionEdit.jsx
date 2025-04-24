@@ -20,7 +20,7 @@ const ParallaxSection = () => {
     const method = "POST";
     const headers = {
       "Content-Type": "application/json",
-      // "auth-token": userToken,
+      
     };
     const body = {};
 
@@ -178,13 +178,13 @@ const ParallaxSection = () => {
                       {activeText === text.Content ? "Active" : "Set as Active"}
                     </button>
 
-                    <button
+                    {/* <button
                       className="text-red-600 hover:text-red-800 text-lg px-3"
                       onClick={() => handleDeleteText(text.idCode)}
                       title="Delete"
                     >
                       <FaTrash />
-                    </button>
+                    </button> */}
                   </td>
 
                 </tr>
