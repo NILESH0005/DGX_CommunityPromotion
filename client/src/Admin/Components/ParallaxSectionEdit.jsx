@@ -1,6 +1,8 @@
 import { useState, useContext, useEffect } from "react";
 import Swal from "sweetalert2";
 import ApiContext from "../../context/ApiContext";
+import { FaTrash } from "react-icons/fa";
+
 
 const ParallaxSection = () => {
   const [parallaxTexts, setParallaxTexts] = useState([]);
@@ -9,7 +11,7 @@ const ParallaxSection = () => {
   const { fetchData, userToken } = useContext(ApiContext);
 
   useEffect(() => {
-    console.log("User Token:", userToken); 
+    console.log("User Token:", userToken);
     fetchParallaxTexts();
   }, [userToken, fetchData]);
 
@@ -62,8 +64,8 @@ const ParallaxSection = () => {
         const response = await fetchData(endpoint, method, body, headers);
 
         if (response.success) {
-          const newTextObj = { Content: newText, isActive: false, idCode: response.data.id }; 
-          console.log("idcode:" , response.data.id);
+          const newTextObj = { Content: newText, isActive: false, idCode: response.data.id };
+          console.log("idcode:", response.data.id);
           setParallaxTexts([...parallaxTexts, newTextObj]);
           setNewText("");
 
@@ -81,30 +83,42 @@ const ParallaxSection = () => {
       Swal.fire({ icon: "error", title: "Limit Reached", text: "You can only add up to 10 parallax texts." });
     }
   };
+  const handleDeleteText = async (idCode) => {
+    const confirm = await Swal.fire({
+      title: "Are you sure?",
+      text: "This will permanently delete the parallax text.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    });
 
-  // const handleSetActiveText = async (idCode) => {
-  //   const endpoint = "home/setActiveParallaxText";
-  //   const method = "POST";
-  //   const headers = {
-  //     "Content-Type": "application/json",
-  //     "auth-token": userToken,
-  //   };
-  //   const body = { idCode };
+    if (confirm.isConfirmed) {
+      const endpoint = "home/deleteParallaxText"; 
+      const method = "POST";
+      const headers = {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      };
+      const body = { idCode };
 
-  //   try {
-  //     const response = await fetchData(endpoint, method, body, headers);
+      try {
+        const response = await fetchData(endpoint, method, body, headers);
 
-  //     if (response.success) {
-  //       fetchParallaxTexts();
-  //       Swal.fire({ icon: "success", title: "Updated!", text: "Active parallax text has been updated.", timer: 1500, showConfirmButton: false });
-  //     } else {
-  //       Swal.fire("Error", response.message, "error");
-  //     }
-  //   } catch (error) {
-  //     console.error("API Request Error:", error);
-  //     Swal.fire("Error", "Something went wrong!", "error");
-  //   }
-  // };
+        if (response.success) {
+          Swal.fire("Deleted!", "The text has been removed.", "success");
+          fetchParallaxTexts();
+        } else {
+          Swal.fire("Error", response.message, "error");
+        }
+      } catch (error) {
+        console.error("API Request Error:", error);
+        Swal.fire("Error", "Something went wrong!", "error");
+      }
+    }
+  };
+
 
   const handleSetActiveText = async (idCode) => {
     console.log("Setting active text with idCode:", idCode); // Debug
@@ -152,18 +166,27 @@ const ParallaxSection = () => {
                 <tr key={index} className="border">
                   <td className="border p-2 text-center">{index + 1}</td>
                   <td className="border p-2">{text.Content}</td>
-                  <td className="border p-2 text-center">
+                  <td className="border p-2 text-center flex items-center justify-center gap-2">
                     <button
                       className={`px-3 py-1 rounded ${activeText === text.Content
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-green-500 hover:bg-green-600 text-white"
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-green-500 hover:bg-green-600 text-white"
                         }`}
-                      onClick={() => handleSetActiveText(text.idCode)} // Call handleSetActiveText
+                      onClick={() => handleSetActiveText(text.idCode)}
                       disabled={activeText === text.Content}
                     >
                       {activeText === text.Content ? "Active" : "Set as Active"}
                     </button>
+
+                    <button
+                      className="text-red-600 hover:text-red-800 text-lg px-3"
+                      onClick={() => handleDeleteText(text.idCode)}
+                      title="Delete"
+                    >
+                      <FaTrash />
+                    </button>
                   </td>
+
                 </tr>
               ))}
             </tbody>
