@@ -434,3 +434,59 @@ export const updateBlog = async (req, res) => {
     res.status(500).json({ success: false, data: {}, message: "Something went wrong, please try again" });
   }
 };
+
+
+export const getUserBlogs = async (req, res) => {
+  let success = false;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(400).json({ success, data: {}, message: "User ID not found. Please login." });
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError("Failed to connect to database");
+        return res.status(500).json({ success, data: err, message: "Failed to connect to database" });
+      }
+
+      try {
+        const userQuery = `SELECT UserID FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+
+        if (userRows.length === 0) {
+          closeConnection();
+          return res.status(404).json({ success, data: {}, message: "User not found" });
+        }
+
+        const actualUserId = userRows[0].UserID;
+
+        const BlogQuery = `
+          SELECT BlogID, title, AuthAdd as UserName, author, content, Category as category, publishedDate,
+                 AddOnDt as timestamp, image, UserID, Status, AdminRemark
+          FROM Community_Blog 
+          WHERE ISNULL(delStatus, 0) = 0 
+            AND UserID = ? 
+            AND Status IN ('Pending', 'Rejected')
+          ORDER BY AddOnDt DESC;
+        `;
+
+        const BlogGet = await queryAsync(conn, BlogQuery, [actualUserId]);
+        success = true;
+        closeConnection();
+        logInfo("User-specific pending/rejected blogs fetched successfully");
+
+        return res.status(200).json({ success, data: BlogGet, message: "User's blogs fetched successfully" });
+      } catch (queryErr) {
+        closeConnection();
+        logError("Database Query Error:", queryErr);
+        return res.status(500).json({ success, data: queryErr, message: "Database Query Error" });
+      }
+    });
+  } catch (error) {
+    logError("Unexpected Error:", error);
+    return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
+  }
+};
+

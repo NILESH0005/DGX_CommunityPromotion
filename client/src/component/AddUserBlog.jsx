@@ -31,7 +31,7 @@ const AddUserBlog = (props) => {
 
   useEffect(() => {
     const fetchBlogs = async () => {
-      const endpoint = "blog/getBlog";
+      const endpoint = "blog/getUserBlogs";
       const method = "POST";
       const headers = { 'Content-Type': 'application/json' };
 
