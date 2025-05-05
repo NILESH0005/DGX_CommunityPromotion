@@ -4,19 +4,55 @@ import Swal from "sweetalert2";
 import LoadPage from "../../../component/LoadPage";
 import ViewQuizModal from "./ViewQuizModal";
 import EditQuizModal from "./EditQuizModal";
-import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaFilter, FaTimes } from "react-icons/fa";
 
 const QuizTable = () => {
   const { fetchData, userToken } = useContext(ApiContext);
   const [quizzes, setQuizzes] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true); // Start with loading true
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [quizLevels, setQuizLevels] = useState([]);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState({
+    quizCategory: true,
+    quizName: true,
+    duration: true,
+    startDateTime: true,
+    endDateTime: true,
+    questions: true,
+    participants: true,
+    attempts: true,
+    totalMarks: true,
+    passingPercentage: true,
+    actions: true,
+    // Hidden by default
+    level: false,
+    negativeMarking: false,
+    visibility: false
+  });
+
+  // Column definitions for better organization
+  const columnDefinitions = [
+    { key: 'quizCategory', label: 'Quiz Category' },
+    { key: 'quizName', label: 'Quiz Name' },
+    { key: 'level', label: 'Level' },
+    { key: 'duration', label: 'Duration' },
+    { key: 'negativeMarking', label: 'Negative Marking' },
+    { key: 'startDateTime', label: 'Start Date & Time' },
+    { key: 'endDateTime', label: 'End Date & Time' },
+    { key: 'visibility', label: 'Visibility' },
+    { key: 'questions', label: 'Questions' },
+    { key: 'participants', label: 'Participants' },
+    { key: 'attempts', label: 'Attempts' },
+    { key: 'totalMarks', label: 'Total Marks' },
+    { key: 'passingPercentage', label: 'Passing Percentage' },
+    { key: 'actions', label: 'Actions' }
+  ];
 
   // Initialize empty stats object to prevent undefined errors
   const defaultStats = {
@@ -180,7 +216,8 @@ const QuizTable = () => {
           getLevelName(quiz.QuizLevel)?.toLowerCase().includes(searchLower) ||
           quiz.QuizVisibility?.toLowerCase().includes(searchLower) ||
           quiz.QuizDuration?.toString().includes(searchTerm) ||
-          (quiz.NegativeMarking ? "yes" : "no").includes(searchLower)
+          (quiz.NegativeMarking ? "yes" : "no").includes(searchLower) ||
+          (quiz.PassingPercentage?.toString().includes(searchTerm))
         );
       } catch (e) {
         console.error("Filter error:", e);
@@ -188,6 +225,49 @@ const QuizTable = () => {
       }
     });
   }, [searchTerm, quizzes, categories, quizLevels]);
+
+  const handleDelete = async (quizId) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const endpoint = `quiz/deleteQuiz/${quizId}`;
+        const method = "DELETE";
+        const headers = {
+          'Content-Type': 'application/json',
+          'auth-token': userToken
+        };
+
+        const response = await fetchData(endpoint, method, null, headers);
+        if (response.success) {
+          Swal.fire(
+            'Deleted!',
+            'Quiz has been deleted.',
+            'success'
+          );
+          // Update local state to remove the deleted quiz
+          setQuizzes(prevQuizzes => prevQuizzes.filter(quiz => quiz.QuizID !== quizId));
+        } else {
+          throw new Error(response.message || "Failed to delete quiz");
+        }
+      } catch (error) {
+        console.error("Error deleting quiz:", error);
+        Swal.fire(
+          'Error!',
+          error.message || 'Failed to delete quiz',
+          'error'
+        );
+      }
+    }
+  };
 
   // Action handlers
   const handleView = (quiz) => {
@@ -200,10 +280,35 @@ const QuizTable = () => {
     setShowEditModal(true);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseModal = (updatedQuiz) => {
     setShowViewModal(false);
     setShowEditModal(false);
+    
+    if (updatedQuiz) {
+      // Update the quizzes state with the updated quiz
+      setQuizzes(prevQuizzes => 
+        prevQuizzes.map(quiz => 
+          quiz.QuizID === updatedQuiz.QuizID ? updatedQuiz : quiz
+        )
+      );
+    }
+    
     setSelectedQuiz(null);
+  };
+
+  const toggleColumnVisibility = (column) => {
+    setVisibleColumns(prev => ({
+      ...prev,
+      [column]: !prev[column]
+    }));
+  };
+
+  const toggleAllColumns = (value) => {
+    const newVisibility = {};
+    columnDefinitions.forEach(col => {
+      newVisibility[col.key] = value;
+    });
+    setVisibleColumns(newVisibility);
   };
 
   if (loading) {
@@ -234,131 +339,192 @@ const QuizTable = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded transition"
+          >
+            {showFilters ? <FaTimes /> : <FaFilter />}
+            {showFilters ? "Close" : "Columns"}
+          </button>
+        </div>
       </div>
+
+      {showFilters && (
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-medium text-lg">Visible Columns</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => toggleAllColumns(true)}
+                className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+              >
+                Show All
+              </button>
+              <button
+                onClick={() => toggleAllColumns(false)}
+                className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+              >
+                Hide All
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {columnDefinitions.map(({ key, label }) => (
+              <label
+                key={key}
+                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={visibleColumns[key]}
+                  onChange={() => toggleColumnVisibility(key)}
+                  className="rounded border-gray-300 text-DGXgreen focus:ring-DGXgreen"
+                />
+                <span className="text-sm">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       {filteredQuizzes.length > 0 ? (
         <div className="overflow-hidden rounded-lg border border-gray-300">
           <div className="overflow-auto" style={{ maxHeight: "600px" }}>
-            <table className="w-full">
-              <thead className="sticky top-0 z-10">
-                <tr className="bg-DGXgreen">
-                  <th className="p-2 border text-center w-12">#</th>
-                  <th className="p-2 border text-center min-w-[150px]">
-                    Quiz Category
-                  </th>
-                  <th className="p-2 border text-center min-w-[150px]">
-                    Quiz Name
-                  </th>
-                  <th className="p-2 border text-center min-w-[100px]">
-                    Level
-                  </th>
-                  <th className="p-2 border text-center min-w-[80px]">
-                    Duration
-                  </th>
-                  <th className="p-2 border text-center min-w-[120px]">
-                    Negative Marking
-                  </th>
-                  <th className="p-2 border text-center min-w-[180px]">
-                    Start Date & Time
-                  </th>
-                  <th className="p-2 border text-center min-w-[180px]">
-                    End Date & Time
-                  </th>
-                  <th className="p-2 border text-center min-w-[100px]">
-                    Visibility
-                  </th>
-                  <th className="p-2 border text-center min-w-[80px]">
-                    Questions
-                  </th>
-                  <th className="p-2 border text-center min-w-[120px]">
-                    Participants
-                  </th>
-                  <th className="p-2 border text-center min-w-[80px]">
-                    Attempts
-                  </th>
-                  <th className="p-2 border text-center min-w-[100px]">
-                    Total Marks
-                  </th>
-                  <th className="p-2 border text-center min-w-[120px]">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredQuizzes.map((quiz, index) => {
-                  return (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-DGXgreen text-white">
+                    <th className="p-2 border text-center w-12 sticky left-0 bg-DGXgreen">#</th>
+                    {columnDefinitions.map(({ key, label }) => (
+                      visibleColumns[key] && (
+                        <th key={key} className="p-2 border text-center min-w-[100px]">
+                          {label}
+                        </th>
+                      )
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredQuizzes.map((quiz, index) => (
                     <tr key={quiz.QuizID} className="hover:bg-gray-50">
-                      <td className="p-2 border text-center w-12">
+                      <td className="p-2 border text-center w-12 sticky left-0 bg-white">
                         {index + 1}
                       </td>
-                      <td className="p-2 border text-center min-w-[150px]">
-                        {getCategoryName(quiz.QuizCategory)}
-                      </td>
-                      <td className="p-2 border text-center min-w-[150px]">
-                        {quiz.QuizName}
-                      </td>
-                      <td className="p-2 border text-center min-w-[100px]">
-                        {getLevelName(quiz.QuizLevel)}
-                      </td>
-                      <td className="p-2 border text-center min-w-[80px]">
-                        {quiz.QuizDuration} mins
-                      </td>
-                      <td className="p-2 border text-center min-w-[120px]">
-                        {quiz.NegativeMarking ? "Yes" : "No"}
-                      </td>
-                      <td className="p-2 border text-center min-w-[180px]">
-                        {formatDateTime(quiz.StartDateAndTime)}
-                      </td>
-                      <td className="p-2 border text-center min-w-[180px]">
-                        {formatDateTime(quiz.EndDateTime)}
-                      </td>
-                      <td className="p-2 border text-center min-w-[100px]">
-                        {quiz.QuizVisibility}
-                      </td>
-                      <td className="p-2 border text-center min-w-[100px]">
-                        {quiz.QuestionMappedCount || 0}
-                      </td>
-                      <td className="p-2 border text-center min-w-[120px]">
-                        {quiz.UniqueParticipants || 0}
-                      </td>
-                      <td className="p-2 border text-center min-w-[80px]">
-                        {quiz.totalMaxAttempts || 0}
-                      </td>
-                      <td className="p-2 border text-center min-w-[100px]">
-                        {quiz.TotalMarksPerQuiz || 0}
-                      </td>
-                      <td className="p-2 border text-center min-w-[120px]">
-                        <div className="flex flex-wrap justify-center gap-1 sm:gap-2">
-                          <button
-                            onClick={() => handleView(quiz)}
-                            className="bg-DGXblue text-white p-1 sm:p-2 rounded hover:bg-blue-600 transition"
-                            title="View"
-                            aria-label="View"
-                          >
-                            <FaEye className="text-xs sm:text-sm" />
-                          </button>
-                          <button
-                            onClick={() => handleEdit(quiz)}
-                            className="bg-yellow-500 text-white p-1 sm:p-2 rounded hover:bg-yellow-600 transition"
-                            title="Edit"
-                            aria-label="Edit"
-                          >
-                            <FaEdit className="text-xs sm:text-sm" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(quiz.QuizID)}
-                            className="bg-red-500 text-white p-1 sm:p-2 rounded hover:bg-red-600 transition"
-                            title="Delete"
-                            aria-label="Delete"
-                          >
-                            <FaTrash className="text-xs sm:text-sm" />
-                          </button>
-                        </div>
-                      </td>
+                      
+                      {visibleColumns.quizCategory && (
+                        <td className="p-2 border text-center">
+                          {getCategoryName(quiz.QuizCategory)}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.quizName && (
+                        <td className="p-2 border text-center">
+                          {quiz.QuizName}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.level && (
+                        <td className="p-2 border text-center">
+                          {getLevelName(quiz.QuizLevel)}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.duration && (
+                        <td className="p-2 border text-center">
+                          {quiz.QuizDuration} mins
+                        </td>
+                      )}
+                      
+                      {visibleColumns.negativeMarking && (
+                        <td className="p-2 border text-center">
+                          {quiz.NegativeMarking ? "Yes" : "No"}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.startDateTime && (
+                        <td className="p-2 border text-center">
+                          {formatDateTime(quiz.StartDateAndTime)}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.endDateTime && (
+                        <td className="p-2 border text-center">
+                          {formatDateTime(quiz.EndDateTime)}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.visibility && (
+                        <td className="p-2 border text-center">
+                          {quiz.QuizVisibility}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.questions && (
+                        <td className="p-2 border text-center">
+                          {quiz.QuestionMappedCount || 0}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.participants && (
+                        <td className="p-2 border text-center">
+                          {quiz.UniqueParticipants || 0}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.attempts && (
+                        <td className="p-2 border text-center">
+                          {quiz.totalMaxAttempts || 0}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.totalMarks && (
+                        <td className="p-2 border text-center">
+                          {quiz.TotalMarksPerQuiz || 0}
+                        </td>
+                      )}
+                      
+                      {visibleColumns.passingPercentage && (
+                        <td className="p-2 border text-center">
+                          {quiz.PassingPercentage || 0}%
+                        </td>
+                      )}
+                      
+                      {visibleColumns.actions && (
+                        <td className="p-2 border text-center">
+                          <div className="flex justify-center items-center gap-2 whitespace-nowrap">
+                            <button
+                              onClick={() => handleView(quiz)}
+                              className="bg-DGXblue text-white p-2 rounded hover:bg-blue-600 transition flex items-center justify-center"
+                              title="View"
+                              aria-label="View"
+                            >
+                              <FaEye className="text-sm" />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(quiz)}
+                              className="bg-yellow-500 text-white p-2 rounded hover:bg-yellow-600 transition flex items-center justify-center"
+                              title="Edit"
+                              aria-label="Edit"
+                            >
+                              <FaEdit className="text-sm" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(quiz.QuizID)}
+                              className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition flex items-center justify-center"
+                              title="Delete"
+                              aria-label="Delete"
+                            >
+                              <FaTrash className="text-sm" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ) : (

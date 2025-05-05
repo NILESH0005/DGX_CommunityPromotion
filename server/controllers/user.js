@@ -607,7 +607,7 @@ export const getuser = async (req, res) => {
       }
 
       try {
-        const query = `SELECT UserID, Name, EmailId, CollegeName, MobileNumber, Category, Designation,isAdmin, ReferalNumberCount, ReferalNumber, ReferedBy,  FlagPasswordChange, AddOnDt FROM Community_User WHERE isnull(delStatus,0) = 0 AND EmailId = ?`;
+        const query = `SELECT UserID, Name, EmailId, CollegeName, MobileNumber, Category, Designation,isAdmin, ReferalNumberCount, ReferalNumber, ReferedBy, ProfilePicture,  FlagPasswordChange, AddOnDt FROM Community_User WHERE isnull(delStatus,0) = 0 AND EmailId = ?`;
         const rows = await queryAsync(conn, query, [userId]);
 
         if (rows.length > 0) {
