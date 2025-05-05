@@ -9,6 +9,8 @@ import SignInn from "./component/SignInn";
 import ForgotPassword from "./component/ForgotPassword";
 import ChangePassword from "./component/ChangePassword.jsx";
 import UserProfile from "./component/UserProfile.jsx";
+
+
 import Discussion from "./container/Discussion.jsx";
 import Blog from "./container/Blog.jsx";
 import ContactUs from "./container/ContactUs.jsx";
@@ -128,6 +130,8 @@ function App() {
             <Route path="/SignInn" element={<SignInn />} />
             <Route path="/ForgotPassword" element={<ForgotPassword />} />
             <Route path="/ChangePassword" element={<ChangePassword />} />
+           
+           {/* User Profile  */}
             <Route
               path="/UserProfile"
               element={
@@ -139,6 +143,7 @@ function App() {
                 />
               }
             />
+            
             <Route path="/Discussion" element={<Discussion />} />
             <Route path="/ContactUs" element={<ContactUs />} />
             <Route path="/Blog" element={<Blog />} />

@@ -7,6 +7,10 @@ import jwt from "jsonwebtoken";
 import dotenv from 'dotenv'
 import { generatePassword, referCodeGenerator, encrypt } from '../utility/index.js';
 import { queryAsync, mailSender, logError, logInfo, logWarning } from '../helper/index.js';
+import path from 'path';
+import { promises as fs } from 'fs';
+
+
 
 dotenv.config()
 const JWT_SECRET = process.env.JWTSECRET;
@@ -248,82 +252,117 @@ export const deleteUserDiscussion = async (req, res) => {
     }
 };
 
-export const updateProfilePicture = async (req, res) => {
-    console.log("Incoming profile picture update request.");
+export const uploadUserAvatar = async (req, res) => {
     let success = false;
-
     const userId = req.user.id;
+  
     console.log("User ID:", userId);
-
+  
     try {
-        // Validate file presence
-        if (!req.file) {
-            const warningMessage = "No profile picture uploaded";
-            logWarning(warningMessage);
-            return res.status(400).json({ success, data: {}, message: warningMessage });
+      let { profileImage } = req.body;
+  
+      console.log("Request Body:", req.body);
+  
+      // Manual validation
+      if (!profileImage) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Missing required fields" });
+      }
+  
+      // Set default values for null checks
+      profileImage = profileImage ?? null;
+  
+      connectToDatabase(async (err, conn) => {
+        if (err) {
+          console.error("Failed to connect to database");
+          return res
+            .status(500)
+            .json({ success: false, message: "Failed to connect to database" });
         }
-
-        const profilePicturePath = req.file.path;
-
-        // Connect to DB
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                const errorMessage = "Failed to connect to database";
-                logError(errorMessage);
-                return res.status(500).json({ success, data: err, message: errorMessage });
-            }
-
-            try {
-                // Validate user
-                const userQuery = `SELECT UserID, Name FROM Community_User WHERE UserID = ? AND ISNULL(delStatus, 0) = 0;`;
-                const userRows = await queryAsync(conn, userQuery, [userId]);
-
-                if (userRows.length === 0) {
-                    closeConnection();
-                    const warningMessage = "User not found. Please login.";
-                    logWarning(warningMessage);
-                    return res.status(404).json({ success, data: {}, message: warningMessage });
-                }
-
-                const user = userRows[0];
-
-                // Update profile picture
-                const updateQuery = `
-                    UPDATE Community_User 
-                    SET ProfilePicture = ?, AuthLstEdit = ?, editOnDt = GETDATE() 
-                    WHERE UserID = ?;
-                `;
-                await queryAsync(conn, updateQuery, [profilePicturePath, user.Name, userId]);
-
-                success = true;
-                closeConnection();
-                const infoMessage = "Profile picture updated successfully!";
-                logInfo(infoMessage);
-
-                return res.status(200).json({
-                    success,
-                    data: { profilePicture: profilePicturePath },
-                    message: infoMessage
-                });
-
-            } catch (queryErr) {
-                closeConnection();
-                logError("Database Query Error:", queryErr);
-                return res.status(500).json({
-                    success: false,
-                    data: queryErr,
-                    message: "Failed to update profile picture"
-                });
-            }
-        });
+        console.log("Database connection established successfully");
+  
+        try {
+          const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+          const userRows = await queryAsync(conn, userQuery, [userId]);
+          console.log("User Rows:", userRows);
+  
+          if (userRows.length === 0) {
+            console.log("User not found, please login first.");
+            return res.status(400).json({
+              success: false,
+              message: "User not found, please login first.",
+            });
+          }
+  
+          const user = userRows[0];
+          const authLstEdit = user.Name;
+  
+          // Validate image format
+          const matches = profileImage.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (!matches || matches.length !== 3) {
+            return res.status(400).json({ 
+              success: false,
+              message: "Invalid image format" 
+            });
+          }
+  
+          const imageType = matches[1].toLowerCase();
+          const imageData = matches[2];
+          
+          // Validate image type
+          const allowedTypes = ['jpeg', 'jpg', 'png', 'webp'];
+          if (!allowedTypes.includes(imageType)) {
+            return res.status(400).json({ 
+              success: false,
+              message: `Only ${allowedTypes.join(', ')} images are allowed`
+            });
+          }
+  
+          // Validate image size
+          const buffer = Buffer.from(imageData, 'base64');
+          if (buffer.length > 5 * 1024 * 1024) {
+            return res.status(400).json({ 
+              success: false,
+              message: "Image size should be less than 5MB"
+            });
+          }
+  
+          // Update user profile with base64 image data
+          const updateQuery = `
+            UPDATE Community_User 
+            SET ProfilePicture = ?, AuthLstEdit = ?, editOnDt = GETDATE() 
+            WHERE EmailId = ?;
+          `;
+          console.log("Executing query: ", updateQuery);
+  
+          await queryAsync(conn, updateQuery, [
+            profileImage, // Store the base64 string directly
+            authLstEdit,
+            userId
+          ]);
+  
+          success = true;
+          console.log("Profile picture updated successfully!");
+          return res.status(200).json({
+            success,
+            data: { imageUrl: profileImage }, // Return the base64 string
+            message: "Profile picture updated successfully!",
+          });
+        } catch (queryErr) {
+          console.error("Database Query Error:", queryErr.message || queryErr);
+          return res
+            .status(500)
+            .json({ success: false, message: "Database Query Error" });
+        } finally {
+          closeConnection(conn);
+        }
+      });
     } catch (error) {
-        logError("Unexpected Error:", error);
-        return res.status(500).json({
-            success: false,
-            data: error,
-            message: "Internal server error, check logs"
-        });
+      console.error("Unexpected Error:", error.stack || JSON.stringify(error));
+      console.error("Error Details:", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Unexpected Error, check logs" });
     }
-};
-
-
+  };

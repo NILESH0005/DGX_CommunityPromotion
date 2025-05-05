@@ -32,7 +32,6 @@ const Navbar = () => {
     useEffect(() => {
         if (userToken && user) {
             setIsLoggedIn(true);
-            console.log(user);
         } else {
             setIsLoggedIn(false);
         }
@@ -72,6 +71,19 @@ const Navbar = () => {
         { label: 'Guidelines', to: '/CommunityGuidelines', icon: faBook },
         { label: 'Learn Hub', to: '/Lms', icon: faChalkboardTeacher }
     ];
+
+    const getProfileImage = () => {
+        if (user?.ProfilePicture) {
+            // Add timestamp to prevent caching
+            const timestamp = new Date().getTime();
+            if (user.ProfilePicture.startsWith('data:image') || 
+                user.ProfilePicture.startsWith('http') || 
+                user.ProfilePicture.startsWith('/')) {
+                return `${user.ProfilePicture}?${timestamp}`;
+            }
+        }
+        return `${images.defaultProfile}?${new Date().getTime()}`;
+    };
 
     return (
         <main>
@@ -125,10 +137,14 @@ const Navbar = () => {
                         <div className='relative flex items-center gap-2'>
                             {<h1 className='hidden sm:inline text-sm font-medium'>{user.Name}</h1>}
                             <img
-                                src={images.defaultProfile}
+                                src={getProfileImage()}
                                 alt="User"
-                                className='h-8 w-8 md:h-10 md:w-10 rounded-full border-2 cursor-pointer border-DGXgreen'
+                                className='h-8 w-8 md:h-10 md:w-10 rounded-full border-2 cursor-pointer border-DGXgreen object-cover'
                                 onClick={toggleDropdown}
+                                onError={(e) => {
+                                    e.target.src = `${images.defaultProfile}?${new Date().getTime()}`;
+                                }}
+                                key={user?.ProfilePicture} // Add key to force re-render when image changes
                             />
                             {isDropdownOpen && (
                                 <div className="relative">
@@ -165,7 +181,7 @@ const Navbar = () => {
                     )}
                 </section>
 
-                {/* Mobile side menu - Updated with better styling */}
+                {/* Mobile side menu */}
                 <div className={clsx(
                     'fixed h-full w-screen lg:hidden bg-black/70 backdrop-blur-sm top-0 right-0 -translate-x-full transition-all z-50',
                     isSideMenuOpen && 'translate-x-0'
@@ -180,9 +196,12 @@ const Navbar = () => {
                                 <div className='flex items-center gap-2'>
                                     <span className='text-sm truncate max-w-[100px]'>{user.Name}</span>
                                     <img
-                                        src={images.defaultProfile}
+                                        src={getProfileImage()}
                                         alt="User"
-                                        className='h-8 w-8 rounded-full border-2 border-white'
+                                        className='h-8 w-8 rounded-full border-2 border-white object-cover'
+                                        onError={(e) => {
+                                            e.target.src = `${images.defaultProfile}?${new Date().getTime()}`;
+                                        }}
                                     />
                                 </div>
                             )}
@@ -239,28 +258,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
-
-
-
-
-// export default Navbar;
-
-// import React from 'react';
-
-// const Navbar = () => {
-//     return (
-//         <header className="fixed top-0 left-0 w-full p-8 flex justify-between items-center z-50">
-//             <a href="/" className="text-white font-bold text-2xl uppercase no-underline">DGX</a>
-//             <ul className="flex">
-//                 <li className="ml-5"><a href="/" className="text-white px-4 py-2 rounded-full hover:bg-white hover:text-purple-900">Home</a></li>
-//                 <li className="ml-5"><a href="#" className="text-white px-4 py-2 rounded-full hover:bg-white hover:text-purple-900">About</a></li>
-//                 <li className="ml-5"><a href="#" className="text-white px-4 py-2 rounded-full hover:bg-white hover:text-purple-900">Projects</a></li>
-//                 <li className="ml-5"><a href="#" className="text-white px-4 py-2 rounded-full hover:bg-white hover:text-purple-900">Community</a></li>
-//                 <li className="ml-5"><a href="#" className="text-white px-4 py-2 rounded-full hover:bg-white hover:text-purple-900">Contact</a></li>
-//             </ul>
-//         </header>
-//     );
-// };
-
-// export default Navbar;

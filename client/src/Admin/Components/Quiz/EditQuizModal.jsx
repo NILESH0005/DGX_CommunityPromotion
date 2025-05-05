@@ -27,17 +27,6 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
 
   useEffect(() => {
     if (quiz) {
-      // const formatDateForInput = (dateString) => {
-      //   if (!dateString) return '';
-      //   // console.log("date 1",dateString)
-      //   // const date = new Date(dateString);
-      //   // console.log("date 2",dateString)
-      //   // const adjustedDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-      //   // console.log("date 1",dateString)
-      //   return format(dateString, "yyyy-MM-dd'T'HH:mm");
-
-      // };
-
       const formatDateForInput = (dateString) => {
         if (!dateString) return "";
 
@@ -208,7 +197,13 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
           icon: "success",
           confirmButtonText: "OK",
         }).then(() => {
-          onClose(true, formattedData);
+          // Pass the updated quiz data back to the parent
+          onClose({
+            ...quiz,
+            ...formData,
+            StartDateAndTime: formattedData.StartDateAndTime,
+            EndDateTime: formattedData.EndDateTime,
+          });
         });
       } else {
         Swal.fire({
@@ -237,7 +232,7 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Edit Quiz</h2>
           <button
-            onClick={() => onClose(false)}
+            onClick={() => onClose(null)}
             className="text-gray-500 hover:text-gray-700"
           >
             &times;
@@ -398,7 +393,7 @@ const EditQuizModal = ({ quiz, onClose, categories, quizLevels }) => {
           <div className="flex justify-end space-x-3 mt-4">
             <button
               type="button"
-              onClick={() => onClose(false)}
+              onClick={() => onClose(null)}
               className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
               disabled={loading}
             >
