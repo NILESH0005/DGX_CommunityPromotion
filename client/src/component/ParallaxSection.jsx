@@ -9,7 +9,7 @@ const ParallaxSection = () => {
 
     fetchActiveParallaxText();
 
-  }, []); 
+  }, []);
 
 
   const fetchActiveParallaxText = async () => {
@@ -66,13 +66,15 @@ const ParallaxSection = () => {
       <h2 id="text" className="absolute text-white text-8xl whitespace-nowrap z-10">
         {activeText}
       </h2>
-      <a
-        href="/VerifyEmail"
-        id="btn"
-        className="absolute bg-white text-purple-900 px-8 py-4 rounded-full text-xl z-10 transform translate-y-24"
-      >
-        Join Us
-      </a>
+      {!userToken && (
+        <a
+          href="/VerifyEmail"
+          id="btn"
+          className="absolute bg-white text-purple-900 px-8 py-4 rounded-full text-xl z-10 transform translate-y-24"
+        >
+          Join Us
+        </a>
+      )}
       <img
         src="bg0.png"
         id="tech_wave"

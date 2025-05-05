@@ -24,7 +24,6 @@ const AdminUsers = () => {
 
   const [formErrors, setFormErrors] = useState({});
 
-  // Fetch users on component mount
   useEffect(() => {
     fetchUsers();
   }, []);

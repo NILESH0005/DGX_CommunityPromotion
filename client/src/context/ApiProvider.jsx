@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 const ApiProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userToken, setUserToken] = useState(null);
- 
+
   const navigate = useNavigate();
   const logOut = () => {
     setUser(null);
@@ -39,6 +39,41 @@ const ApiProvider = ({ children }) => {
     }
   }, [userToken, logOut]);
 
+
+
+  // const fetchData = useCallback(async (endpoint, method, body, headers = {}) => {
+  //   try {
+  //     const isFormData = body instanceof FormData;
+
+  //     const finalHeaders = {
+  //       ...headers,
+  //       'auth-token': userToken || headers['auth-token'] || ''
+  //     };
+  //     if (!isFormData) {
+  //       finalHeaders['Content-Type'] = 'application/json';
+  //     }
+
+  //     console.log("API call:", { endpoint, method, body, headers: finalHeaders });
+
+  //     const result = await apiRequest(
+  //       endpoint,
+  //       method,
+  //       isFormData ? body : JSON.stringify(body),
+  //       finalHeaders
+  //     );
+
+  //     if (result?.message?.includes('expired') || result?.message?.includes('invalid')) {
+  //       logOut();
+  //       throw new Error('Session expired. Please login again.');
+  //     }
+  //     return result;
+  //   } catch (error) {
+  //     console.error("API error:", error);
+  //     throw error;
+  //   }
+  // }, [userToken, logOut]);
+
+
   const _fetchWithToken = async (endpoint, method, body, token, headers = {}) => {
     return fetchData(endpoint, method, body, {
       ...headers,
@@ -57,24 +92,47 @@ const ApiProvider = ({ children }) => {
     }
   };
 
+  // useEffect(() => {
+  //   const token = Cookies.get("userToken");
+  //   if (token) {
+  //     try {
+  //       // const parsedToken = JSON.parse(token);
+  //       setUserToken(parsedToken);
+  //       getUserData(parsedToken)
+  //         .then(data => setUser(data.data))
+  //         .catch(error => {
+  //           console.error("Token invalid or expired:", error.message);
+  //           // logOut(); 
+  //           if (error.message.includes('expired') || error.message.includes('invalid')) {
+  //             logOut();
+  //           }
+  //         });
+  //     } catch (e) {
+  //       console.error("Token handling error:", e);
+  //       // logOut();
+  //     }
+  //   }
+  // }, []);
+
   useEffect(() => {
     const token = Cookies.get("userToken");
     if (token) {
       try {
-        const parsedToken = JSON.parse(token);
-        setUserToken(parsedToken);
-        getUserData(parsedToken)
+        setUserToken(token); // Use token directly without parsing
+        getUserData(token)
           .then(data => setUser(data.data))
           .catch(error => {
             console.error("Token invalid or expired:", error.message);
-            logOut(); // Safer way to clean up state
+            if (error.message.includes('expired') || error.message.includes('invalid')) {
+              logOut();
+            }
           });
       } catch (e) {
-        console.error("Invalid token format:", e);
-        logOut();
+        console.error("Token handling error:", e);
       }
     }
   }, []);
+
 
 
   const logIn = async (token) => {
@@ -82,7 +140,11 @@ const ApiProvider = ({ children }) => {
       const userData = await getUserData(token);
       setUser(userData.data);
       setUserToken(token);
-      Cookies.set("userToken", JSON.stringify(token), { expires: 7 });
+      Cookies.set("userToken", token, {
+        expires: 7,
+        secure: true,
+        sameSite: 'strict'
+      });
     } catch (error) {
       console.error("Login failed:", error);
       throw error;

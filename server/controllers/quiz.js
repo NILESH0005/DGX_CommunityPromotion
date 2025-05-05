@@ -516,7 +516,7 @@ export const getQuestion = async (req, res) => {
     tblDDReferences.idCode, -- Added here
     option_text,
     QuestionOptions.is_correct,
-    question_type,
+    --question_type,
     COUNT(CASE 
              WHEN ISNULL(QuizMapping.delStatus, 0) = 0 
              THEN QuizMapping.QuestionsID 
@@ -545,7 +545,7 @@ GROUP BY
     QuestionOptions.question_id,
     QuestionOptions.is_correct,
     Questions.AddOnDt
-    question_type;
+    --question_type;
 `;
         const quizzes = await queryAsync(conn, query);
 

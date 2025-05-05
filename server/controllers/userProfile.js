@@ -14,9 +14,6 @@ const SIGNATURE = process.env.SIGNATURE;
 
 
 
-
-
-
 export const profileDetail = async (req, res) => {
     let success = false;
     const userId = req.user.id;
@@ -90,7 +87,6 @@ export const profileDetail = async (req, res) => {
         res.status(500).json({ success: false, data: Err, message: 'Something went wrong please try again' });
     }
 }
-
 
 export const getUserDiscussion = async (req, res) => {
     let success = false;
@@ -251,4 +247,83 @@ export const deleteUserDiscussion = async (req, res) => {
         res.status(500).json({ success: false, message: 'Something went wrong, please try again' });
     }
 };
+
+export const updateProfilePicture = async (req, res) => {
+    console.log("Incoming profile picture update request.");
+    let success = false;
+
+    const userId = req.user.id;
+    console.log("User ID:", userId);
+
+    try {
+        // Validate file presence
+        if (!req.file) {
+            const warningMessage = "No profile picture uploaded";
+            logWarning(warningMessage);
+            return res.status(400).json({ success, data: {}, message: warningMessage });
+        }
+
+        const profilePicturePath = req.file.path;
+
+        // Connect to DB
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                const errorMessage = "Failed to connect to database";
+                logError(errorMessage);
+                return res.status(500).json({ success, data: err, message: errorMessage });
+            }
+
+            try {
+                // Validate user
+                const userQuery = `SELECT UserID, Name FROM Community_User WHERE UserID = ? AND ISNULL(delStatus, 0) = 0;`;
+                const userRows = await queryAsync(conn, userQuery, [userId]);
+
+                if (userRows.length === 0) {
+                    closeConnection();
+                    const warningMessage = "User not found. Please login.";
+                    logWarning(warningMessage);
+                    return res.status(404).json({ success, data: {}, message: warningMessage });
+                }
+
+                const user = userRows[0];
+
+                // Update profile picture
+                const updateQuery = `
+                    UPDATE Community_User 
+                    SET ProfilePicture = ?, AuthLstEdit = ?, editOnDt = GETDATE() 
+                    WHERE UserID = ?;
+                `;
+                await queryAsync(conn, updateQuery, [profilePicturePath, user.Name, userId]);
+
+                success = true;
+                closeConnection();
+                const infoMessage = "Profile picture updated successfully!";
+                logInfo(infoMessage);
+
+                return res.status(200).json({
+                    success,
+                    data: { profilePicture: profilePicturePath },
+                    message: infoMessage
+                });
+
+            } catch (queryErr) {
+                closeConnection();
+                logError("Database Query Error:", queryErr);
+                return res.status(500).json({
+                    success: false,
+                    data: queryErr,
+                    message: "Failed to update profile picture"
+                });
+            }
+        });
+    } catch (error) {
+        logError("Unexpected Error:", error);
+        return res.status(500).json({
+            success: false,
+            data: error,
+            message: "Internal server error, check logs"
+        });
+    }
+};
+
 

@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.post('/blogpost', fetchUser, blogpost)
 router.post('/blogpost_bulk', fetchUser, blogpost_bulk)
-router.post('/getBlog', getBlog)
+router.post('/getBlog', fetchUser, getBlog)
 router.post('/updateBlog/:blogId', fetchUser, updateBlog);
 
 

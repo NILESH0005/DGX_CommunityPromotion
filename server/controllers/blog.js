@@ -13,7 +13,7 @@ export const blogpost_bulk = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const warningMessage = "Data is not in the right format";
-    logWarning(warningMessage); 
+    logWarning(warningMessage);
     res.status(400).json({ success, data: errors.array(), message: warningMessage });
     return;
   }
@@ -27,7 +27,7 @@ export const blogpost_bulk = async (req, res) => {
     connectToDatabase(async (err, conn) => {
       if (err) {
         const errorMessage = "Failed to connect to database";
-        logError(err); 
+        logError(err);
         res.status(500).json({ success: false, data: err, message: errorMessage });
         return;
       }
@@ -105,117 +105,196 @@ export const blogpost_bulk = async (req, res) => {
     return res.status(500).json({ success: false, data: {}, message: 'Something went wrong, please try again' });
   }
 };
-  export const blogpost = async (req, res) => {
-    let success = false;
-    const userId = req.user.id;
-    console.log("User ID:", userId);
+export const blogpost = async (req, res) => {
+  let success = false;
+  const userId = req.user.id;
+  console.log("User ID:", userId);
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      logWarning("Data is not in the right format");
-      return res.status(400).json({ success, data: errors.array(), message: "Data is not in the right format" });
-    }
-    try {
-      let { title, author, content, image, category, publishedDate } = req.body;
-        title = title ?? null;
-      content = content ?? null;
-      image = image ?? null;
-      category = category ?? null;
-      author = author ?? null;
-      publishedDate = publishedDate ?? null;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    logWarning("Data is not in the right format");
+    return res.status(400).json({ success, data: errors.array(), message: "Data is not in the right format" });
+  }
+  try {
+    let { title, author, content, image, category, publishedDate } = req.body;
+    title = title ?? null;
+    content = content ?? null;
+    image = image ?? null;
+    category = category ?? null;
+    author = author ?? null;
+    publishedDate = publishedDate ?? null;
 
-      connectToDatabase(async (err, conn) => {
-        if (err) {
-          logError("Failed to connect to database");
-          return res.status(500).json({ success: false, data: err, message: "Failed to connect to database" });
-        }
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError("Failed to connect to database");
+        return res.status(500).json({ success: false, data: err, message: "Failed to connect to database" });
+      }
 
-        try {
-          // Fetch user details (including admin status)
-          const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
-          const userRows = await queryAsync(conn, userQuery, [userId]);
+      try {
+        // Fetch user details (including admin status)
+        const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userRows = await queryAsync(conn, userQuery, [userId]);
 
-          if (userRows.length > 0) {
-            const user = userRows[0];
-            const isAdmin = user.isAdmin === 1;
+        if (userRows.length > 0) {
+          const user = userRows[0];
+          const isAdmin = user.isAdmin === 1;
 
-            // Determine approval details based on admin status
-            const status = isAdmin ? "Approved" : "Pending";
-            const approvedBy = isAdmin ? user.Name : null;
-            const approvedOn = isAdmin ? new Date() : null;
+          // Determine approval details based on admin status
+          const status = isAdmin ? "Approved" : "Pending";
+          const approvedBy = isAdmin ? user.Name : null;
+          const approvedOn = isAdmin ? new Date() : null;
 
-            // Insert blog post
-            const blogPostQuery = `
+          // Insert blog post
+          const blogPostQuery = `
                           INSERT INTO Community_Blog 
                           (title, author, content, Category, image, publishedDate, AuthAdd, AddOnDt, delStatus, Status, AdminRemark, ApprovedBy, ApprovedOn, UserID) 
                           VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), 0, ?, ?, ?, ?, ?);
                       `;
-            const blogPost = await queryAsync(conn, blogPostQuery, [
-              title, author, content, category, image, publishedDate,
-              user.Name, status, null, approvedBy, approvedOn, user.UserID
-            ]);
+          const blogPost = await queryAsync(conn, blogPostQuery, [
+            title, author, content, category, image, publishedDate,
+            user.Name, status, null, approvedBy, approvedOn, user.UserID
+          ]);
 
-            // Fetch last inserted Blog ID
-            const lastInsertedIdQuery = `SELECT TOP 1 BlogID FROM Community_Blog WHERE ISNULL(delStatus, 0) = 0 ORDER BY BlogID DESC;`;
-            const lastInsertedId = await queryAsync(conn, lastInsertedIdQuery);
+          // Fetch last inserted Blog ID
+          const lastInsertedIdQuery = `SELECT TOP 1 BlogID FROM Community_Blog WHERE ISNULL(delStatus, 0) = 0 ORDER BY BlogID DESC;`;
+          const lastInsertedId = await queryAsync(conn, lastInsertedIdQuery);
 
-            success = true;
-            closeConnection();
-            logInfo("Blog posted successfully!");
-
-            return res.status(200).json({
-              success,
-              data: { postId: lastInsertedId[0].BlogID },
-              message: "Blog posted successfully!"
-            });
-          } else {
-            closeConnection();
-            logWarning("User not found, please login first.");
-            return res.status(400).json({ success: false, data: {}, message: "User not found, please login first." });
-          }
-        } catch (queryErr) {
+          success = true;
           closeConnection();
-          logError("Database Query Error:", queryErr);
-          return res.status(500).json({ success: false, data: queryErr, message: "Database Query Error" });
+          logInfo("Blog posted successfully!");
+
+          return res.status(200).json({
+            success,
+            data: { postId: lastInsertedId[0].BlogID },
+            message: "Blog posted successfully!"
+          });
+        } else {
+          closeConnection();
+          logWarning("User not found, please login first.");
+          return res.status(400).json({ success: false, data: {}, message: "User not found, please login first." });
         }
-      });
-    } catch (error) {
-      logError("Unexpected Error:", error);
-      return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
-    }
-  };
+      } catch (queryErr) {
+        closeConnection();
+        logError("Database Query Error:", queryErr);
+        return res.status(500).json({ success: false, data: queryErr, message: "Database Query Error" });
+      }
+    });
+  } catch (error) {
+    logError("Unexpected Error:", error);
+    return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
+  }
+};
+
+// export const getBlog = async (req, res) => {
+//   const userId = req.user.id;
+//   console.log("User ID:", userId);
+//   let success = false;
+
+//   try {
+//     connectToDatabase(async (err, conn) => {
+//       if (err) {
+//         const errorMessage = "Failed to connect to database";
+//         logError(err);
+//         res.status(500).json({ success: false, data: err, message: errorMessage });
+//         return;``
+//       }
+//       try {
+//         // const BlogQuery = `SELECT BlogID, title, AuthAdd as UserName, author, content, Category as category, publishedDate, AddOnDt as timestamp, image, UserID, Status, AdminRemark FROM Community_Blog WHERE ISNULL(delStatus, 0) = 0  ORDER BY AddOnDt DESC`;
+
+//         const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+//         const userRows = await queryAsync(conn, userQuery, [userId]);
+
+//         if (userRows.length > 0) {
+//           var conditionParam = "";
+//           const user = userRows[0];
+
+//           const isAdmin = user.isAdmin === 1;
+//           console.log("is admin ", isAdmin)
+
+//           isAdmin != 1
+
+//           conditionParam = "and Status = 'Approved'";
+//         }
+
+//         const BlogQuery = `SELECT BlogID, title, AuthAdd as UserName, author, content, Category as category, publishedDate, AddOnDt as timestamp, image, UserID, Status, 
+//         AdminRemark FROM Community_Blog 
+//         WHERE ISNULL(delStatus, 0) = 0 `+ conditionParam + `ORDER BY AddOnDt DESC`
+//         const BlogGet = await queryAsync(conn, BlogQuery);
+//         success = true;
+//         closeConnection();
+//         const infoMessage = "Blog Got Successfully";
+//         logInfo(infoMessage);
+//         res.status(200).json({ success, data: BlogGet, message: infoMessage });
+//       }
+//       catch (queryErr) {
+//         logError(queryErr);
+//         closeConnection();
+//         res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
+//       }
+//     })
+//   }
+//   catch (error) {
+//     logError(error);
+//     res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
+//   }
+// }
 
 export const getBlog = async (req, res) => {
   let success = false;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(400).json({ success, data: {}, message: "User ID not found. Please login." });
+  }
+
   try {
     connectToDatabase(async (err, conn) => {
       if (err) {
-        const errorMessage = "Failed to connect to database";
-        logError(err);
-        res.status(500).json({ success: false, data: err, message: errorMessage });
-        return;
+        logError("Failed to connect to database");
+        return res.status(500).json({ success, data: err, message: "Failed to connect to database" });
       }
+
       try {
-        const BlogQuery = `SELECT BlogID, title, AuthAdd as UserName, author, content, Category as category, publishedDate, AddOnDt as timestamp, image, UserID, Status, AdminRemark FROM Community_Blog WHERE ISNULL(delStatus, 0) = 0  ORDER BY AddOnDt DESC`;
+        const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+
+        let conditionParam = "";
+
+        if (userRows.length > 0) {
+          const user = userRows[0];
+          const isAdmin = user.isAdmin === 1;
+
+          if (!isAdmin) {
+            conditionParam = "AND Status = 'Approved'";
+          }
+        }
+
+        const BlogQuery = `
+          SELECT BlogID, title, AuthAdd as UserName, author, content, Category as category, publishedDate,
+                 AddOnDt as timestamp, image, UserID, Status, AdminRemark
+          FROM Community_Blog 
+          WHERE ISNULL(delStatus, 0) = 0 ${conditionParam}
+          ORDER BY AddOnDt DESC;
+        `;
+
         const BlogGet = await queryAsync(conn, BlogQuery);
         success = true;
         closeConnection();
-        const infoMessage = "Blog Got Successfully";
-        logInfo(infoMessage);
-        res.status(200).json({ success, data: BlogGet, message: infoMessage });
-      }
-      catch (queryErr) {
-        logError(queryErr);
+        logInfo("Blogs fetched successfully");
+
+        return res.status(200).json({ success, data: BlogGet, message: "Blogs fetched successfully" });
+      } catch (queryErr) {
         closeConnection();
-        res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
+        logError("Database Query Error:", queryErr);
+        return res.status(500).json({ success, data: queryErr, message: "Database Query Error" });
       }
-    })
+    });
+  } catch (error) {
+    logError("Unexpected Error:", error);
+    return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
   }
-  catch (error) {
-    logError(error);
-    res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
-  }
-}
+};
+
 
 export const updateBlog = async (req, res) => {
   let success = false;

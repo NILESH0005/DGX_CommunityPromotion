@@ -19,7 +19,8 @@ import EditProfileModal from './EditProfileModal';
 import DiscussionModal from './discussion/DiscussionModal.jsx';
 import AddUserEvent from './AddUserEvent.jsx';
 import AddUserBlog from './AddUserBlog.jsx';
-import UserQuiz from './UserQuiz.jsx'; 
+import UserQuiz from './UserQuiz.jsx';
+import { compressImage } from '../utils/compressImage.js';
 
 const UserProfile = (props) => {
 
@@ -40,13 +41,68 @@ const UserProfile = (props) => {
     return doc.body.textContent || "";
   };
 
-  const handleImageChange = (event) => {
+  const handleImageChange = async (event) => {
     const file = event.target.files[0];
-    if (file) {
+    if (!file) return;
+
+    try {
+      // 1. Show preview
       const imageUrl = URL.createObjectURL(file);
       setBackgroundImage(imageUrl);
+
+      // 2. Validate (same as before)
+      const allowedFormats = ["image/jpeg", "image/png", "image/webp"];
+      const maxSize = 2 * 1024 * 1024; // 2MB
+
+      if (!allowedFormats.includes(file.type)) {
+        Swal.fire({ icon: 'error', title: 'Invalid Format', text: 'Only JPEG/PNG/WEBP allowed.' });
+        return;
+      }
+
+      if (file.size > maxSize) {
+        Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Max size: 2MB.' });
+        return;
+      }
+
+      // 3. Compress image (if needed)
+      const compressedFile = await compressImage(file);
+
+      // 4. Prepare FormData
+      const formData = new FormData();
+      formData.append('profilePicture', compressedFile);
+
+      // 5. Upload (DIRECT FETCH, bypassing fetchData)
+      setLoading(true);
+      const response = await fetchData(`userprofile/updateProfilePicture`, {
+        method: 'POST',
+        headers: {
+          'auth-token': userToken, // Reuse the token from context
+          // Let browser auto-set Content-Type for FormData!
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      setLoading(false);
+
+      if (!response.ok) throw new Error(result.message || "Upload failed");
+
+      // 6. Success: Update UI
+      if (props.setUser) {
+        props.setUser(prev => ({ ...prev, ProfilePicture: result.data.profilePicture }));
+      }
+
+      Swal.fire({ icon: 'success', title: 'Success!', text: 'Profile picture updated.' });
+      setBackgroundImage(result.data.profilePicture); // Use server URL
+
+    } catch (err) {
+      setLoading(false);
+      console.error("Upload error:", err);
+      Swal.fire({ icon: 'error', title: 'Error', text: err.message || "Upload failed" });
+      setBackgroundImage(user?.ProfilePicture || images.defaultProfile); // Revert
     }
   };
+
   const handleButtonClick = () => {
     setShowEmailInput(true);
   };
@@ -240,15 +296,18 @@ const UserProfile = (props) => {
               <div className="w-full h-[250px] rounded-t-lg border border-t-0 border-l-0 border-r-0 border-b-DGXgreen border-b-4">
                 <img src={images.NvidiaBackground} className="w-full h-full rounded-tl-lg rounded-tr-lg" alt="Profile background" />
               </div>
-              <div className="flex flex-col items-center -mt-20">
-                <div className="w-40 h-40 border-4 border-DGXgreen rounded-full">
+              <div className="flex flex-col items-center -mt-20 relative">
+                <div className="w-40 h-40 border-4 border-DGXgreen rounded-full relative group">
                   <img src={user?.ProfilePicture || images.defaultProfile} className='object-contain aspect-square rounded-full' />
+                  <div className="absolute inset-0 bg-black bg-opacity-30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <FaEdit className="text-white text-3xl" />
+                  </div>
                   <input
                     type="file"
                     accept="image/*"
-                    className="absolute opacity-0 cursor-pointer"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     onChange={handleImageChange}
-                    title="Click to change background image"
+                    title="Click to change profile picture"
                   />
                 </div>
                 <div>
@@ -409,7 +468,7 @@ const UserProfile = (props) => {
                 <div className='flex-col'>
                   <h4 className="text-xl text-[#0f172a] font-bold">My Blogs</h4>
                 </div>
-                <AddUserBlog blogs={props.blogs} setBlogs={props.setBlogs}/>
+                <AddUserBlog blogs={props.blogs} setBlogs={props.setBlogs} />
               </div>
             )}
             {activeTab === 'quiz' && (
