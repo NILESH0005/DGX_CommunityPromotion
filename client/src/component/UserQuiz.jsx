@@ -119,7 +119,7 @@ const UserQuiz = () => {
 
   useEffect(() => {
     let result = [...quizData];
-    
+
     if (filters.dateRange !== 'all') {
       const days = parseInt(filters.dateRange);
       const cutoffDate = new Date();
@@ -138,7 +138,7 @@ const UserQuiz = () => {
 
     // Apply search filter
     if (searchTerm) {
-      result = result.filter(quiz => 
+      result = result.filter(quiz =>
         quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         quiz.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -202,8 +202,10 @@ const UserQuiz = () => {
                   <option value="7">Last 7 Days</option>
                   <option value="30">Last 30 Days</option>
                   <option value="90">Last 90 Days</option>
+                  <option value="120">Last 120 Days</option> 
                 </select>
               </div>
+
             </div>
             <input
               type="text"
@@ -223,13 +225,13 @@ const UserQuiz = () => {
               <div className="overflow-auto" style={{ maxHeight: "600px" }}>
                 <table className="w-full">
                   <thead className="sticky top-0 z-10">
-                    <tr className="bg-blue-600 text-white">
+                    <tr className="bg-DGXblue text-white">
                       <th className="p-2 border text-center w-12">#</th>
-                      <th className="p-2 border text-center min-w-[150px]">Quiz Title</th>
+                      <th className="p-2 border text-center min-w-[150px]">Quiz Name</th>
                       <th className="p-2 border text-center min-w-[120px]">Category</th>
                       {/* <th className="p-2 border text-center min-w-[100px]">Score</th> */}
                       <th className="p-2 border text-center min-w-[100px]">Attempts</th>
-                      <th className="p-2 border text-center min-w-[180px]">Attempt Date</th>
+                      <th className="p-2 border text-center min-w-[180px]">Quiz Attempt Date </th>
                       <th className="p-2 border text-center min-w-[120px]">Status</th>
                     </tr>
                   </thead>
@@ -257,8 +259,8 @@ const UserQuiz = () => {
             </div>
           ) : (
             <p className="text-center text-gray-500 py-4">
-              {searchTerm || filters.category !== 'all' || filters.dateRange !== 'all' 
-                ? "No quizzes match your search/filters" 
+              {searchTerm || filters.category !== 'all' || filters.dateRange !== 'all'
+                ? "No quizzes match your search/filters"
                 : "No quiz attempts found"}
             </p>
           )}

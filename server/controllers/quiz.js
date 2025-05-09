@@ -788,7 +788,7 @@ export const getQuestionsByGroupAndLevel = async (req, res) => {
 
 export const createQuizQuestionMapping = async (req, res) => {
   let success = false;
-  const userId = req.user.id; // Get user ID from authenticated request
+  const userId = req.user.id;
   console.log("User ID:", userId);
 
   const errors = validationResult(req);
@@ -1265,12 +1265,16 @@ export const submitQuiz = async (req, res) => {
 
           obtainedMarks += obtainedPoints;
 
+          // const percentage = totalPossibleMarks > 0
+          //   ? (obtainedMarks / totalPossibleMarks) * 100
+          //   : 0;
+
           const insertQuery = `INSERT INTO quiz_score (
-            userID, quizID, questionID, answerID, correctAns, 
-            marks, AuthAdd, AddOnDt, delStatus,
-            ObtainedMarks, totalMarks, noOfAttempts,
-            editOnDt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), 0, ?, ?, ?, NULL)`;
+                userID, quizID, questionID, answerID, correctAns, 
+                marks, AuthAdd, AddOnDt, delStatus,
+                ObtainedMarks, totalMarks, noOfAttempts,
+                editOnDt
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), 0, ?, ?, ?, NULL)`;
 
           await queryAsync(conn, insertQuery, [
             user.UserID,
@@ -1283,6 +1287,7 @@ export const submitQuiz = async (req, res) => {
             obtainedPoints,
             totalPossibleMarks,
             noOfAttempts,
+            // percentage
           ]);
         }
 
@@ -1296,6 +1301,7 @@ export const submitQuiz = async (req, res) => {
             obtainedMarks,
             totalMarks: totalPossibleMarks,
             noOfAttempts,
+            // percentage
           },
         });
       } catch (queryErr) {

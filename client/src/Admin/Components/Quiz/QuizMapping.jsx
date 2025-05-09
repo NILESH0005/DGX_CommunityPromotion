@@ -499,17 +499,17 @@ const QuizMapping = () => {
   const handleQuizChange = (e) => {
     const quizId = e.target.value;
     console.log('Quiz changed to:', quizId);
-    
+
     // Immediately clear all question-related states
     setMappedQuestions([]);
     setSelectedQuestions([]);
     setSelectedMappedQuestions([]);
     setQuestions([]);
     setQuestionMarks({});
-    
+
     // Then update the selected quiz
     setSelectedQuiz(quizId);
-    
+
     // Reset other selections
     setSelectedGroup("");
     setSelectedLevel("");
@@ -524,7 +524,7 @@ const QuizMapping = () => {
         <div className="mb-8">
           <label className="block font-semibold text-gray-700 mb-2">Select Quiz:</label>
           <div className="relative">
-            <select
+            {/* <select
               className="w-full p-2 pl-3 pr-8 border rounded-md text-gray-800 bg-white appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               onChange={handleQuizChange}
               value={selectedQuiz}
@@ -536,7 +536,23 @@ const QuizMapping = () => {
                   {quiz.QuizName} • {quiz.questionCount} {quiz.questionCount === 1 ? 'Question' : 'Questions'}
                 </option>
               ))}
+            </select> */}
+            <select
+              className="w-full p-2 pl-3 pr-8 border rounded-md text-gray-800 bg-white appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={handleQuizChange}
+              value={selectedQuiz}
+              disabled={loading.quizzes}
+            >
+              <option value="">-- Select Quiz Name --</option>
+              {quizzes.map(quiz => (
+                <option key={quiz.QuizID} value={quiz.QuizID}>
+                  {quiz.QuizName} • {quiz.questionCount} {quiz.questionCount === 1 ? 'Question' : 'Questions'} •
+                  {new Date(quiz.StartDateAndTime).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} -
+                  {new Date(quiz.EndDateTime).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </option>
+              ))}
             </select>
+
             <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -641,7 +657,7 @@ const QuizMapping = () => {
               </div>
             ) : (
               <div className="text-center py-4 text-gray-500">
-               {selectedQuiz ? "No questions currently mapped to this quiz" : "Please select a quiz"}
+                {selectedQuiz ? "No questions currently mapped to this quiz" : "Please select a quiz"}
               </div>
             )}
           </div>

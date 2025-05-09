@@ -183,6 +183,58 @@ export const getQuestionGroupDropdown = async (req, res) => {
     }
 };
 
+export const getModules = async (req, res) => {
+    let success = false;
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError(err);
+                return res.status(500).json({
+                    success,
+                    message: "Database connection error"
+                });
+            }
+
+            try {
+                const query = `
+            SELECT 
+              ModuleID, 
+              ModuleName, 
+              ModuleImage, 
+              ModuleDescription 
+            FROM ModulesDetails 
+            WHERE delStatus = 0
+            ORDER BY ModuleID
+          `;
+
+                const results = await queryAsync(conn, query);
+
+                success = true;
+                res.status(200).json({
+                    success,
+                    data: results,
+                    message: "Modules fetched successfully"
+                });
+            } catch (queryErr) {
+                logError(queryErr);
+                res.status(500).json({
+                    success,
+                    message: "Error fetching modules"
+                });
+            } finally {
+                closeConnection();
+            }
+        });
+    } catch (error) {
+        logError(error);
+        res.status(500).json({
+            success,
+            message: "Server error"
+        });
+    }
+};
+
 
 
 

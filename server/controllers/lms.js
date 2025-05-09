@@ -3,8 +3,6 @@ import { connectToDatabase, closeConnection } from "../database/mySql.js";
 import { logError, logInfo, logWarning, queryAsync } from "../helper/index.js";
 import multer from 'multer';
 import path from 'path';
-
-// Multer configuration
 const learningMaterialStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/learning-materials');
@@ -18,7 +16,7 @@ const learningMaterialStorage = multer.diskStorage({
 export const uploadLearningMaterial = multer({
     storage: learningMaterialStorage,
     limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB limit
+        fileSize: 10 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
         const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -33,125 +31,277 @@ export const uploadLearningMaterial = multer({
 export const uploadFile = async (req, res) => {
     let success = false;
     const userId = req.user.id;
+    const { moduleId, subModuleId, unitId } = req.body; // These come from form data
 
-    console.log("User ID:", userId);
-    console.log("Uploaded File:", req.file);
+    // Validation
+    if (!req.file) {
+        return res.status(400).json({ success, message: "No file uploaded" });
+    }
+    if (!unitId) {
+        return res.status(400).json({ success, message: "Unit ID is required" });
+    }
 
     try {
-        // Manual validation
-        if (!req.file) {
-            logWarning("No file uploaded");
-            return res.status(400).json({ success, message: "No file uploaded" });
-        }
-
-        const { moduleId, subModuleId, unitId } = req.body;
-
-        if (!moduleId || !unitId) {
-            return res.status(400).json({
-                success: false,
-                message: "Module ID and Unit ID are required"
-            });
-        }
-
         connectToDatabase(async (err, conn) => {
             if (err) {
-                logError("Failed to connect to database");
-                return res.status(500).json({
-                    success: false,
-                    message: "Failed to connect to database"
-                });
+                logError("Database connection failed");
+                return res.status(500).json({ success, message: "Database connection failed" });
             }
-            logInfo("Database connection established successfully");
 
             try {
-                // Get user details (similar to your quiz controller)
-                const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
-                const userRows = await queryAsync(conn, userQuery, [userId]);
-                console.log("User Rows:", userRows);
+                // 1. Verify user exists
+                const [user] = await queryAsync(conn, 
+                    `SELECT UserID, Name FROM Community_User 
+                     WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0`, 
+                    [userId]
+                );
 
-                if (userRows.length === 0) {
-                    logWarning("User not found, please login first.");
-                    return res.status(400).json({
-                        success: false,
-                        message: "User not found, please login first.",
-                    });
+                if (!user) {
+                    return res.status(404).json({ success, message: "User not found" });
                 }
 
-                const user = userRows[0];
-                const authAdd = user.Name;
+                // 2. Prepare file data
+                const filePath = `/uploads/learning-materials/${req.file.filename}`;
                 const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-                // Insert file data (following your table schema)
-                const fileQuery = `
-          INSERT INTO FilesDetails (
-            FilesName, 
-            FilePath, 
-            FileType, 
-            UnitID, 
-            AuthAdd, 
-            AddOnDt, 
-            delStatus
-          ) VALUES (?, ?, ?, ?, ?, ?, 0)
-        `;
-
-                const filePath = `/uploads/learning-materials/${req.file.filename}`;
-
-                await queryAsync(conn, fileQuery, [
+                // 3. Insert into FilesDetails
+                const fileInsert = await queryAsync(conn, `
+                    INSERT INTO FilesDetails (
+                        FilesName, 
+                        FilePath, 
+                        FileType, 
+                        UnitID, 
+                        AuthAdd, 
+                        AddOnDt,
+                        delStatus
+                    ) VALUES (?, ?, ?, ?, ?, ?, 0)
+                `, [
                     req.file.originalname,
                     filePath,
                     req.file.mimetype,
                     unitId,
-                    authAdd,
+                    user.Name,
                     currentDate
                 ]);
 
-                // Get last inserted ID (similar to your quiz controller)
-                const lastInsertedIdQuery = `SELECT TOP 1 FileID FROM FilesDetails WHERE ISNULL(delStatus, 0) = 0 ORDER BY FileID DESC`;
-                const lastInsertedId = await queryAsync(conn, lastInsertedIdQuery);
-                console.log("Last Inserted File ID:", lastInsertedId);
-
-                // Update Unit's edit timestamp
+                // 4. Update Unit's last edit info
                 await queryAsync(conn, `
-          UPDATE UnitsDetails 
-          SET editOnDt = ?, AuthLstEdit = ?
-          WHERE UnitID = ?`,
-                    [currentDate, authAdd, unitId]
-                );
+                    UPDATE UnitsDetails 
+                    SET editOnDt = ?, AuthLstEdit = ?
+                    WHERE UnitID = ?
+                `, [currentDate, user.Name, unitId]);
+
+                // 5. Get the new FileID
+                const [newFile] = await queryAsync(conn, `
+                    SELECT TOP 1 FileID FROM FilesDetails 
+                    WHERE UnitID = ? 
+                    ORDER BY AddOnDt DESC
+                `, [unitId]);
 
                 success = true;
-                logInfo("File uploaded successfully!");
                 return res.status(200).json({
                     success,
                     data: {
-                        fileId: lastInsertedId[0].FileID,
-                        filePath: filePath,
+                        fileId: newFile.FileID,
+                        filePath,
                         fileName: req.file.originalname
                     },
-                    message: "File uploaded successfully!",
+                    message: "File uploaded successfully"
                 });
+
             } catch (queryErr) {
-                logError("Database Query Error:", queryErr.message || queryErr);
-                return res.status(500).json({
-                    success: false,
-                    message: "Database Query Error",
-                    details: process.env.NODE_ENV === 'development' ? queryErr.stack : undefined
+                logError("Database error:", queryErr);
+                return res.status(500).json({ 
+                    success, 
+                    message: "Database operation failed",
+                    error: process.env.NODE_ENV === 'development' ? queryErr.message : null
                 });
             } finally {
                 closeConnection(conn);
             }
         });
     } catch (error) {
-        logError("Unexpected Error:", error.stack || JSON.stringify(error));
-        console.error("Error Details:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Unexpected Error, check logs",
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        logError("Server error:", error);
+        return res.status(500).json({ 
+            success, 
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? error.message : null
         });
     }
 };
 
+export const getSubModulesByModule = async (req, res) => {
+    let success = false;
+    const userId = req.user?.id;
+    const moduleId = req.query.moduleId;
+
+    if (!userId) {
+        return res.status(400).json({
+            success,
+            message: "User ID not found. Please login."
+        });
+    }
+
+    if (!moduleId) {
+        return res.status(400).json({
+            success,
+            message: "Module ID is required."
+        });
+    }
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError("Failed to connect to database");
+                return res.status(500).json({
+                    success,
+                    message: "Failed to connect to database"
+                });
+            }
+
+            try {
+                // Verify user exists
+                const userQuery = `SELECT UserID FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+                const userRows = await queryAsync(conn, userQuery, [userId]);
+
+                if (userRows.length === 0) {
+                    closeConnection(conn);
+                    return res.status(404).json({
+                        success,
+                        message: "User not found."
+                    });
+                }
+
+                // Fetch sub-modules for the specified module
+                const subModuleQuery = `
+            SELECT 
+              SubModuleID as id,
+              SubModuleName as name,
+              SubModuleImage as image,
+              SubModuleDescription as description,
+              ModuleID as moduleId
+            FROM SubModulesDetails
+            WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0
+            ORDER BY SubModuleName ASC
+          `;
+
+                const subModules = await queryAsync(conn, subModuleQuery, [moduleId]);
+
+                success = true;
+                closeConnection(conn);
+                logInfo(`Fetched sub-modules for ModuleID: ${moduleId}`);
+
+                return res.status(200).json({
+                    success,
+                    data: subModules,
+                    message: "Sub-modules fetched successfully"
+                });
+
+            } catch (queryErr) {
+                closeConnection(conn);
+                logError("Database Query Error:", queryErr);
+                return res.status(500).json({
+                    success,
+                    message: "Database Query Error"
+                });
+            }
+        });
+    } catch (error) {
+        logError("Unexpected Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unexpected Error, check logs"
+        });
+    }
+};
+
+export const getUnitsBySubModule = async (req, res) => {
+    let success = false;
+    const userId = req.user?.id;
+    const subModuleId = req.query.subModuleId;
+
+    if (!userId) {
+        return res.status(400).json({
+            success,
+            message: "User ID not found. Please login."
+        });
+    }
+
+    if (!subModuleId) {
+        return res.status(400).json({
+            success,
+            message: "Sub-Module ID is required."
+        });
+    }
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError("Failed to connect to database");
+                return res.status(500).json({
+                    success,
+                    message: "Failed to connect to database"
+                });
+            }
+
+            try {
+                // Verify user exists
+                const userQuery = `SELECT UserID FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+                const userRows = await queryAsync(conn, userQuery, [userId]);
+
+                if (userRows.length === 0) {
+                    closeConnection(conn);
+                    return res.status(404).json({
+                        success,
+                        message: "User not found."
+                    });
+                }
+
+                // Fetch units for the specified sub-module
+                const unitQuery = `
+            SELECT 
+              UnitID as id,
+              UnitName as name,
+              UnitImg as image,
+              UnitDescription as description,
+              SubModuleID as subModuleId
+            FROM UnitsDetails
+            WHERE SubModuleID = ? AND ISNULL(delStatus, 0) = 0
+            ORDER BY UnitName ASC
+          `;
+
+                const units = await queryAsync(conn, unitQuery, [subModuleId]);
+
+                success = true;
+                closeConnection(conn);
+                logInfo(`Fetched units for SubModuleID: ${subModuleId}`);
+
+                return res.status(200).json({
+                    success,
+                    data: units,
+                    message: "Units fetched successfully"
+                });
+
+            } catch (queryErr) {
+                closeConnection(conn);
+                logError("Database Query Error:", queryErr);
+                return res.status(500).json({
+                    success,
+                    message: "Database Query Error"
+                });
+            }
+        });
+    } catch (error) {
+        logError("Unexpected Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unexpected Error, check logs"
+        });
+    }
+};
 export const LMS = {
     upload: uploadLearningMaterial,
-    uploadFile: uploadFile
+    uploadFile: uploadFile,
+    getSubModules: getSubModulesByModule,
+    getUnits: getUnitsBySubModule
 };

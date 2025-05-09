@@ -48,6 +48,7 @@ const QuizList = () => {
             }
 
             if (data.success) {
+                // First create grouped quizzes
                 const groupedQuizzes = data.data.quizzes.reduce((acc, quiz) => {
                     const existingGroup = acc.find(group => group.group_name === quiz.group_name);
 
@@ -62,7 +63,7 @@ const QuizList = () => {
                             image: quiz.QuizImage,
                             startDate: adjustTimeZone(new Date(quiz.StartDateAndTime)),
                             endDate: adjustTimeZone(new Date(quiz.EndDateTime)),
-                            attempts: quiz.userAttempts || 0 // Add attempts from API
+                            attempts: quiz.userAttempts || 0
                         });
                     } else {
                         acc.push({
@@ -79,18 +80,28 @@ const QuizList = () => {
                                 image: quiz.QuizImage,
                                 startDate: adjustTimeZone(new Date(quiz.StartDateAndTime)),
                                 endDate: adjustTimeZone(new Date(quiz.EndDateTime)),
-                                attempts: quiz.userAttempts || 0 // Add attempts from API
+                                attempts: quiz.userAttempts || 0
                             }]
                         });
                     }
                     return acc;
                 }, []);
 
-                setQuizzes(groupedQuizzes);
+                // Then filter out groups with no active/upcoming quizzes
+                const filteredGroups = groupedQuizzes.filter(group => {
+                    return group.quizzes.some(quiz => {
+                        const status = getQuizStatus(quiz);
+                        return status !== 'expired';
+                    });
+                });
+
+                // Finally set the filtered groups to state
+                setQuizzes(filteredGroups);
             } else {
                 throw new Error(data.message || "Failed to fetch quizzes");
             }
 
+            // Leaderboard code remains the same
             if (leaderboardData.success) {
                 const sortedLeaderboard = leaderboardData.data.quizzes
                     .sort((a, b) => b.totalPoints - a.totalPoints)
@@ -137,13 +148,9 @@ const QuizList = () => {
         if (!date) return null;
         return new Date(date.getTime() - 5 * 60 * 60 * 1000 - 30 * 60 * 1000);
     };
-
-    // Helper function to format time
     const formatTime = (time) => {
         return time < 10 ? `0${time}` : time;
     };
-
-    // Function to calculate time remaining
     const getTimeRemaining = (startDate) => {
         const diff = startDate - now;
 
@@ -156,8 +163,6 @@ const QuizList = () => {
 
         return { days, hours, minutes, seconds };
     };
-
-    // Function to determine quiz status
     const getQuizStatus = (quiz) => {
         if (now < quiz.startDate) {
             return 'upcoming';
@@ -263,7 +268,6 @@ const QuizList = () => {
                                                                 </svg>
                                                                 {quiz.points} points
                                                             </span>
-                                                            {/* Add attempts display */}
                                                             {quiz.attempts > 0 && (
                                                                 <span className="flex items-center text-gray-600">
                                                                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,8 +310,8 @@ const QuizList = () => {
                                                     {status === 'active' ? (
                                                         <button
                                                             className={`w-full py-2 px-4 rounded-lg transition-all duration-200 hover:shadow-md relative z-10 mt-4 ${quiz.attempts > 0
-                                                                    ? 'bg-DGXblue hover:bg-blue-700 text-white'
-                                                                    : 'bg-DGXblue hover:bg-blue-600 text-white'
+                                                                ? 'bg-DGXblue hover:bg-blue-700 text-white'
+                                                                : 'bg-DGXblue hover:bg-blue-600 text-white'
                                                                 }`}
                                                             onClick={() => handleQuizClick(quiz, subject)}
                                                         >

@@ -31,7 +31,8 @@ import {
   FaGraduationCap,
   FaLayerGroup
 } from "react-icons/fa";
-import MultiLevelFileUpload from "./Components/LMS/MultiLevelFileUpload";
+// import MultiLevelFileUpload from "./Components/LMS/MultiLevelFileUpload";
+import LearningMaterialManager from "./Components/LMS/LearningMaterialManager";
 
 const AdminDashboard = (props) => {
   const [activeComp, setActiveComp] = useState("users");
@@ -85,7 +86,7 @@ const AdminDashboard = (props) => {
       case "contact":
         return <Contact />;
       case "select_module":
-        return <MultiLevelFileUpload />;
+        return <LearningMaterialManager />;
       default:
         return <Home />;
     }
