@@ -1287,7 +1287,6 @@ export const submitQuiz = async (req, res) => {
             obtainedPoints,
             totalPossibleMarks,
             noOfAttempts,
-            // percentage
           ]);
         }
 
