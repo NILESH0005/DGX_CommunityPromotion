@@ -10,6 +10,7 @@ import QuizPanel from "./Components/Quiz/QuizPanel";
 import QuestionBank from "./Components/Quiz/QuestionBank";
 import QuizMapping from "./Components/Quiz/QuizMapping";
 import QuizSettings from "./Components/Quiz/QuizSettings";
+// import SelectModule from "./Components/LMS/SelectModule"; // Make sure to create this component
 import {
   FaUsers,
   FaComments,
@@ -26,8 +27,12 @@ import {
   FaAngleDown,
   FaAngleUp,
   FaBars,
-  FaTimes
+  FaTimes,
+  FaGraduationCap,
+  FaLayerGroup
 } from "react-icons/fa";
+// import MultiLevelFileUpload from "./Components/LMS/MultiLevelFileUpload";
+import LearningMaterialManager from "./Components/LMS/LearningMaterialManager";
 
 const AdminDashboard = (props) => {
   const [activeComp, setActiveComp] = useState("users");
@@ -48,10 +53,10 @@ const AdminDashboard = (props) => {
 
     // Set initial state
     handleResize();
-    
+
     // Add event listener
     window.addEventListener('resize', handleResize);
-    
+
     // Clean up
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -80,6 +85,8 @@ const AdminDashboard = (props) => {
         return <Home />;
       case "contact":
         return <Contact />;
+      case "select_module":
+        return <LearningMaterialManager />;
       default:
         return <Home />;
     }
@@ -97,8 +104,8 @@ const AdminDashboard = (props) => {
       {/* Mobile Header */}
       <div className="md:hidden bg-black text-white p-4 flex justify-between items-center sticky top-0 z-50">
         <div className="text-2xl font-bold">Admin Dashboard</div>
-        <button 
-          onClick={() => setSidebarOpen(!sidebarOpen)} 
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
           className="text-white focus:outline-none"
           aria-label="Toggle menu"
         >
@@ -107,7 +114,7 @@ const AdminDashboard = (props) => {
       </div>
 
       {/* Sidebar - Changed positioning for mobile */}
-      <div 
+      <div
         className={`fixed md:relative top-16 md:top-0 left-0 h-[calc(100vh-64px)] md:h-auto bg-black text-white w-64 flex-shrink-0 
         transform transition-transform duration-300 ease-in-out z-40 md:z-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
@@ -116,9 +123,8 @@ const AdminDashboard = (props) => {
           <ul>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
-                  activeComp === "users" ? "bg-gray-700 text-yellow-300" : ""
-                }`}
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "users" ? "bg-gray-700 text-yellow-300" : ""
+                  }`}
                 onClick={() => handleMenuItemClick("users")}
               >
                 <FaUsers className="mr-4" />
@@ -127,11 +133,10 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
-                  activeComp === "discussions"
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "discussions"
                     ? "bg-gray-700 text-yellow-300"
                     : ""
-                }`}
+                  }`}
                 onClick={() => handleMenuItemClick("discussions")}
               >
                 <FaComments className="mr-4" />
@@ -140,9 +145,8 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
-                  activeComp === "events" ? "bg-gray-700 text-yellow-300" : ""
-                }`}
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "events" ? "bg-gray-700 text-yellow-300" : ""
+                  }`}
                 onClick={() => handleMenuItemClick("events")}
               >
                 <FaCalendarAlt className="mr-4" />
@@ -151,11 +155,10 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
-                  activeComp === "blog_manager"
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "blog_manager"
                     ? "bg-gray-700 text-yellow-300"
                     : ""
-                }`}
+                  }`}
                 onClick={() => handleMenuItemClick("blog_manager")}
               >
                 <FaBlog className="mr-4" />
@@ -165,11 +168,10 @@ const AdminDashboard = (props) => {
             {/* Quiz Section with Hover-based Submenu */}
             <li className="relative group">
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
-                  ["quizpanel", "quiz_bank", "quiz_mapping", "quiz_settings"].includes(activeComp)
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${["quizpanel", "quiz_bank", "quiz_mapping", "quiz_settings"].includes(activeComp)
                     ? "bg-gray-700 text-yellow-300"
                     : ""
-                }`}
+                  }`}
               >
                 <FaBrain className="mr-4" />
                 Quiz
@@ -178,11 +180,10 @@ const AdminDashboard = (props) => {
               <ul className="bg-gray-800 absolute hidden group-hover:block w-full left-0 top-full z-10">
                 <li>
                   <div
-                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${
-                      activeComp === "quizpanel"
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "quizpanel"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
-                    }`}
+                      }`}
                     onClick={() => handleMenuItemClick("quizpanel")}
                   >
                     <FaQuestionCircle className="mr-4" />
@@ -191,11 +192,10 @@ const AdminDashboard = (props) => {
                 </li>
                 <li>
                   <div
-                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${
-                      activeComp === "quiz_bank"
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "quiz_bank"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
-                    }`}
+                      }`}
                     onClick={() => handleMenuItemClick("quiz_bank")}
                   >
                     <FaList className="mr-4" />
@@ -204,11 +204,10 @@ const AdminDashboard = (props) => {
                 </li>
                 <li>
                   <div
-                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${
-                      activeComp === "quiz_mapping"
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "quiz_mapping"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
-                    }`}
+                      }`}
                     onClick={() => handleMenuItemClick("quiz_mapping")}
                   >
                     <FaChartPie className="mr-4" />
@@ -217,11 +216,10 @@ const AdminDashboard = (props) => {
                 </li>
                 <li>
                   <div
-                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${
-                      activeComp === "quiz_settings"
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "quiz_settings"
                         ? "bg-gray-700 text-yellow-300"
                         : ""
-                    }`}
+                      }`}
                     onClick={() => handleMenuItemClick("quiz_settings")}
                   >
                     <FaCog className="mr-4" />
@@ -231,13 +229,41 @@ const AdminDashboard = (props) => {
               </ul>
             </li>
 
-            <li>
+            {/* LMS Section with Hover-based Submenu */}
+            <li className="relative group">
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
-                  activeComp === "guidelines"
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${["select_module"].includes(activeComp)
                     ? "bg-gray-700 text-yellow-300"
                     : ""
-                }`}
+                  }`}
+              >
+                <FaGraduationCap className="mr-4" />
+                LMS
+                <FaAngleDown className="ml-auto group-hover:rotate-180 transition-transform duration-200" />
+              </div>
+              <ul className="bg-gray-800 absolute hidden group-hover:block w-full left-0 top-full z-10">
+                <li>
+                  <div
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "select_module"
+                        ? "bg-gray-700 text-yellow-300"
+                        : ""
+                      }`}
+                    onClick={() => handleMenuItemClick("select_module")}
+                  >
+                    <FaLayerGroup className="mr-4" />
+                    Upload learning Kit
+                  </div>
+                </li>
+                {/* Add more LMS submenu items here as needed */}
+              </ul>
+            </li>
+
+            <li>
+              <div
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "guidelines"
+                    ? "bg-gray-700 text-yellow-300"
+                    : ""
+                  }`}
                 onClick={() => handleMenuItemClick("guidelines")}
               >
                 <FaBook className="mr-4" />
@@ -246,9 +272,8 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
-                  activeComp === "Home" ? "bg-gray-700 text-yellow-300" : ""
-                }`}
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "Home" ? "bg-gray-700 text-yellow-300" : ""
+                  }`}
                 onClick={() => handleMenuItemClick("Home")}
               >
                 <FaHome className="mr-4" />
@@ -257,9 +282,8 @@ const AdminDashboard = (props) => {
             </li>
             <li>
               <div
-                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${
-                  activeComp === "contact" ? "bg-gray-700 text-yellow-300" : ""
-                }`}
+                className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "contact" ? "bg-gray-700 text-yellow-300" : ""
+                  }`}
                 onClick={() => handleMenuItemClick("contact")}
               >
                 <FaEnvelope className="mr-4" />
@@ -271,9 +295,8 @@ const AdminDashboard = (props) => {
       </div>
 
       {/* Main Content - Added margin-top for mobile */}
-      <div className={`flex-1 min-h-screen p-4 md:p-6 overflow-x-auto transition-all duration-300 mt-16 md:mt-0 ${
-        sidebarOpen && isMobile ? 'ml-64' : ''
-      }`}>
+      <div className={`flex-1 min-h-screen p-4 md:p-6 overflow-x-auto transition-all duration-300 mt-16 md:mt-0 ${sidebarOpen && isMobile ? 'ml-64' : ''
+        }`}>
         <div className="bg-white rounded-lg shadow p-4 md:p-6">
           {getComp(activeComp)}
         </div>

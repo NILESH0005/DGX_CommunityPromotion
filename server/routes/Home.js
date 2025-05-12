@@ -10,6 +10,7 @@ import {
   updateContentSection,
   addProjectShowcase,
   getProjectShowcase,
+  deleteParallaxText,
 
 
   getAllCMSContent,
@@ -19,6 +20,7 @@ const router = express.Router();
 
 router.post('/addParallaxText', fetchUser, addParallaxText);
 router.post('/getParallaxContent',  getParallaxContent);
+router.post('/deleteParallaxText',  deleteParallaxText);
 router.post('/setActiveParallaxText', fetchUser, setActiveParallaxText);
 router.post('/addContentSection', fetchUser, addContentSection);
 router.get('/getContent',  getContent);

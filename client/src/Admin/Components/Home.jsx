@@ -1,6 +1,7 @@
 import { useState, useContext, useEffect } from "react";
 import ParallaxSectionEdit from "./ParallaxSectionEdit";
-import ContentSectionEdit from "./ContentSectionEdit";
+// import ContentSectionEdit from "./ContentSectionEdit";
+import ContentManager from "./ContentSectionEdit"
 import NewSectionEdit from "./NewSectionEdit";
 import ProjectShowcaseEdit from "./ProjectShowcaseEdit";
 import ApiContext from "../../context/ApiContext";
@@ -48,7 +49,7 @@ const Home = () => {
   return (
     <div>
        <ParallaxSectionEdit data={getSectionData("parallaxText", "Parallax")} />
-      <ContentSectionEdit data={getSectionData("contentSection", "ContentSection")} />
+      <ContentManager data={getSectionData("contentSection", "ContentSection")} />
       <NewSectionEdit data={getSectionData("news_section", "Latest News")} />
       <ProjectShowcaseEdit data={getSectionData("project_showcase", "ProjectShowcase")}/>
     </div>

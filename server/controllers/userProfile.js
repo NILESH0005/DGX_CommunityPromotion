@@ -18,9 +18,6 @@ const SIGNATURE = process.env.SIGNATURE;
 
 
 
-
-
-
 export const profileDetail = async (req, res) => {
     let success = false;
     const userId = req.user.id;
@@ -94,7 +91,6 @@ export const profileDetail = async (req, res) => {
         res.status(500).json({ success: false, data: Err, message: 'Something went wrong please try again' });
     }
 }
-
 
 export const getUserDiscussion = async (req, res) => {
     let success = false;

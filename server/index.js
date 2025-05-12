@@ -13,25 +13,13 @@ import dropdownRoutes from './routes/Dropdown.js';
 import { connectToDatabase } from './database/mySql.js';
 import homeRoutes from './routes/Home.js';
 import quizRoutes from './routes/Quiz.js';
+import LMS from './routes/LMS.js'
 
 dotenv.config();
 
 const port = process.env.PORT || 8000;
 const app = express();
 
-// Multer configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/gifs');
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
-const upload = multer({ storage });
-
-// CORS Configuration
 app.use(
   cors({
     origin: '*',
@@ -40,15 +28,12 @@ app.use(
   })
 );
 
-// Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static files
 app.use('/gifs', express.static('uploads/gifs'));
-
-// Routes
+app.use('/lms', LMS)
 app.use('/user', userRoutes);
 app.use('/discussion', userDiscussion);
 app.use('/eventandworkshop', userEvent);
@@ -60,7 +45,31 @@ app.use('/home', homeRoutes);
 app.use('/quiz', quizRoutes);
 
 
-// Database connection
+const learningMaterialStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'D:/dgx_deployed/server/uploads/learning-materials');
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const uploadLearningMaterial = multer({ 
+  storage: learningMaterialStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, JPEG, and PNG are allowed.'));
+    }
+  }
+});
+
 connectToDatabase((err) => {
   if (err) {
     console.error('Failed to connect to the database. Exiting...');
@@ -73,8 +82,9 @@ connectToDatabase((err) => {
   }
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Something broke!');
 });
+
+app.use('/uploads', express.static('uploads'));

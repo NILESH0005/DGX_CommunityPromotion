@@ -169,89 +169,87 @@ const QuizQuestions = ({ onBackToBank, onQuestionCreated }) => {
     }
   };
 
-  const handleCreateQuestion = async () => {
+ const handleCreateQuestion = async () => {
     // Trim all inputs first
     const trimmedQuestion = questionText.trim();
     const trimmedOptions = options.map(opt => opt.trim()).filter(opt => opt !== "");
-    
+
     // Validate inputs
     if (!trimmedQuestion) {
-      Swal.fire("Error", "Please enter a question!", "error");
-      return;
+        Swal.fire("Error", "Please enter a question!", "error");
+        return;
     }
-    
+
     if (trimmedOptions.length < 2) {
-      Swal.fire("Error", "You must have at least 2 valid answer options!", "error");
-      return;
+        Swal.fire("Error", "You must have at least 2 valid answer options!", "error");
+        return;
     }
-    
+
     if (correctAnswers.length === 0) {
-      Swal.fire("Error", "Please select at least one correct answer!", "error");
-      return;
+        Swal.fire("Error", "Please select at least one correct answer!", "error");
+        return;
     }
-    
+
     if (questionType === "multiple" && correctAnswers.length < 2) {
-      Swal.fire("Error", "Multiple choice questions require at least 2 correct answers!", "error");
-      return;
+        Swal.fire("Error", "Multiple choice questions require at least 2 correct answers!", "error");
+        return;
     }
-  
+
     // Map only valid options with their correct indices
     const validOptions = options
-      .map((opt, index) => ({
-        option_text: opt.trim(),
-        is_correct: correctAnswers.includes(index) ? 1 : 0,
-        image: optionImages[index] || null
-      }))
-      .filter(opt => opt.option_text !== ""); // Remove empty options
-  
+        .map((opt, index) => ({
+            option_text: opt.trim(),
+            is_correct: correctAnswers.includes(index) ? 1 : 0,
+            image: optionImages[index] || null
+        }))
+        .filter(opt => opt.option_text !== ""); // Remove empty options
+
     // Verify we still have enough options after filtering
     if (validOptions.length < 2) {
-      Swal.fire("Error", "You must have at least 2 valid answer options after removing empty ones!", "error");
-      return;
+        Swal.fire("Error", "You must have at least 2 valid answer options after removing empty ones!", "error");
+        return;
     }
-  
-    // Prepare the payload
-    const payload = {
-      question_text: trimmedQuestion,
-      Ques_level: selectedLevel || null,
-      image: image || null,
-      group_id: Number(group) || 0,
-      question_type: questionType === "multiple" ? 1 : 0,
-      options: validOptions
+
+    // Prepare the request
+    const endpoint = "quiz/createQuestion";
+    const method = "POST";
+    const headers = {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
     };
-  
+    const body = {
+        question_text: trimmedQuestion,
+        Ques_level: selectedLevel || null,
+        image: image || null,
+        group_id: Number(group) || 0,
+        question_type: questionType === "multiple" ? 1 : 0,
+        options: validOptions
+    };
+
     try {
-      const response = await fetchData(
-        "quiz/createQuestion",
-        "POST",
-        payload,
-        {
-          "Content-Type": "application/json",
-          "auth-token": userToken,
+        const data = await fetchData(endpoint, method, body, headers);
+
+        if (data?.success) {
+            Swal.fire("Success", "Question added successfully!", "success");
+            // Reset form
+            setQuestionText("");
+            setOptions(["", ""]);
+            setCorrectAnswers([]);
+            setImage(null);
+            setOptionImages([null, null]);
+            setSelectedLevel("");
+            // Notify parent component
+            if (onQuestionCreated) {
+                onQuestionCreated();
+            }
+        } else {
+            Swal.fire("Error", data?.message || "Failed to add question", "error");
         }
-      );
-  
-      if (response?.success) {
-        Swal.fire("Success", "Question added successfully!", "success");
-        // Reset form
-        setQuestionText("");
-        setOptions(["", ""]);
-        setCorrectAnswers([]);
-        setImage(null);
-        setOptionImages([null, null]);
-        setSelectedLevel("");
-        // Notify parent component
-        if (onQuestionCreated) {
-          onQuestionCreated();
-        }
-      } else {
-        Swal.fire("Error", response?.message || "Failed to add question", "error");
-      }
     } catch (error) {
-      console.error("Question creation error:", error);
-      Swal.fire("Error", "Failed to create question. Please try again.", "error");
+        console.error("Question creation error:", error);
+        Swal.fire("Error", "Failed to create question. Please try again.", "error");
     }
-  };
+};
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-lg max-h-screen overflow-hidden flex flex-col">

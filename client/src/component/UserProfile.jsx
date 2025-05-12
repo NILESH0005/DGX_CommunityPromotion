@@ -76,6 +76,7 @@ const UserProfile = (props) => {
       }
     }
   };
+
   const handleButtonClick = () => {
     setShowEmailInput(true);
   };

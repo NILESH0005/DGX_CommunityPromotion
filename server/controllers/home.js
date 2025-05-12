@@ -66,6 +66,141 @@ export const addParallaxText = async (req, res) => {
   }
 };
 
+export const deleteParallaxText = async (req, res) => {
+  let success = false;
+  const { idCode } = req.body;
+  const adminName = req.user?.id;
+
+  console.log("Received request to delete parallax text. ID:", idCode, "Admin:", adminName);
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const warningMessage = "Data is not in the right format";
+    console.error(warningMessage, errors.array());
+    logWarning(warningMessage);
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: warningMessage
+    });
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        const errorMessage = "Failed to connect to database";
+        console.error(errorMessage, err);
+        logError(errorMessage);
+        return res.status(500).json({
+          success: false,
+          data: err,
+          message: errorMessage
+        });
+      }
+
+      try {
+        // 1. First verify the content exists and is a parallax component
+        const verifyQuery = `SELECT idCode, isActive 
+                                 FROM tblCMSContent 
+                                 WHERE idCode = ? 
+                                 AND ComponentName = 'Parallax'
+                                 AND (delStatus IS NULL OR delStatus = 0)`;
+
+        console.log("Executing verify query for ID:", idCode);
+        const verifyResult = await queryAsync(conn, verifyQuery, [
+          { name: 'idCode', type: sql.Int, value: parseInt(idCode) }
+        ]);
+
+        if (verifyResult.length === 0) {
+          closeConnection();
+          const notFoundMessage = "Parallax content not found or already deleted";
+          console.warn(notFoundMessage);
+          logWarning(notFoundMessage);
+          return res.status(404).json({
+            success: false,
+            message: notFoundMessage,
+          });
+        }
+
+        // 2. Check if content is active
+        if (verifyResult[0].isActive === 1) {
+          closeConnection();
+          const activeMessage = "Cannot delete active parallax content. Deactivate first.";
+          console.warn(activeMessage);
+          logWarning(activeMessage);
+          return res.status(400).json({
+            success: false,
+            message: activeMessage,
+          });
+        }
+
+        // 3. Perform soft delete
+        const deleteQuery = `UPDATE tblCMSContent 
+                                 SET delStatus = 1, 
+                                     delOnDt = GETDATE(), 
+                                     AuthDel = ? ,
+                                     isActive = 0 
+                            
+                                 WHERE idCode = ? 
+                                 AND (delStatus IS NULL OR delStatus = 0)`;
+
+        console.log("Executing delete query for ID:", idCode);
+        const deleteResult = await queryAsync(conn, deleteQuery, [
+          { name: 'adminName', type: sql.NVarChar, value: adminName },
+          { name: 'idCode', type: sql.Int, value: parseInt(idCode) }
+        ]);
+
+        if (deleteResult.length > 0) {
+          success = true;
+          closeConnection();
+          const successMessage = `Parallax text ${idCode} deleted successfully`;
+          console.log(successMessage);
+          logInfo(successMessage);
+
+          return res.status(200).json({
+            success,
+            data: {
+              idCode: deleteResult[0].idCode,
+              AuthDel: deleteResult[0].AuthDel,
+              delOnDt: deleteResult[0].delOnDt,
+              delStatus: deleteResult[0].delStatus
+            },
+            message: successMessage,
+          });
+        } else {
+          closeConnection();
+          const failMessage = `Failed to delete parallax text ${idCode}`;
+          console.error(failMessage);
+          logError(failMessage);
+          return res.status(404).json({
+            success: false,
+            message: failMessage,
+          });
+        }
+      } catch (queryErr) {
+        closeConnection();
+        const dbErrorMessage = "Database query error during parallax text deletion";
+        console.error(dbErrorMessage, queryErr);
+        logError(dbErrorMessage);
+        return res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: dbErrorMessage
+        });
+      }
+    });
+  } catch (error) {
+    const unexpectedErrorMessage = "Unexpected error during parallax text deletion";
+    console.error(unexpectedErrorMessage, error);
+    logError(unexpectedErrorMessage);
+    return res.status(500).json({
+      success: false,
+      data: error,
+      message: unexpectedErrorMessage
+    });
+  }
+};
+
 export const addContentSection = async (req, res) => {
   let success = false;
   console.log("Headers:", req.headers);
@@ -547,10 +682,6 @@ export const getProjectShowcase = async (req, res) => {
     return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
   }
 };
-
-
-
-
 
 export const getAllCMSContent = async (req, res) => {
   try {
