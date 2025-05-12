@@ -364,5 +364,3 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
 };
 
 export default DiscussionModal;
-
-

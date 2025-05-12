@@ -169,17 +169,20 @@ const UserProfile = (props) => {
           'Content-Type': 'application/json',
           'auth-token': userToken
         };
+  
         if (userToken) {
           setLoading(true);
           fetchData(endpoint, method, body, headers)
             .then(result => {
+              console.log("Raw API response:", result); // <--- log full result
               if (result && result.data) {
-                return result.data;
+                return result.data;   
               } else {
                 throw new Error("Invalid data format");
               }
             })
             .then((data) => {
+              console.log("Parsed data:", data); // <--- log parsed data
               setLoading(false);
               setUserDisscussion(data.updatedDiscussions);
             })
@@ -192,13 +195,15 @@ const UserProfile = (props) => {
         console.log(error);
       }
     };
-    
-    if (userToken != null && user != null && userToken != undefined && user != undefined) {
+  
+    if (userToken && user) {
       setIsLoggedIn(true);
       fetchUserDisscussions();
     }
   }, [user, userToken, fetchData]);
-  console.log("user",user)
+  
+  console.log("user", user);
+  
 
   const handleDeleteDiscussion = async (discussion) => {
     const result = await Swal.fire({

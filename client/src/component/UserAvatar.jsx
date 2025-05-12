@@ -1,23 +1,29 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import { images } from '../../public/index.js';
 import { FaCamera, FaCheck, FaTimes, FaSpinner } from 'react-icons/fa';
-import { compressImage } from "../utils/compressImage.js";
 import ApiContext from '../context/ApiContext.jsx';
 import Swal from 'sweetalert2';
 
-const UserAvatar = ({ user }) => {
+const UserAvatar = ({ user, onImageUpdate }) => {
   const { userToken, fetchData, setUser } = useContext(ApiContext);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentImage, setCurrentImage] = useState(user?.ProfilePicture || images.defaultProfile);
+  const [currentProfileImage, setCurrentProfileImage] = useState(user?.ProfilePicture || images.defaultProfile);
   const fileInputRef = useRef(null);
+
+  // Update local state when user prop changes
+  useEffect(() => {
+    if (user?.ProfilePicture) {
+      setCurrentProfileImage(user.ProfilePicture);
+    }
+  }, [user?.ProfilePicture]);
 
   const getProfileImageUrl = () => {
     // First priority: Show the preview image if it exists
     if (previewImage) return previewImage;
     
-    // Second priority: Show the current image
-    return currentImage;
+    // Second priority: Show the current user's profile picture
+    return currentProfileImage;
   };
 
   const handleFileChange = async (e) => {
@@ -46,7 +52,6 @@ const UserAvatar = ({ user }) => {
     setIsLoading(true);
 
     try {
-      // Convert to base64 for preview
       const reader = new FileReader();
       reader.onload = (event) => {
         setPreviewImage(event.target.result);
@@ -78,19 +83,22 @@ const UserAvatar = ({ user }) => {
       });
   
       if (response.success) {
-        // Update both the user context and local state
-        const newImage = response.data.imageUrl;
+        // Update the local state first to immediately show the new image
+        setCurrentProfileImage(response.data.imageUrl);
         
+        // Update the user context - this will automatically update Navbar
         if (setUser) {
           setUser(prev => ({
             ...prev,
-            ProfilePicture: newImage
+            ProfilePicture: response.data.imageUrl
           }));
         }
         
-        // Update local state immediately
-        setCurrentImage(newImage);
         setPreviewImage(null);
+        
+        if (onImageUpdate) {
+          onImageUpdate(response.data.imageUrl);
+        }
         
         Swal.fire({
           icon: 'success',
@@ -198,10 +206,6 @@ const UserAvatar = ({ user }) => {
               </button>
             </div>
           )}
-          
-          {/* <p className="text-center text-xs text-gray-500 mt-2">
-            Supported formats: JPG, PNG, WEBP (Max 5MB)
-          </p> */}
         </div>
       </div>
     </div>

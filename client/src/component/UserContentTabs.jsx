@@ -16,70 +16,116 @@ const UserContentTabs = ({
   blogs,
   setBlogs,
   quiz,
-  setQuiz
+  setQuiz,
+  userBlogCount // Add this new prop for the user-specific blog count
 }) => {
   return (
-    <div className="w-full lg:w-3/4 bg-DGXwhite rounded-lg shadow-xl md:p-4 md:border border-DGXgreen mx-auto">
+    <div className="w-full lg:w-3/4 bg-white rounded-xl shadow-lg p-6 mx-auto">
       {activeTab === 'posts' && (
-        <div>
-          <div className='post_bar pt-4 flex flex-col space-y-6'>
-            <div className='flex-col'>
-              <h4 className="text-xl text-[#0f172a] font-bold">My Posts</h4>
-            </div>
-            {userDisscussions.map((discussion, index) => (
-              <div key={index} className='post shadow-xl rounded-md p-2'>
-                <a href="#" className="m-2 shadow-xl flex flex-col md:flex-row bg-white border border-DGXgreen rounded-lg hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">
-                  <div className="w-full md:w-1/4">
-                    <img className="object-cover w-full h-96 md:h-auto md:rounded-none rounded-t-lg md:rounded-s-lg" src={discussion.Image} alt="" />
-                  </div>
-                  <div className="w-full md:w-3/4 flex flex-col justify-between p-4 leading-normal">
-                    <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{discussion.Title}</h5>
-                    <p className="mb-3 font-normal text-gray-700 dark:text-gray-400">{stripHtmlTags(discussion.Content)}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="inline-flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                        onClick={() => handleClickDiscussion(discussion)}>
-                        Read more
-                        <FaArrowRight className="ml-1 text-blue-600 dark:text-blue-400" />
-                      </span>
-                      <div className="flex items-center gap-x-4">
-                        <FaTrash className="text-gray-600 hover:text-red-600 cursor-pointer text-xl transition-transform transform hover:scale-110"
-                          onClick={() => handleDeleteDiscussion(discussion)} />
+        <div className="space-y-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">My Posts</h2>
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              {userDisscussions.length} {userDisscussions.length === 1 ? 'Post' : 'Posts'}
+            </span>
+          </div>
+          
+          {userDisscussions.length > 0 ? (
+            <div className="space-y-6">
+              {userDisscussions.map((discussion, index) => (
+                <div 
+                  key={index} 
+                  className="group relative overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 bg-white border border-gray-100"
+                >
+                  <div className="flex flex-col md:flex-row">
+                    {discussion.Image && (
+                      <div className="w-full md:w-1/3 h-48 md:h-auto">
+                        <img 
+                          className="object-cover w-full h-full"
+                          src={discussion.Image} 
+                          alt={discussion.Title || "Post image"} 
+                        />
+                      </div>
+                    )}
+                    <div className={`p-5 ${discussion.Image ? 'md:w-2/3' : 'w-full'}`}>
+                      <div className="flex flex-col h-full justify-between">
+                        <div>
+                          {discussion.Title && (
+                            <h3 className="text-xl font-semibold text-gray-800 mb-2 line-clamp-2">
+                              {discussion.Title}
+                            </h3>
+                          )}
+                          {discussion.Content && (
+                            <p className="text-gray-600 mb-4 line-clamp-3">
+                              {stripHtmlTags(discussion.Content)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                          <button
+                            onClick={() => handleClickDiscussion(discussion)}
+                            className="flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                          >
+                            Read more
+                            <FaArrowRight className="ml-2" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDiscussion(discussion)}
+                            className="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors"
+                            aria-label="Delete post"
+                          >
+                            <FaTrash className="text-lg" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </a>
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-gray-500">You haven't created any posts yet.</p>
+            </div>
+          )}
         </div>
       )}
+
       {activeTab === 'events' && (
-        <div className='w-full'>
-          <div className='flex-col'>
-            <h4 className="text-xl text-[#0f172a] font-bold">My Events</h4>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">My Events</h2>
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              {events.length} {events.length === 1 ? 'Event' : 'Events'}
+            </span>
           </div>
           <AddUserEvent events={events} setEvents={setEvents} />
         </div>
       )}
+
       {activeTab === 'blogs' && (
-        <div className='w-full'>
-          <div className='flex-col'>
-            <h4 className="text-xl text-[#0f172a] font-bold">My Blogs</h4>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">My Blogs</h2>
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              {userBlogCount !== undefined ? userBlogCount : blogs.length} {/* Use userBlogCount if available */}
+              {userBlogCount === 1 ? ' Blog' : ' Blogs'}
+            </span>
           </div>
           <AddUserBlog blogs={blogs} setBlogs={setBlogs} />
         </div>
       )}
+
       {activeTab === 'quiz' && (
-        <div className='w-full'>
-          <div className='flex-col'>
-            <h4 className="text-xl text-[#0f172a] font-bold">User Quiz</h4>
-          </div>
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">User Quiz</h2>
           <UserQuiz quiz={quiz} setQuiz={setQuiz} />
         </div>
       )}
+
       {activeTab === 'password' && (
-        <div>
-          <h4 className="text-xl text-[#0f172a] font-bold">Change Password</h4>
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Change Password</h2>
           <ChangePassword />
         </div>
       )}
@@ -87,4 +133,4 @@ const UserContentTabs = ({
   );
 };
 
-export default UserContentTabs;
+export default UserContentTabs;         
