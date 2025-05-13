@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import UnitSelector from './UnitComponents/UnitSelector';
 import FileUploader from './FileUploader';
 import ModuleCreator from './ModuleComponents/ModuleCreator';
-import SubModuleTable from './SubModuleComponents/SubModuleTable'; // New component
+import SubModuleTable from './SubModuleComponents/SubModuleTable';
 
 const formReducer = (state, action) => {
   console.log('Reducer action:', action.type, 'Payload:', action.payload);
@@ -283,191 +283,280 @@ const LearningMaterialManager = () => {
     dispatch({ type: 'FINISH_UNITS' });
   };
 
-  return (
-    <div className="max-w-6xl mx-auto p-6 bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-lg">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Learning Managemenet System</h2>
-        <p className="text-gray-600">Create and organize your educational content</p>
+
+return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Hero Section */}
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
+          Learning Management System
+        </h1>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          Create, organize, and manage your educational content with ease
+        </p>
       </div>
 
-      {/* Progress Steps */}
-      {/* <div className="steps steps-horizontal mb-8">
-        <div className={`step ${formState.module ? 'step-primary' : ''}`}>
-          <div className="step-circle">1</div>
-          <div className="step-title">Module</div>
-        </div>
-        <div className={`step ${formState.module?.subModules?.length ? 'step-primary' : ''}`}>
-          <div className="step-circle">2</div>
-          <div className="step-title">Submodules</div>
-        </div>
-        <div className={`step ${formState.subModule ? 'step-primary' : ''}`}>
-          <div className="step-circle">3</div>
-          <div className="step-title">Units</div>
-        </div>
-        <div className={`step ${formState.fileData ? 'step-primary' : ''}`}>
-          <div className="step-circle">4</div>
-          <div className="step-title">Content</div>
-        </div>
-      </div> */}
-
-      <div className="space-y-8 bg-white p-6 rounded-lg shadow-sm">
-        {/* Module Creation/Display */}
-        {!formState.module && !formState.isCreatingModule && (
-          <div className="text-center py-8">
-            <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
+      {/* Main Content Card */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+        {/* Progress Indicator */}
+        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center space-x-4">
+            <div className={`flex items-center ${formState.module ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${formState.module ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                {formState.module ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <span>1</span>
+                )}
+              </div>
+              <span className="ml-2 font-medium">Module</span>
             </div>
-            <h3 className="text-xl font-semibold mb-2">Start by creating a module</h3>
-            <p className="text-gray-600 mb-4">Modules help organize your learning materials</p>
-            <button
-              onClick={() => dispatch({ type: 'START_CREATING_MODULE' })}
-              className="btn btn-primary btn-lg"
-            >
-              Create New Module
-            </button>
-          </div>
-        )}
 
-        {formState.isCreatingModule ? (
-          <ModuleCreator
-            onCancel={() => dispatch({ type: 'RESET' })}
-            onCreate={handleModuleCreated}
-          />
-        ) : formState.module && (
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="card-title text-xl">{formState.module.name}</h3>
+            <div className="flex-1 h-1 bg-gray-200 rounded-full">
+              <div className={`h-1 rounded-full ${formState.module ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+            </div>
+
+            <div className={`flex items-center ${formState.module?.subModules?.length ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${formState.module?.subModules?.length ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                {formState.module?.subModules?.length ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <span>2</span>
+                )}
+              </div>
+              <span className="ml-2 font-medium">Submodules</span>
+            </div>
+
+            <div className="flex-1 h-1 bg-gray-200 rounded-full">
+              <div className={`h-1 rounded-full ${formState.subModule ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+            </div>
+
+            <div className={`flex items-center ${formState.subModule ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${formState.subModule ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                {formState.subModule ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <span>3</span>
+                )}
+              </div>
+              <span className="ml-2 font-medium">Units</span>
+            </div>
+
+            <div className="flex-1 h-1 bg-gray-200 rounded-full">
+              <div className={`h-1 rounded-full ${formState.fileData ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+            </div>
+
+            <div className={`flex items-center ${formState.fileData ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${formState.fileData ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                {formState.fileData ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <span>4</span>
+                )}
+              </div>
+              <span className="ml-2 font-medium">Content</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-8">
+          {/* Module Creation/Display */}
+          {!formState.module && !formState.isCreatingModule && (
+            <div className="text-center py-12">
+              <div className="mx-auto w-32 h-32 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-16 h-16 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">Start by creating a module</h3>
+              <p className="text-lg text-gray-600 mb-6 max-w-lg mx-auto">
+                Modules are the foundation of your learning materials. Create one to get started.
+              </p>
+              <button
+                onClick={() => dispatch({ type: 'START_CREATING_MODULE' })}
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Create New Module
+              </button>
+            </div>
+          )}
+
+          {formState.isCreatingModule ? (
+            <ModuleCreator
+              onCancel={() => dispatch({ type: 'RESET' })}
+              onCreate={handleModuleCreated}
+            />
+          ) : formState.module && (
+            <div className="bg-blue-50 rounded-lg p-6 border border-blue-100">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-2">{formState.module.name}</h3>
                   {formState.module.description && (
-                    <p className="text-gray-600 mt-1">{formState.module.description}</p>
+                    <p className="text-gray-600">{formState.module.description}</p>
                   )}
                 </div>
                 {formState.module.banner && (
-                  <div className="avatar">
-                    <div className="w-16 rounded-lg">
-                      <img src={formState.module.banner} alt="Module banner" />
+                  <div className="mt-4 md:mt-0 md:ml-6">
+                    <div className="w-24 h-24 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                      <img src={formState.module.banner} alt="Module banner" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Submodule Management */}
-        {formState.module && formState.isEditingSubmodules && (
-          <SubModuleTable
-            module={formState.module}
-            onSave={handleSubmoduleCreated}
-            onCancel={() => dispatch({ type: 'CANCEL_SUBMODULES' })}
-          />
-        )}
-
-        {formState.subModule && (
-          formState.isEditingUnits ? (
-            <UnitTable
-              subModule={formState.subModule}
-              onSave={(subModuleId, units) => handleUnitsUpdated(subModuleId, units)}
-              onCancel={() => dispatch({ type: 'FINISH_UNITS' })}
+          {/* Submodule Management */}
+          {formState.module && formState.isEditingSubmodules && (
+            <SubModuleTable
+              module={formState.module}
+              onSave={handleSubmoduleCreated}
+              onCancel={() => dispatch({ type: 'CANCEL_SUBMODULES' })}
             />
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold">
-                  Units for: {formState.subModule.name}
-                </h3>
-                <button
-                  onClick={() => dispatch({ type: 'START_EDITING_UNITS' })}
-                  className="btn btn-primary btn-sm"
-                >
-                  Manage Units
-                </button>
-              </div>
+          )}
 
-              {formState.subModule.units?.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {formState.subModule.units.map(unit => (
-                    <div
-                      key={unit.id}
-                      className={`card bg-base-100 shadow cursor-pointer hover:bg-gray-50 ${formState.unit?.id === unit.id ? 'ring-2 ring-primary' : ''
-                        }`}
-                      onClick={() => dispatch({ type: 'SET_UNIT', payload: unit })}
-                    >
-                      <div className="card-body">
-                        <h3 className="card-title">{unit.name}</h3>
-                        {unit.description && <p>{unit.description}</p>}
+          {formState.subModule && (
+            formState.isEditingUnits ? (
+              <UnitTable
+                subModule={formState.subModule}
+                onSave={(subModuleId, units) => handleUnitsUpdated(subModuleId, units)}
+                onCancel={() => dispatch({ type: 'FINISH_UNITS' })}
+              />
+            ) : (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <h3 className="text-xl font-bold text-gray-800">
+                    Units for: <span className="text-blue-600">{formState.subModule.name}</span>
+                  </h3>
+                  <button
+                    onClick={() => dispatch({ type: 'START_EDITING_UNITS' })}
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Manage Units
+                  </button>
+                </div>
+
+                {formState.subModule.units?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {formState.subModule.units.map(unit => (
+                      <div
+                        key={unit.id}
+                        className={`bg-white p-5 rounded-lg border ${formState.unit?.id === unit.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-300'} shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer`}
+                        onClick={() => dispatch({ type: 'SET_UNIT', payload: unit })}
+                      >
+                        <h3 className="font-semibold text-lg text-gray-800 mb-2">{unit.name}</h3>
+                        {unit.description && <p className="text-gray-600">{unit.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-yellow-700">
+                          No units added yet. Click "Manage Units" to add some.
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="alert alert-info">
-                  <div>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span>No units added yet. Click "Manage Units" to add some.</span>
                   </div>
-                </div>
+                )}
+              </div>
+            )
+          )}
+
+          {/* File Upload Section */}
+          {formState.unit && (
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Upload Learning Material</h3>
+              <FileUploader onFileSelect={(file) => dispatch({ type: 'SET_FILE', payload: file })} />
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex flex-col-reverse sm:flex-row justify-between items-center pt-6 border-t border-gray-200 gap-4">
+            <div>
+              {formState.module && (
+                <button
+                  onClick={() => {
+                    if (formState.unit) {
+                      dispatch({ type: 'SET_UNIT', payload: null });
+                    } else if (formState.subModule) {
+                      dispatch({ type: 'SET_SUBMODULE', payload: null });
+                    } else if (formState.isEditingSubmodules) {
+                      dispatch({ type: 'RESET' });
+                    }
+                  }}
+                  className="flex items-center px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition duration-150"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                  </svg>
+                  Back
+                </button>
               )}
             </div>
-          )
-        )}
-        <div className="flex justify-between pt-6 border-t">
-          <div>
-            {formState.module && (
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <button
                 onClick={() => {
-                  if (formState.unit) {
-                    dispatch({ type: 'SET_UNIT', payload: null });
-                  } else if (formState.subModule) {
-                    dispatch({ type: 'SET_SUBMODULE', payload: null });
-                  } else if (formState.isEditingSubmodules) {
-                    dispatch({ type: 'RESET' });
-                  }
+                  Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You'll lose all your current progress.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes, start over',
+                    cancelButtonText: 'Cancel'
+                  }).then((result) => {
+                    if (result.isConfirmed) {
+                      dispatch({ type: 'RESET' });
+                    }
+                  });
                 }}
-                className="btn btn-ghost"
-              >
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-                Back
-              </button>
-            )}
-          </div>
-
-          <div className="flex space-x-2">
-            <button
-              onClick={() => dispatch({ type: 'RESET' })}
-              className="btn btn-outline"
-              disabled={isSubmitting}
-            >
-              Start Over
-            </button>
-            {formState.unit && formState.fileData && (
-              <button
-                onClick={handleSubmit}
-                className="btn btn-primary px-8"
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <span className="loading loading-spinner"></span>
-                    Uploading Content...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                    </svg>
-                    Submit Content
-                  </>
-                )}
+                Start Over
               </button>
-            )}
+              {formState.unit && formState.fileData && (
+                <button
+                  onClick={handleSubmit}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out flex items-center justify-center"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                      </svg>
+                      Submit Content
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -475,4 +564,4 @@ const LearningMaterialManager = () => {
   );
 };
 
-export default LearningMaterialManager;
+export default LearningMaterialManager; 
