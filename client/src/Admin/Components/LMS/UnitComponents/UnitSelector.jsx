@@ -5,11 +5,13 @@ import ApiContext from '../../../../context/ApiContext';
 import Swal from 'sweetalert2';
 
 const UnitSelector = ({ subModule, selectedUnit, onSelectUnit }) => {
-  const [units, setUnits] = useState([]);
+  // const [units, setUnits] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const { fetchData } = useContext(ApiContext);
+    const units = subModule?.units || [];
+
 
   // Fetch units when subModule changes
   // useEffect(() => {
@@ -65,11 +67,12 @@ const UnitSelector = ({ subModule, selectedUnit, onSelectUnit }) => {
       image: newUnit.image,
       subModuleId: subModule.id
     };
-    setUnits(prev => [...prev, createdUnit]);
-    onSelectUnit(createdUnit);
+    
+    // Call parent handler with the subModuleId and new unit
+    onSelectUnit(subModule.id, createdUnit);
     setIsCreating(false);
   };
-
+  
   return (
     <div className="card bg-base-100 shadow">
       <div className="card-body">

@@ -58,15 +58,17 @@ const SubModuleSelector = ({ module, selectedSubModule, onSelectSubModule }) => 
   }, [module?.id, fetchData]);
 
   // ... rest of your component remains the same ...
-  const handleSubModuleCreated = (newSubModule) => {
+   const handleSubModuleCreated = (newSubModule) => {
     const createdSubModule = {
       id: newSubModule.id || Date.now(),
       name: newSubModule.name,
       description: newSubModule.description,
       image: newSubModule.image,
-      moduleId: module.id
+      moduleId: module.id,
+      units: [] // Initialize with empty units array
     };
-    setSubModules(prev => [...prev, createdSubModule]);
+    
+    // Call parent handler
     onSelectSubModule(createdSubModule);
     setIsCreating(false);
   };
