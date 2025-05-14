@@ -85,53 +85,60 @@ console.log(user.UserID);
     }
   };
 
-  export const getEvent = async (req, res) => {
+    export const getEvent = async (req, res) => {
     let success = false;
     try {
-      connectToDatabase(async (err, conn) => {
-        if (err) {
-          const errorMessage = "Failed to connect to database";
-          logError(err);
-          res
-            .status(500)
-            .json({ success: false, data: err, message: errorMessage });
-          return;
-        }
-        try {
-          const EventWorkshopGetQuery = `SELECT CE.EventID, CE.EventTitle, CE.AuthAdd AS UserName, CE.StartDate, CE.EndDate, CE.Host, ET.ddValue AS EventType,  CE.Venue, CE.RegistrationLink, CE.EventDescription, C.ddValue AS Category, CE.AddOnDt AS timestamp, CE.EventImage, CE.Status, CE.UserID, CE.AdminRemark FROM Community_Event CE LEFT JOIN tblDDReferences ET ON CE.EventType = ET.idCode 
-          AND ET.ddCategory = 'eventType' LEFT JOIN tblDDReferences C ON CE.Category = C.idCode AND C.ddCategory = 'eventHost'
-          WHERE ISNULL(CE.delStatus, 0) = 0  
-            ORDER BY CE.AddOnDt DESC;`
-          const EventWorkshopGet = await queryAsync(conn, EventWorkshopGetQuery);
-          
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                const errorMessage = "Failed to connect to database";
+                logError(err);
+                res
+                    .status(500)
+                    .json({ success: false, data: err, message: errorMessage });
+                return;
+            }
+            try {
+                const EventWorkshopGetQuery = `SELECT CE.EventID, CE.EventTitle, CE.AuthAdd AS UserName, CE.StartDate, CE.EndDate, CE.Host, ET.ddValue AS EventType,  CE.Venue, CE.RegistrationLink, CE.EventDescription, C.ddValue AS Category, CE.AddOnDt AS timestamp, CE.EventImage, CE.Status, CE.UserID, CE.AdminRemark FROM Community_Event CE LEFT JOIN tblDDReferences ET ON CE.EventType = ET.idCode 
+                AND ET.ddCategory = 'eventType' LEFT JOIN tblDDReferences C ON CE.Category = C.idCode AND C.ddCategory = 'eventHost'
+                WHERE ISNULL(CE.delStatus, 0) = 0  
+                ORDER BY CE.AddOnDt DESC;`;
+                
+                const EventWorkshopGet = await queryAsync(conn, EventWorkshopGetQuery);
+                
+                // Get total count of events
+                const countQuery = `SELECT COUNT(*) AS totalCount FROM Community_Event WHERE ISNULL(delStatus, 0) = 0`;
+                const countResult = await queryAsync(conn, countQuery);
+                const totalCount = countResult[0].totalCount;
 
-          success = true;
-          closeConnection();
-          const infoMessage = "Event and Workshop Got Successfully";
-          logInfo(infoMessage);
-          res
-            .status(200)
-            .json({ success, data: EventWorkshopGet, message: infoMessage });
-        } catch (queryErr) {
-          logError(queryErr);
-          closeConnection();
-          res.status(500).json({
-            success: false,
-            data: queryErr,
-            message: "Something went wrong please try again",
-          });
-        }
-      });
+                success = true;
+                closeConnection();
+                const infoMessage = "Event and Workshop Got Successfully";
+                logInfo(infoMessage);
+                res.status(200).json({ 
+                    success, 
+                    data: EventWorkshopGet, 
+                    totalCount,  // Add totalCount to response
+                    message: infoMessage 
+                });
+            } catch (queryErr) {
+                logError(queryErr);
+                closeConnection();
+                res.status(500).json({
+                    success: false,
+                    data: queryErr,
+                    message: "Something went wrong please try again",
+                });
+            }
+        });
     } catch (error) {
-      logError(error);
-      res.status(500).json({
-        success: false,
-        data: {},
-        message: "Something went wrong please try again",
-      });
+        logError(error);
+        res.status(500).json({
+            success: false,
+            data: {},
+            message: "Something went wrong please try again",
+        });
     }
-  };
-
+};
 
   // export const updateEvent = async (req, res) => {
   //   let success = false;

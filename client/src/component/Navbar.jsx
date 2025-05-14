@@ -74,15 +74,13 @@ const Navbar = () => {
 
     const getProfileImage = () => {
         if (user?.ProfilePicture) {
-            // Add timestamp to prevent caching
-            const timestamp = new Date().getTime();
-            if (user.ProfilePicture.startsWith('data:image') || 
-                user.ProfilePicture.startsWith('http') || 
-                user.ProfilePicture.startsWith('/')) {
-                return `${user.ProfilePicture}?${timestamp}`;
+            // Add cache-busting parameter only if the image is not a data URL
+            if (!user.ProfilePicture.startsWith('data:image')) {
+                return `${user.ProfilePicture}?${new Date().getTime()}`;
             }
+            return user.ProfilePicture;
         }
-        return `${images.defaultProfile}?${new Date().getTime()}`;
+        return images.defaultProfile;
     };
 
     return (
@@ -142,9 +140,8 @@ const Navbar = () => {
                                 className='h-8 w-8 md:h-10 md:w-10 rounded-full border-2 cursor-pointer border-DGXgreen object-cover'
                                 onClick={toggleDropdown}
                                 onError={(e) => {
-                                    e.target.src = `${images.defaultProfile}?${new Date().getTime()}`;
+                                    e.target.src = images.defaultProfile;
                                 }}
-                                key={user?.ProfilePicture} // Add key to force re-render when image changes
                             />
                             {isDropdownOpen && (
                                 <div className="relative">
@@ -200,7 +197,7 @@ const Navbar = () => {
                                         alt="User"
                                         className='h-8 w-8 rounded-full border-2 border-white object-cover'
                                         onError={(e) => {
-                                            e.target.src = `${images.defaultProfile}?${new Date().getTime()}`;
+                                            e.target.src = images.defaultProfile;
                                         }}
                                     />
                                 </div>

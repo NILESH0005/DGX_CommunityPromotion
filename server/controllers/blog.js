@@ -240,60 +240,91 @@ export const blogpost = async (req, res) => {
 // }
 
 export const getBlog = async (req, res) => {
-  let success = false;
-  const userId = req.user?.id;
-
-  if (!userId) {
-    return res.status(400).json({ success, data: {}, message: "User ID not found. Please login." });
-  }
-
-  try {
-    connectToDatabase(async (err, conn) => {
-      if (err) {
-        logError("Failed to connect to database");
-        return res.status(500).json({ success, data: err, message: "Failed to connect to database" });
-      }
-
-      try {
-        const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
-        const userRows = await queryAsync(conn, userQuery, [userId]);
-
-        let conditionParam = "";
-
-        if (userRows.length > 0) {
+    let success = false;
+    const userId = req.user?.id;
+  
+    if (!userId) {
+      return res.status(400).json({ success, data: {}, message: "User ID not found. Please login." });
+    }
+  
+    try {
+      connectToDatabase(async (err, conn) => {
+        if (err) {
+          logError("Failed to connect to database");
+          return res.status(500).json({ success, data: err, message: "Failed to connect to database" });
+        }
+  
+        try {
+          const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+          const userRows = await queryAsync(conn, userQuery, [userId]);
+  
+          if (userRows.length === 0) {
+            closeConnection();
+            return res.status(404).json({ success, data: {}, message: "User not found" });
+          }
+  
           const user = userRows[0];
           const isAdmin = user.isAdmin === 1;
-
+          let conditionParam = "";
+          let userSpecificCondition = `AND UserID = ${user.UserID}`;
+  
           if (!isAdmin) {
             conditionParam = "AND Status = 'Approved'";
+            // Non-admins should see both their own blogs (regardless of status) and approved blogs from others
+            userSpecificCondition = `AND (UserID = ${user.UserID} OR Status = 'Approved')`;
           }
+  
+          // Get total count of blogs for the logged-in user
+          const userBlogCountQuery = `
+            SELECT COUNT(*) AS userBlogCount 
+            FROM Community_Blog 
+            WHERE ISNULL(delStatus, 0) = 0 
+            AND UserID = ${user.UserID}
+          `;
+          const userCountResult = await queryAsync(conn, userBlogCountQuery);
+          const userBlogCount = userCountResult[0].userBlogCount;
+  
+          // Get total count of all visible blogs (for reference)
+          const totalCountQuery = `
+            SELECT COUNT(*) AS totalCount 
+            FROM Community_Blog 
+            WHERE ISNULL(delStatus, 0) = 0 ${conditionParam}
+          `;
+          const totalCountResult = await queryAsync(conn, totalCountQuery);
+          const totalCount = totalCountResult[0].totalCount;
+  
+          // Get blog data with appropriate visibility
+          const BlogQuery = `
+            SELECT BlogID, title, AuthAdd as UserName, author, content, Category as category, publishedDate,
+                   AddOnDt as timestamp, image, UserID, Status, AdminRemark
+            FROM Community_Blog 
+            WHERE ISNULL(delStatus, 0) = 0 ${userSpecificCondition}
+            ORDER BY AddOnDt DESC;
+          `;
+  
+          const BlogGet = await queryAsync(conn, BlogQuery);
+          success = true;
+          closeConnection();
+          logInfo("Blogs fetched successfully");
+  
+          return res.status(200).json({ 
+            success, 
+            data: BlogGet, 
+            // totalCount,        
+            userBlogCount,     // Count of blogs belonging to the logged-in user
+            message: "Blogs fetched successfully" 
+          });
+        } catch (queryErr) {
+          closeConnection();
+          logError("Database Query Error:", queryErr);
+          return res.status(500).json({ success, data: queryErr, message: "Database Query Error" });
         }
-
-        const BlogQuery = `
-          SELECT BlogID, title, AuthAdd as UserName, author, content, Category as category, publishedDate,
-                 AddOnDt as timestamp, image, UserID, Status, AdminRemark
-          FROM Community_Blog 
-          WHERE ISNULL(delStatus, 0) = 0 ${conditionParam}
-          ORDER BY AddOnDt DESC;
-        `;
-
-        const BlogGet = await queryAsync(conn, BlogQuery);
-        success = true;
-        closeConnection();
-        logInfo("Blogs fetched successfully");
-
-        return res.status(200).json({ success, data: BlogGet, message: "Blogs fetched successfully" });
-      } catch (queryErr) {
-        closeConnection();
-        logError("Database Query Error:", queryErr);
-        return res.status(500).json({ success, data: queryErr, message: "Database Query Error" });
-      }
-    });
-  } catch (error) {
-    logError("Unexpected Error:", error);
-    return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
-  }
-};
+      });
+    } catch (error) {
+      logError("Unexpected Error:", error);
+      return res.status(500).json({ success: false, data: error, message: "Unexpected Error, check logs" });
+    }
+  };
 
 
 export const updateBlog = async (req, res) => {
