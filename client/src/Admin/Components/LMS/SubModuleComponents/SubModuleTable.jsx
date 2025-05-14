@@ -3,8 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { motion } from 'framer-motion';
 import { compressImage } from '../../../../utils/compressImage';
 import FileUploader from '../FileUploader';
-import Swal from 'sweetalert2';
-
 
 const SubModuleTable = ({ module = {}, onSave, onCancel, onSelectSubmodule }) => {
     const [subModules, setSubModules] = useState(module.subModules || []);

@@ -33,6 +33,7 @@ import {
 } from "react-icons/fa";
 // import MultiLevelFileUpload from "./Components/LMS/MultiLevelFileUpload";
 import LearningMaterialManager from "./Components/LMS/LearningMaterialManager";
+import ModuleBuilder from "./Components/LMS/ModuleBuilder/ModuleBuilder";
 
 const AdminDashboard = (props) => {
   const [activeComp, setActiveComp] = useState("users");
@@ -87,6 +88,7 @@ const AdminDashboard = (props) => {
         return <Contact />;
       case "select_module":
         return <LearningMaterialManager />;
+        // return <ModuleBuilder />
       default:
         return <Home />;
     }
