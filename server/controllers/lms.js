@@ -3,6 +3,7 @@ import { connectToDatabase, closeConnection } from "../database/mySql.js";
 import { logError, logInfo, logWarning, queryAsync } from "../helper/index.js";
 import multer from 'multer';
 import path from 'path';
+
 const learningMaterialStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/learning-materials');

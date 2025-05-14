@@ -30,7 +30,7 @@ const closeConnection = () => {
         console.error("Error closing the connection:", err);
       } else {
         console.log("Database connection closed.");
-        connection = null; // Reset connection
+        connection = null; 
       }
     });
   }
