@@ -151,46 +151,43 @@ const BlogPage = () => {
     }
   ];
 
-  useEffect(() => {
-    // Simulating API call with timeout
-    const fetchBlogs = async () => {
-      try {
-        setLoading(true);
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Use dummy data instead of API call
-        setBlogs(dummyBlogs);
-        
-      } catch (error) {
-        console.error("Blog fetch error:", error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Connection Error',
-          text: 'Failed to load blog data'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+                useEffect(() => {
+                    try {
+                        const fetchBlogs = () => {
+                            try {
+                                const endpoint = "blog/getBlog";
+                                const method = "POST";
+                                const headers = {
+                                    'Content-Type': 'application/json',
+                                    'auth-token': userToken
+                                };
+                                console.log("toookkkeeenn:", userToken)
 
-    fetchBlogs();
-  }, [fetchData, userToken]);
-
-  useEffect(() => {
-    // Simulating categories fetch
-    const fetchCategories = async () => {
-      try {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Use dummy categories instead of API call
-        setCategories(dummyCategories);
-        
-      } catch (error) {
-        console.error("Category fetch error:", error);
-      }
-    };
+                                setLoading(true);
+                                fetchData(endpoint, method, headers)
+                                    .then(result => {
+                                        if (result && result.data) {
+                                            return result.data;
+                                        } else {
+                                            throw new Error("Invalid data format");
+                                        }
+                                    })
+                                    .then((data) => {
+                                        console.log(data);
+                                        setBlogs(data)
+                                    })
+                                    .catch(error => {
+                                        setLoading(false);
+                                        console.error(`Something went wrong: ${error.message}`);
+                                    });
+                            } catch (error) {
+                                console.log(error)
+                            }
+                        };
+                        fetchBlogs()
+                    } catch (error) {
+                        console.log(error)
+                    }
 
     fetchCategories();
   }, [fetchData, userToken]);

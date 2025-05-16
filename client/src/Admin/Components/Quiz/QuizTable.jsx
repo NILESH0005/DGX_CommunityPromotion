@@ -111,6 +111,7 @@ const QuizTable = () => {
 
   const fetchQuizzes = async () => {
     try {
+      console.log("token is ", userToken);
       const endpoint = "quiz/getQuizzes";
       const method = "GET";
       const headers = {

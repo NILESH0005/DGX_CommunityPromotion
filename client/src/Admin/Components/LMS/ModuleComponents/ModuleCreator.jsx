@@ -33,10 +33,9 @@ const ModuleCreator = ({ onCreate, onCancel, existingModules = [] }) => {
       }
 
       const module = {
-        id: uuidv4(),
-        name: newModule.name.trim(),
-        description: newModule.description.trim(),
-        banner: compressedBanner,
+        ModuleName: newModule.name.trim(),
+        ModuleImage: compressedBanner,
+        ModuleDescription: newModule.description.trim(),
         subModules: [],
         createdAt: new Date().toISOString()
       };
