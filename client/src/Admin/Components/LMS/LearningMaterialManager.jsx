@@ -4,6 +4,9 @@ import Swal from "sweetalert2";
 import ModuleComponent from './ModuleComponent';
 import SubModuleComponent from './SubModuleComponent';
 import UnitComponent from './UnitComponent';
+import { v4 as uuidv4 } from 'uuid';
+import { compressImage } from '../../../utils/compressImage';
+
 
 const initialState = {
   module: null,
@@ -13,6 +16,16 @@ const initialState = {
   isCreatingModule: false,
   isEditingSubmodules: false,
   isEditingUnits: false
+};
+
+const hasUploadedFiles = (module) => {
+  if (!module || !module.subModules) return false;
+
+  return module.subModules.some(subModule =>
+    subModule.units?.some(unit =>
+      unit.files && unit.files.length > 0
+    )
+  );
 };
 
 const formReducer = (state, action) => {
@@ -104,12 +117,104 @@ const formReducer = (state, action) => {
   }
 };
 
-const   LearningMaterialManager = () => {
-  const { fetchData } = useContext(ApiContext);
+const LearningMaterialManager = () => {
+  const { fetchData, user, userToken } = useContext(ApiContext);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formState, dispatch] = useReducer(formReducer, initialState);
+  const [error, setError] = useState(null);
 
-  // Load saved data from localStorage
+
+  const getCurrentDateTime = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const transformForBackend = async (moduleData) => {
+    const currentUser = user?.username || 'system';
+    const now = getCurrentDateTime();
+
+    // Validate required fields
+    if (!moduleData?.ModuleName || !moduleData?.subModules) {
+      throw new Error("Module name and at least one submodule are required");
+    }
+
+    // Convert module image to base64 if it exists
+    let moduleImageBase64 = moduleData.ModuleImage;
+    if (moduleData.ModuleImage instanceof File) {
+      moduleImageBase64 = await compressImage(moduleData.ModuleImage);
+    }
+
+    // Process submodules
+    const processedSubModules = await Promise.all(
+      moduleData.subModules.map(async (subModule) => {
+        if (!subModule.SubModuleName) {
+          throw new Error("SubModule name is required");
+        }
+
+        let subModuleImageBase64 = subModule.SubModuleImage;
+        if (subModule.SubModuleImage instanceof File) {
+          subModuleImageBase64 = await compressImage(subModule.SubModuleImage);
+        }
+
+        // Process units with safe UnitImg handling
+        const processedUnits = await Promise.all(
+          (subModule.units || []).map(async (unit) => {
+            if (!unit.UnitName) {
+              throw new Error("Unit name is required");
+            }
+
+            // Handle UnitImg - can be File, string (base64), null, or undefined
+            let unitImageBase64 = '';
+            if (unit.UnitImg instanceof File) {
+              unitImageBase64 = await compressImage(unit.UnitImg);
+            } else if (unit.UnitImg) {
+              // If it's not a File but has value, assume it's already base64 string
+              unitImageBase64 = unit.UnitImg;
+            }
+            // else case: unitImageBase64 remains empty string
+
+            return {
+              UnitName: unit.UnitName,
+              UnitImg: unitImageBase64, // Will be empty string if no image
+              UnitDescription: unit.UnitDescription || "",
+              AuthAdd: currentUser,
+              AddOnDt: now,
+              editOnDt: now,
+              delStatus: 0,
+              Files: (unit.files || []).map(file => ({
+                FilesName: file.originalName || `file_${Date.now()}`,
+                FilePath: file.filePath || '',
+                FileType: file.fileType || '',
+                AuthAdd: currentUser,
+                AddOnDt: now,
+                editOnDt: now,
+                delStatus: 0
+              }))
+            };
+          })
+        );
+
+        return {
+          SubModuleName: subModule.SubModuleName,
+          SubModuleImage: subModuleImageBase64 || '',
+          SubModuleDescription: subModule.SubModuleDescription || "",
+          AuthAdd: currentUser,
+          AddOnDt: now,
+          editOnDt: now,
+          delStatus: 0,
+          Units: processedUnits
+        };
+      })
+    );
+
+    return {
+      ModuleName: moduleData.ModuleName,
+      ModuleImage: moduleImageBase64 || '',
+      ModuleDescription: moduleData.ModuleDescription || "",
+      AuthAdd: currentUser,
+      AddOnDt: now,
+      editOnDt: now,
+      delStatus: 0,
+      SubModules: processedSubModules
+    };
+  };
+
   useEffect(() => {
     const savedData = localStorage.getItem('learningMaterials');
     if (savedData) {
@@ -122,7 +227,27 @@ const   LearningMaterialManager = () => {
   }, []);
 
   const saveToLocalStorage = (moduleData) => {
-    const dataToSave = { module: moduleData };
+    const dataToSave = {
+      module: {
+        id: moduleData.id || uuidv4(),
+        ModuleName: moduleData.ModuleName,
+        ModuleImage: moduleData.ModuleImage,
+        ModuleDescription: moduleData.ModuleDescription,
+        subModules: moduleData.subModules.map(subModule => ({
+          id: subModule.id || uuidv4(),
+          SubModuleName: subModule.SubModuleName,
+          SubModuleImage: subModule.SubModuleImage,
+          SubModuleDescription: subModule.SubModuleDescription,
+          units: subModule.units.map(unit => ({
+            id: unit.id || uuidv4(),
+            UnitName: unit.UnitName,
+            UnitImg: unit.UnitImg,
+            UnitDescription: unit.UnitDescription,
+            files: unit.files || []
+          }))
+        }))
+      }
+    };
     localStorage.setItem('learningMaterials', JSON.stringify(dataToSave));
   };
 
@@ -138,11 +263,15 @@ const   LearningMaterialManager = () => {
       formData.append('file', formState.fileData);
       formData.append('unitId', formState.unit.id);
       formData.append('moduleId', formState.module.id);
+
       if (formState.subModule) {
         formData.append('subModuleId', formState.subModule.id);
       }
 
-      const response = await fetchData(
+      // Add auth info
+      formData.append('authUser', user?.username || 'system');
+
+      const uploadResponse = await fetchData(
         'lms/upload-learning-material',
         'POST',
         formData,
@@ -150,14 +279,182 @@ const   LearningMaterialManager = () => {
         true
       );
 
-      if (response.success) {
+      if (uploadResponse.success) {
+        const updatedModule = {
+          ...formState.module,
+          subModules: formState.module.subModules.map(subModule => {
+            if (formState.subModule && subModule.id === formState.subModule.id) {
+              return {
+                ...subModule,
+                units: subModule.units.map(unit => {
+                  if (unit.id === formState.unit.id) {
+                    return {
+                      ...unit,
+                      files: [
+                        ...(unit.files || []),
+                        {
+                          id: uuidv4(),
+                          originalName: uploadResponse.file.originalName,
+                          filePath: uploadResponse.file.filePath,
+                          fileType: uploadResponse.file.fileType,
+                          fileSize: uploadResponse.file.fileSize,
+                          uploadedAt: getCurrentDateTime()
+                        }
+                      ]
+                    };
+                  }
+                  return unit;
+                })
+              };
+            }
+            return subModule;
+          })
+        };
+
+        saveToLocalStorage(updatedModule);
+        dispatch({ type: 'SET_MODULE', payload: updatedModule });
+
         Swal.fire('Success', 'Learning material uploaded successfully', 'success');
-        saveToLocalStorage(formState.module);
       } else {
-        throw new Error(response.message || 'Upload failed');
+        throw new Error(uploadResponse.message || 'Upload failed');
       }
     } catch (error) {
       Swal.fire('Error', error.message || 'Failed to upload file', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // const handleSubmitAllData = async () => {
+  //   if (!formState.module) {
+  //     Swal.fire('Error', 'No module data to submit', 'error');
+  //     return;
+  //   }
+
+  //   if (!userToken) {
+  //     Swal.fire('Error', 'Authentication token missing. Please log in again.', 'error');
+  //     return;
+  //   }
+
+  //   setIsSubmitting(true);
+  //   setError(null);
+
+  //   try {
+  //     const savedData = JSON.parse(localStorage.getItem('learningMaterials'));
+  //     if (!savedData?.module) {
+  //       throw new Error("No module data found in local storage");
+  //     }
+
+  //     const payload = await transformForBackend(savedData.module);
+  //     console.log("Processed payload:", payload);
+
+  //     if (!payload.ModuleName || !Array.isArray(payload.SubModules)) {
+  //       throw new Error("Invalid module structure - missing required fields");
+  //     }
+  //     console.log("tttookkkeeen", userToken)
+  //     const endpoint = "lms/save-learning-materials";
+  //     const body = JSON.stringify(payload)
+  //     const method = "POST";
+  //     const headers = {
+  //       // 'Content-Type': 'application/json',
+  //       'auth-token': userToken
+  //     };
+
+
+  //     // Stringify the payload before sending
+  //     const response = await fetchData(
+  //       endpoint,
+  //       method,
+  //       body, // Stringify here
+  //       headers
+  //     );
+
+  //     if (!response) {
+  //       throw new Error("No response received from server");
+  //     }
+
+  //     if (response.success) {
+  //       Swal.fire('Success', 'All learning materials submitted successfully', 'success');
+  //       localStorage.removeItem('learningMaterials');
+  //       dispatch({ type: 'RESET' });
+  //     } else {
+  //       throw new Error(response.message || "Submission failed");
+  //     }
+  //   } catch (error) {
+  //     console.error("Detailed submission error:", error);
+  //     setError(error.message);
+  //     Swal.fire('Error', error.message || 'Failed to submit learning materials', 'error');
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
+
+  const handleSubmitAllData = async () => {
+    if (!formState.module) {
+      Swal.fire('Error', 'No module data to submit', 'error');
+      return;
+    }
+
+    if (!userToken) {
+      Swal.fire('Error', 'Authentication token missing. Please log in again.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const savedData = JSON.parse(localStorage.getItem('learningMaterials'));
+      if (!savedData?.module) {
+        throw new Error("No module data found in local storage");
+      }
+
+      const payload = await transformForBackend(savedData.module);
+      console.log("Processed payload for submission:", payload);
+
+      // Additional validation
+      if (!payload.ModuleName || !Array.isArray(payload.SubModules)) {
+        throw new Error("Invalid module structure - missing required fields");
+      }
+
+      // Validate each submodule and unit
+      payload.SubModules.forEach(subModule => {
+        if (!subModule.SubModuleName) {
+          throw new Error("SubModule name is required");
+        }
+        subModule.Units.forEach(unit => {
+          if (!unit.UnitName) {
+            throw new Error("Unit name is required");
+          }
+        });
+      });
+
+      const response = await fetchData(
+        'lms/save-learning-materials',
+        'POST',
+        payload, // Send as object, let fetchData handle stringification
+        {
+          'Content-Type': 'application/json',
+          'auth-token': userToken
+        }
+      );
+
+      if (!response) {
+        throw new Error("No response received from server");
+      }
+
+      if (response.success) {
+        Swal.fire('Success', 'All learning materials submitted successfully', 'success');
+        localStorage.removeItem('learningMaterials');
+        dispatch({ type: 'RESET' });
+      } else {
+        throw new Error(response.message || "Submission failed");
+      }
+    } catch (error) {
+      console.error("Detailed submission error:", error);
+      setError(error.message);
+      Swal.fire('Error', error.message || 'Failed to submit learning materials', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -198,13 +495,13 @@ const   LearningMaterialManager = () => {
 
       <div className="space-y-6">
         {formState.isCreatingModule ? (
-          <ModuleComponent 
+          <ModuleComponent
             mode="create"
             onCancel={() => dispatch({ type: 'RESET' })}
             onCreate={handleModuleCreated}
           />
         ) : !formState.module ? (
-          <ModuleComponent 
+          <ModuleComponent
             mode="empty"
             onCreateModule={() => dispatch({ type: 'START_CREATING_MODULE' })}
           />
@@ -272,20 +569,25 @@ const   LearningMaterialManager = () => {
             >
               Start Over
             </button>
-            {formState.unit && formState.fileData && (
+
+            {/* Show different buttons based on state */}
+            {formState.unit && formState.fileData ? (
               <button
                 onClick={handleSubmit}
-                className="px-6 py-2 bg-DGXblue text-white rounded-md hover:bg-blue-600 transition"
+                className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <span className="loading loading-spinner"></span>
-                    Uploading...
-                  </>
-                ) : 'Submit Content'}
+                {isSubmitting ? 'Uploading...' : 'Upload File'}
               </button>
-            )}
+            ) : formState.module && hasUploadedFiles(formState.module) ? (
+              <button
+                onClick={handleSubmitAllData}
+                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit All Content'}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

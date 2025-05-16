@@ -33,6 +33,8 @@ import {
 } from "react-icons/fa";
 // import MultiLevelFileUpload from "./Components/LMS/MultiLevelFileUpload";
 import LearningMaterialManager from "./Components/LMS/LearningMaterialManager";
+import LearningMaterialList from "./Components/LMS/LearningMaterialList";
+
 import ModuleBuilder from "./Components/LMS/ModuleBuilder/ModuleBuilder";
 
 const AdminDashboard = (props) => {
@@ -87,8 +89,14 @@ const AdminDashboard = (props) => {
       case "contact":
         return <Contact />;
       case "select_module":
-        return <LearningMaterialManager />;
-        // return <ModuleBuilder />
+  return (
+    <div className="space-y-8">
+      <LearningMaterialManager />
+      {/* <LearningMaterialList /> */}
+    </div>
+  );
+
+      // return <ModuleBuilder />
       default:
         return <Home />;
     }
@@ -136,8 +144,8 @@ const AdminDashboard = (props) => {
             <li>
               <div
                 className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "discussions"
-                    ? "bg-gray-700 text-yellow-300"
-                    : ""
+                  ? "bg-gray-700 text-yellow-300"
+                  : ""
                   }`}
                 onClick={() => handleMenuItemClick("discussions")}
               >
@@ -158,8 +166,8 @@ const AdminDashboard = (props) => {
             <li>
               <div
                 className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "blog_manager"
-                    ? "bg-gray-700 text-yellow-300"
-                    : ""
+                  ? "bg-gray-700 text-yellow-300"
+                  : ""
                   }`}
                 onClick={() => handleMenuItemClick("blog_manager")}
               >
@@ -171,8 +179,8 @@ const AdminDashboard = (props) => {
             <li className="relative group">
               <div
                 className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${["quizpanel", "quiz_bank", "quiz_mapping", "quiz_settings"].includes(activeComp)
-                    ? "bg-gray-700 text-yellow-300"
-                    : ""
+                  ? "bg-gray-700 text-yellow-300"
+                  : ""
                   }`}
               >
                 <FaBrain className="mr-4" />
@@ -183,8 +191,8 @@ const AdminDashboard = (props) => {
                 <li>
                   <div
                     className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "quizpanel"
-                        ? "bg-gray-700 text-yellow-300"
-                        : ""
+                      ? "bg-gray-700 text-yellow-300"
+                      : ""
                       }`}
                     onClick={() => handleMenuItemClick("quizpanel")}
                   >
@@ -195,8 +203,8 @@ const AdminDashboard = (props) => {
                 <li>
                   <div
                     className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "quiz_bank"
-                        ? "bg-gray-700 text-yellow-300"
-                        : ""
+                      ? "bg-gray-700 text-yellow-300"
+                      : ""
                       }`}
                     onClick={() => handleMenuItemClick("quiz_bank")}
                   >
@@ -207,8 +215,8 @@ const AdminDashboard = (props) => {
                 <li>
                   <div
                     className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "quiz_mapping"
-                        ? "bg-gray-700 text-yellow-300"
-                        : ""
+                      ? "bg-gray-700 text-yellow-300"
+                      : ""
                       }`}
                     onClick={() => handleMenuItemClick("quiz_mapping")}
                   >
@@ -219,8 +227,8 @@ const AdminDashboard = (props) => {
                 <li>
                   <div
                     className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "quiz_settings"
-                        ? "bg-gray-700 text-yellow-300"
-                        : ""
+                      ? "bg-gray-700 text-yellow-300"
+                      : ""
                       }`}
                     onClick={() => handleMenuItemClick("quiz_settings")}
                   >
@@ -235,8 +243,8 @@ const AdminDashboard = (props) => {
             <li className="relative group">
               <div
                 className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${["select_module"].includes(activeComp)
-                    ? "bg-gray-700 text-yellow-300"
-                    : ""
+                  ? "bg-gray-700 text-yellow-300"
+                  : ""
                   }`}
               >
                 <FaGraduationCap className="mr-4" />
@@ -247,8 +255,8 @@ const AdminDashboard = (props) => {
                 <li>
                   <div
                     className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "select_module"
-                        ? "bg-gray-700 text-yellow-300"
-                        : ""
+                      ? "bg-gray-700 text-yellow-300"
+                      : ""
                       }`}
                     onClick={() => handleMenuItemClick("select_module")}
                   >
@@ -263,8 +271,8 @@ const AdminDashboard = (props) => {
             <li>
               <div
                 className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "guidelines"
-                    ? "bg-gray-700 text-yellow-300"
-                    : ""
+                  ? "bg-gray-700 text-yellow-300"
+                  : ""
                   }`}
                 onClick={() => handleMenuItemClick("guidelines")}
               >

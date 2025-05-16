@@ -29,7 +29,9 @@
                                 const method = "POST";
                                 const headers = {
                                     'Content-Type': 'application/json',
+                                    'auth-token': userToken
                                 };
+                                console.log("toookkkeeenn:", userToken)
 
                                 setLoading(true);
                                 fetchData(endpoint, method, headers)
