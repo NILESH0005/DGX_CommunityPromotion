@@ -1,4 +1,3 @@
-
 const BASE_URL = import.meta.env.VITE_API_BASEURL
 // const BASE_URL = "http://192.168.209.47:8000/"
 
