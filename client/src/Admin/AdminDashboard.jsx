@@ -89,14 +89,9 @@ const AdminDashboard = (props) => {
       case "contact":
         return <Contact />;
       case "select_module":
-  return (
-    <div className="space-y-8">
-      <LearningMaterialManager />
-      {/* <LearningMaterialList /> */}
-    </div>
-  );
-
-      // return <ModuleBuilder />
+        return <LearningMaterialManager />;
+      case "edit_module":
+        return <LearningMaterialList/>
       default:
         return <Home />;
     }
@@ -264,7 +259,18 @@ const AdminDashboard = (props) => {
                     Upload learning Kit
                   </div>
                 </li>
-                {/* Add more LMS submenu items here as needed */}
+                <li>
+                  <div
+                    className={`py-2 px-6 cursor-pointer flex items-center text-base md:text-lg ${activeComp === "edit_module"
+                      ? "bg-gray-700 text-yellow-300"
+                      : ""
+                      }`}
+                    onClick={() => handleMenuItemClick("edit_module")}
+                  >
+                    <FaLayerGroup className="mr-4" />
+                    Edit Existing Module
+                  </div>
+                </li>
               </ul>
             </li>
 
