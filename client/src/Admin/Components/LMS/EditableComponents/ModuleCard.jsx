@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useContext } from "react";
 import ApiContext from "../../../../context/ApiContext";
 import SubModuleCard from "./SubModuleCard.jsx";
+import ByteArrayImage from "../../../../utils/ByteArrayImage.jsx";
 
 const ModuleCard = ({ module }) => {
   const [expanded, setExpanded] = useState(false);
   const [subModules, setSubModules] = useState([]);
   const [loading, setLoading] = useState(false);
   const { fetchData } = useContext(ApiContext);
+console.log(module);
 
   const handleToggle = async () => {
     setExpanded(!expanded);
@@ -14,6 +16,7 @@ const ModuleCard = ({ module }) => {
     if (!expanded && subModules.length === 0) {
       setLoading(true);
       const response = await fetchData(`lms/getSubModules?moduleId=${module.ModuleID}`, "GET");
+      console.log("response is", response)
       if (response?.success) {
         setSubModules(response.data);
       }
@@ -26,13 +29,9 @@ const ModuleCard = ({ module }) => {
       <div className="cursor-pointer" onClick={handleToggle}>
         <div className="h-40 bg-gray-100 overflow-hidden">
           {module.ModuleImage ? (
-            <img
-              src={`data:image/jpeg;base64,${module.ModuleImage}`}
-              alt={module.ModuleName}
-              className="object-cover w-full h-full"
-            />
+            <ByteArrayImage byteArray={module.ModuleImage.data} />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+            <div className="flex items-center justify-center text-gray-400 text-sm">
               No Image
             </div>
           )}

@@ -1,6 +1,7 @@
 import { upload } from '../config/multerConfig.js';
 import { queryAsync, mailSender, logError, logInfo, logWarning } from '../helper/index.js';
 import { connectToDatabase, closeConnection } from '../database/mySql.js';
+import { log } from 'console';
 
 
 
@@ -69,16 +70,19 @@ export class LMS {
   }
 
   static async saveLearningMaterials(req, res) {
-    if (!req.body || !req.body.ModuleName || !req.body.SubModules) {
+    if (!req.body) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields in request body'
+        message: 'Missing required fields in request body',
+        data: req.body
       });
     }
 
-    const { ModuleName, ModuleImage, ModuleDescription, SubModules } = req.body;
+    const { ModuleName, ModuleImage, ModuleDescription, subModules } = req.body.module;
     const userEmail = req.user.id;
+    
     const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    
     let conn;
 
     try {
@@ -102,6 +106,7 @@ export class LMS {
     `;
       const userRows = await queryAsync(conn, userQuery, [userEmail]);
 
+
       if (userRows.length === 0) {
         throw new Error("User not found, please login first.");
       }
@@ -111,22 +116,28 @@ export class LMS {
       INSERT INTO ModulesDetails 
       (ModuleName, ModuleImage, ModuleDescription, AuthAdd, AddOnDt, delStatus) 
       OUTPUT INSERTED.ModuleID
-      VALUES (?, ?, ?, ?, ?, 0)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
+    console.log(req.body);
+    
       const moduleResult = await queryAsync(conn, moduleInsertQuery, [
         ModuleName,
-        ModuleImage ? Buffer.from(ModuleImage, 'base64') : null,
+        // ModuleImage ? Buffer.from(ModuleImage, 'base64') : null,
+        ModuleImage ? Buffer.from(ModuleImage.split(',')[1], 'base64') : null,
         ModuleDescription || null,
         user.Name,
-        currentDateTime
+        currentDateTime,
+        0
       ]);
 
       if (!moduleResult || moduleResult.length === 0) {
         throw new Error('Failed to insert module - no ID returned');
       }
       const moduleId = moduleResult[0].ModuleID;
-
-      for (const subModule of SubModules) {
+      console.log("Success in Module Query : Module ID - ", moduleId);
+      console.log("Submodule here :- ", subModules);
+      
+      for (const subModule of subModules) {
         const subModuleInsertQuery = `
         INSERT INTO SubModulesDetails 
         (SubModuleName, SubModuleImage, SubModuleDescription, ModuleID, AuthAdd, AddOnDt, delStatus) 
@@ -146,6 +157,7 @@ export class LMS {
           throw new Error('Failed to insert submodule - no ID returned');
         }
         const subModuleId = subModuleResult[0].SubModuleID;
+      console.log("Success in submodule Query : sub Module ID - ", subModuleId);
 
         for (const unit of subModule.Units || []) {
           const unitInsertQuery = `
@@ -184,6 +196,7 @@ export class LMS {
                 user.Name,
                 currentDateTime
               ]);
+              console.log("Success in unit Query ");
             }
           }
         }
@@ -214,6 +227,4 @@ export class LMS {
       });
     }
   }
-
-
 }
