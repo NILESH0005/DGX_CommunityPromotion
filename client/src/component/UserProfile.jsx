@@ -39,7 +39,6 @@ const UserProfile = (props) => {
   const [selectedDiscussion, setSelectedDiscussion] = useState([]);
   const [profileImage, setProfileImage] = useState(null);
 
-  // Fetch profile image when user data changes
   useEffect(() => {
     if (user?.ProfilePicture) {
       const fetchProfileImage = async () => {
@@ -65,10 +64,8 @@ const UserProfile = (props) => {
 
   const handleImageChange = (eventOrUrl) => {
     if (typeof eventOrUrl === 'string') {
-      // Direct URL case
       setBackgroundImage(eventOrUrl);
     } else if (eventOrUrl.target && eventOrUrl.target.files) {
-      // Event object case
       const file = eventOrUrl.target.files[0];
       if (file) {
         const imageUrl = URL.createObjectURL(file);
@@ -175,7 +172,7 @@ const UserProfile = (props) => {
           setLoading(true);
           fetchData(endpoint, method, body, headers)
             .then(result => {
-              console.log("Raw API response:", result); // <--- log full result
+              console.log("Raw API response:", result);
               if (result && result.data) {
                 return result.data;   
               } else {
@@ -183,7 +180,7 @@ const UserProfile = (props) => {
               }
             })
             .then((data) => {
-              console.log("Parsed data:", data); // <--- log parsed data
+              console.log("Parsed data:", data);
               setLoading(false);
               setUserDisscussion(data.updatedDiscussions);
             })
@@ -253,7 +250,7 @@ const UserProfile = (props) => {
 
   return (
     !isLoggedIn ? <h1>login?</h1> : loading ? <LoadPage /> :
-      <div className="bg-DGXwhite p-2 md:p-8">
+      <div className="bg-DGXwhite p-2 sm:p-4 md:p-6 lg:p-8">
         {modalIsOpen && selectedDiscussion && (
           <DiscussionModal
             isOpen={modalIsOpen}
@@ -261,121 +258,148 @@ const UserProfile = (props) => {
             discussion={selectedDiscussion}
           />
         )}
-        <div className="md:my-4 flex flex-col 2xl:flex-row space-y-4 2xl:space-y-0 2xl:space-x-4">
-          <div className="w-full flex flex-col 2xl:w-1/3 sticky top-4 h-[calc(100vh-2rem)] overflow-y-auto">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          {/* Left Sidebar - Profile Section */}
+          <div className="w-full lg:w-1/3 flex flex-col gap-4">
             <UserAvatar 
               user={user} 
               handleImageChange={handleImageChange} 
               profileImage={profileImage}
             />
             
-            <div className="my-4 flex flex-col 2xl:flex-row 2xl:space-y-0 2xl:space-x-4">
-              <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-                <div className="flex-1 bg-DGXwhite rounded-lg shadow-xl p-8 border border-DGXgreen">
-                  <ul>
-                    <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'posts' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('posts')}>
-                      <GoCommentDiscussion className='mr-4 text-2xl' />
-                      <li className={`text-lg ${activeTab === 'posts' ? 'text-DGXblue font-bold' : ''}`}>My Discussions</li>
-                    </div>
-                    <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'events' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('events')}>
-                      <MdEventAvailable className='mr-4 text-2xl' />
-                      <li className={`text-lg ${activeTab === 'events' ? 'text-DGXblue font-bold' : ''}`}>My Events</li>
-                    </div>
-                    <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'blogs' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('blogs')}>
-                      <LiaBlogSolid className='mr-4 text-2xl' />
-                      <li className={`text-lg ${activeTab === 'blogs' ? 'text-DGXblue font-bold' : ''}`}>My Blogs</li>
-                    </div>
-                    <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'quiz' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('quiz')}>
-                      <FaPoll className='mr-4 text-2xl' />
-                      <li className={`text-lg ${activeTab === 'quiz' ? 'text-DGXblue font-bold' : ''}`}>Quiz Dashboard</li>
-                    </div>
-                    <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'password' ? 'bg-DGXgreen/40' : ''}`} onClick={() => setActiveTab('password')}>
-                      <CgPassword className='mr-4 text-2xl' />
-                      <li className={`text-lg ${activeTab === 'password' ? 'text-DGXblue font-bold' : ''}`}>Change Password</li>
-                    </div>
-                    <div className={`flex items-center p-6 cursor-pointer ${activeTab === 'logout' ? 'bg-DGXgreen/40' : ''}`} onClick={() => handleLogout()}>
-                      <SlLogout className='mr-4 text-2xl' />
-                      <li className={`text-lg ${activeTab === 'logout' ? 'text-DGXblue font-bold' : ''}`}>Logout</li>
-                    </div>
-                  </ul>
-                </div>
-                <div className="flex-1 bg-DGXwhite rounded-lg shadow-xl p-4 md:p-8 border border-DGXgreen">
-                  <h4 className="text-md md:text-xl text-DGXblack font-bold">Personal Info</h4>
-                  <ul className="mt-2 text-sm text-DGXgray">
-                    {user.Name && <li className="flex justify-between border-y py-2">
-                      <span className="font-bold w-24">Full name</span>
-                      <span className="text-DGXgray">{user.Name}</span>
-                    </li>}
-                    {user.AddOnDt && <li className="flex justify-between border-b py-2">
-                      <span className="font-bold w-24">Joined</span>
-                      <span className="text-DGXgray">{user.AddOnDt.split('T')[0]}</span>
-                    </li>}
-                    {user.MobileNumber && <li className="flex justify-between border-b py-2">
-                      <span className="font-bold w-24">Mobile</span>
-                      <span className="text-DGXgray">{user.MobileNumber}</span>
-                    </li>}
-                    {user.EmailId && <li className="flex justify-between border-b py-2">
-                      <span className="font-bold w-24">Email</span>
-                      <span className="text-DGXgray">{user.EmailId}</span>
-                    </li>}
-                    {user.Designation && <li className="flex justify-between border-b py-2">
-                      <span className="font-bold w-24">Designation</span>
-                      <span className="text-DGXgray">{user.Designation}</span>
-                    </li>}
-                    {user.CollegeName && <li className="flex justify-between border-b py-2 flex-col lg:flex-row">
-                      <span className="font-bold w-24">College Name</span>
-                      <span className="text-DGXgray">{user.CollegeName}</span>
-                    </li>}
-                    {user.ReferalNumberCount != null && <li className="flex justify-between border-b py-2">
-                      <span className="font-bold w-24">Refer Count Remaining</span>
-                      <span className="text-DGXgray">{user.ReferalNumberCount}</span>
-                    </li>}
-                  </ul>
+            <div className="flex flex-col gap-4">
+              {/* Navigation Menu */}
+              <div className="bg-DGXwhite rounded-lg shadow-xl p-4 border border-DGXgreen">
+                <ul className="space-y-2">
+                  <div 
+                    className={`flex items-center p-3 rounded-lg cursor-pointer ${activeTab === 'posts' ? 'bg-DGXgreen/40' : 'hover:bg-gray-100'}`} 
+                    onClick={() => setActiveTab('posts')}
+                  >
+                    <GoCommentDiscussion className='mr-3 text-lg md:text-xl' />
+                    <li className={`text-sm md:text-base ${activeTab === 'posts' ? 'text-DGXblue font-bold' : ''}`}>My Discussions</li>
+                  </div>
+                  <div 
+                    className={`flex items-center p-3 rounded-lg cursor-pointer ${activeTab === 'events' ? 'bg-DGXgreen/40' : 'hover:bg-gray-100'}`} 
+                    onClick={() => setActiveTab('events')}
+                  >
+                    <MdEventAvailable className='mr-3 text-lg md:text-xl' />
+                    <li className={`text-sm md:text-base ${activeTab === 'events' ? 'text-DGXblue font-bold' : ''}`}>My Events</li>
+                  </div>
+                  <div 
+                    className={`flex items-center p-3 rounded-lg cursor-pointer ${activeTab === 'blogs' ? 'bg-DGXgreen/40' : 'hover:bg-gray-100'}`} 
+                    onClick={() => setActiveTab('blogs')}
+                  >
+                    <LiaBlogSolid className='mr-3 text-lg md:text-xl' />
+                    <li className={`text-sm md:text-base ${activeTab === 'blogs' ? 'text-DGXblue font-bold' : ''}`}>My Blogs</li>
+                  </div>
+                  <div 
+                    className={`flex items-center p-3 rounded-lg cursor-pointer ${activeTab === 'quiz' ? 'bg-DGXgreen/40' : 'hover:bg-gray-100'}`} 
+                    onClick={() => setActiveTab('quiz')}
+                  >
+                    <FaPoll className='mr-3 text-lg md:text-xl' />
+                    <li className={`text-sm md:text-base ${activeTab === 'quiz' ? 'text-DGXblue font-bold' : ''}`}>Quiz Dashboard</li>
+                  </div>
+                  <div 
+                    className={`flex items-center p-3 rounded-lg cursor-pointer ${activeTab === 'password' ? 'bg-DGXgreen/40' : 'hover:bg-gray-100'}`} 
+                    onClick={() => setActiveTab('password')}
+                  >
+                    <CgPassword className='mr-3 text-lg md:text-xl' />
+                    <li className={`text-sm md:text-base ${activeTab === 'password' ? 'text-DGXblue font-bold' : ''}`}>Change Password</li>
+                  </div>
+                  <div 
+                    className={`flex items-center p-3 rounded-lg cursor-pointer ${activeTab === 'logout' ? 'bg-DGXgreen/40' : 'hover:bg-gray-100'}`} 
+                    onClick={() => handleLogout()}
+                  >
+                    <SlLogout className='mr-3 text-lg md:text-xl' />
+                    <li className={`text-sm md:text-base ${activeTab === 'logout' ? 'text-DGXblue font-bold' : ''}`}>Logout</li>
+                  </div>
+                </ul>
+              </div>
+
+              {/* Personal Info Section */}
+              <div className="bg-DGXwhite rounded-lg shadow-xl p-4 border border-DGXgreen">
+                <h4 className="text-base md:text-lg lg:text-xl text-DGXblack font-bold">Personal Info</h4>
+                <ul className="mt-3 space-y-2 text-sm text-DGXgray">
+                  {user.Name && <li className="flex flex-col sm:flex-row justify-between py-2 border-b">
+                    <span className="font-bold sm:w-24">Full name</span>
+                    <span className="text-DGXgray">{user.Name}</span>
+                  </li>}
+                  {user.AddOnDt && <li className="flex flex-col sm:flex-row justify-between py-2 border-b">
+                    <span className="font-bold sm:w-24">Joined</span>
+                    <span className="text-DGXgray">{user.AddOnDt.split('T')[0]}</span>
+                  </li>}
+                  {user.MobileNumber && <li className="flex flex-col sm:flex-row justify-between py-2 border-b">
+                    <span className="font-bold sm:w-24">Mobile</span>
+                    <span className="text-DGXgray">{user.MobileNumber}</span>
+                  </li>}
+                  {user.EmailId && <li className="flex flex-col sm:flex-row justify-between py-2 border-b">
+                    <span className="font-bold sm:w-24">Email</span>
+                    <span className="text-DGXgray">{user.EmailId}</span>
+                  </li>}
+                  {user.Designation && <li className="flex flex-col sm:flex-row justify-between py-2 border-b">
+                    <span className="font-bold sm:w-24">Designation</span>
+                    <span className="text-DGXgray">{user.Designation}</span>
+                  </li>}
+                  {user.CollegeName && <li className="flex flex-col sm:flex-row justify-between py-2 border-b">
+                    <span className="font-bold sm:w-24">College Name</span>
+                    <span className="text-DGXgray">{user.CollegeName}</span>
+                  </li>}
+                  {user.ReferalNumberCount != null && <li className="flex flex-col sm:flex-row justify-between py-2 border-b">
+                    <span className="font-bold sm:w-24">Refer Count Remaining</span>
+                    <span className="text-DGXgray">{user.ReferalNumberCount}</span>
+                  </li>}
+                </ul>
+                
+                {/* Referral Section */}
+                <div className="mt-4">
                   <button
-                    className={`mt-4 px-4 py-2 bg-DGXgreen text-white rounded hover:bg-DGXdarkgreen ${user.ReferalNumberCount === 0 ? 'bg-DGXgreen opacity-75' : ''}`}
+                    className={`w-full px-4 py-2 bg-DGXgreen text-white rounded hover:bg-DGXdarkgreen transition-colors ${user.ReferalNumberCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={handleButtonClick}
                     disabled={user.ReferalNumberCount === 0}
                   >
                     Refer
                   </button>
                   {showEmailInput && (
-                    <div className="mt-4 flex items-center">
+                    <div className="mt-3 flex flex-col sm:flex-row gap-2">
                       <input
                         type="email"
                         value={email}
                         onChange={handleEmailChange}
                         onBlur={handleEmailBlur}
-                        className="p-2 border border-DGXgreen rounded w-full mr-2"
-                        placeholder="Enter your email"
+                        className="flex-1 p-2 border border-DGXgreen rounded"
+                        placeholder="Enter email address"
                       />
                       <button
-                        className="px-4 py-2 bg-DGXgreen text-white rounded hover:bg-DGXdarkgreen"
+                        className="px-4 py-2 bg-DGXgreen text-white rounded hover:bg-DGXdarkgreen transition-colors"
                         onClick={handleEmailSubmit}
                       >
                         Submit
                       </button>
                     </div>
                   )}
-                  {emailError && <p className="text-red-500 mt-2">{emailError}</p>}
-                  {emailSubmitted && !emailError && <p className="text-green-500 mt-2">Refered successfully!</p>}
+                  {emailError && <p className="mt-2 text-sm text-red-500">{emailError}</p>}
+                  {emailSubmitted && !emailError && <p className="mt-2 text-sm text-green-500">Referred successfully!</p>}
                 </div>
               </div>
             </div>
           </div>
-          
-          <UserContentTabs 
-            activeTab={activeTab}
-            userDisscussions={userDisscussions}
-            stripHtmlTags={stripHtmlTags}
-            handleClickDiscussion={handleClickDiscussion}
-            handleDeleteDiscussion={handleDeleteDiscussion}
-            events={props.events}
-            setEvents={props.setEvents}
-            blogs={props.blogs}
-            setBlogs={props.setBlogs}
-            quiz={props.quiz}
-            setQuiz={props.setQuiz}
-          />
+
+          {/* Right Content Area */}
+          <div className="w-full lg:w-2/3">
+            <UserContentTabs 
+              activeTab={activeTab}
+              userDisscussions={userDisscussions}
+              stripHtmlTags={stripHtmlTags}
+              handleClickDiscussion={handleClickDiscussion}
+              handleDeleteDiscussion={handleDeleteDiscussion}
+              events={props.events}
+              setEvents={props.setEvents}
+              blogs={props.blogs}
+              setBlogs={props.setBlogs}
+              quiz={props.quiz}
+              setQuiz={props.setQuiz}
+            />
+          </div>
         </div>
       </div>
   );

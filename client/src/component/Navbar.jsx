@@ -17,7 +17,7 @@ import {
   faUser,
   faCog,
   faSignOutAlt,
-  faChalkboardTeacher
+  faChalkboardTeacher,
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { FaBrain } from 'react-icons/fa';
@@ -58,7 +58,8 @@ const Navbar = () => {
         { label: 'Quiz', to: '/QuizInterface', icon: FaBrain },
         { label: 'Contact Us', to: '/ContactUs', icon: faEnvelope },
         { label: 'Community Guidelines', to: '/CommunityGuidelines', icon: faBook },
-        { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher }
+        { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher },
+        { label: 'LMS', to: '/LMS', icon: faChalkboardTeacher }
     ];
 
     const mobileMenuLinks = [
@@ -69,12 +70,13 @@ const Navbar = () => {
         { label: 'Quiz', to: '/QuizInterface', icon: FaBrain },
         { label: 'Contact', to: '/ContactUs', icon: faEnvelope },
         { label: 'Guidelines', to: '/CommunityGuidelines', icon: faBook },
-        { label: 'Learn Hub', to: '/Lms', icon: faChalkboardTeacher }
+        { label: 'Learn Hub', to: '/Lms', icon: faChalkboardTeacher },
+        { label: 'Learn Hub', to: '/LMS', icon: faChalkboardTeacher }
     ];
 
     const getProfileImage = () => {
         if (user?.ProfilePicture) {
-            // Add cache-busting parameter only if the image is not a data URL
+            
             if (!user.ProfilePicture.startsWith('data:image')) {
                 return `${user.ProfilePicture}?${new Date().getTime()}`;
             }

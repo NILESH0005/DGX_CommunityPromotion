@@ -9,10 +9,10 @@ import BlogModal from "./BlogModal.jsx";
 const AddUserBlog = (props) => {
   const [showForm, setShowForm] = useState(false);
   const { fetchData, user } = useContext(ApiContext);
-  // const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBlog, setSelectedBlog] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [blogs, setBlogs] = useState([]);
 
   const stripHtmlTags = (html) => {
     const doc = new DOMParser().parseFromString(html, "text/html");
@@ -37,26 +37,32 @@ const AddUserBlog = (props) => {
 
       try {
         const result = await fetchData(endpoint, method, {}, headers);
-        if (result.success && Array.isArray(result.data)) {
-          props.setBlogs(result.data);
-          console.log("result", result.data);
+        console.log("API Response:", result); // Debug log
+        
+        if (result?.success && result?.data?.blogs) {
+          // Filter blogs by current user's ID
+          const userBlogs = result.data.blogs.filter(blog => 
+            blog.UserID === user?.UserID
+          );
+          setBlogs(userBlogs);
+          if (props.setBlogs) {
+            props.setBlogs(userBlogs);
+          }
+          console.log("Filtered blogs:", userBlogs);
         } else {
           console.error("Invalid data format:", result);
-          props.setBlogs([]);
+          setBlogs([]);
         }
       } catch (error) {
         console.error("Error fetching blogs:", error);
-        props.setBlogs([]);
+        setBlogs([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchBlogs();
-  }, [fetchData]);
-  console.log(props.blogs);
-
-  const filteredBlogs = props.blogs && props.blogs.filter((blog) => blog.UserID === user.UserID);
+  }, [fetchData, user?.UserID]);
 
   if (loading) {
     return <LoadPage />;
@@ -76,11 +82,11 @@ const AddUserBlog = (props) => {
 
       <div className="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow-lg">
         {showForm ? (
-          <BlogForm setBlogs={props.setBlogs} />
+          <BlogForm setBlogs={setBlogs} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredBlogs.length > 0 ? (
-              filteredBlogs.map((blog) => (
+            {blogs.length > 0 ? (
+              blogs.map((blog) => (
                 <div
                   key={blog.BlogID}
                   className="p-5 rounded-xl shadow-lg border-2 border-gray-200 bg-white hover:shadow-xl transition-all transform hover:-translate-y-1 flex flex-col gap-3"
@@ -109,16 +115,17 @@ const AddUserBlog = (props) => {
                   </div>
 
                   <span
-                    className={`px-3 py-1 text-sm font-semibold rounded-full self-start ${user.isAdmin === 1
+                    className={`px-3 py-1 text-sm font-semibold rounded-full self-start ${
+                      user?.isAdmin === 1
                         ? "bg-green-100 text-green-700"
                         : blog.Status === "Approved"
                           ? "bg-green-100 text-green-700"
                           : blog.Status === "Pending"
                             ? "bg-yellow-100 text-yellow-700"
                             : "bg-red-100 text-red-700"
-                      }`}
+                    }`}
                   >
-                    {user.isAdmin === 1 ? "Approved" : blog.Status}
+                    {user?.isAdmin === 1 ? "Approved" : blog.Status}
                   </span>
                   {blog.Status === "Rejected" && blog.AdminRemark && (
                     <div className="text-sm text-gray-600 bg-gray-100 p-2 rounded-md">
@@ -135,7 +142,9 @@ const AddUserBlog = (props) => {
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-center w-full">No blogs found.</p>
+              <p className="text-gray-500 text-center w-full">
+                {loading ? "Loading..." : "No blogs found."}
+              </p>
             )}
           </div>
         )}
@@ -147,10 +156,10 @@ const AddUserBlog = (props) => {
           closeModal={closeModal}
           updateBlogState={(blogId, status) => {
             if (status === "delete") {
-              props.setBlogs((prevBlogs) => prevBlogs.filter((blog) => blog.BlogID !== blogId));
+              setBlogs(prevBlogs => prevBlogs.filter(blog => blog.BlogID !== blogId));
             } else {
-              props.setBlogs((prevBlogs) =>
-                prevBlogs.map((blog) =>
+              setBlogs(prevBlogs =>
+                prevBlogs.map(blog =>
                   blog.BlogID === blogId ? { ...blog, Status: status } : blog
                 )
               );
