@@ -106,6 +106,7 @@ import Imageclass from './component/LMS/DatasetModule/Imageclass.jsx';
 import Humanevol from './component/LMS/DatasetModule/Humanevol.jsx';
 import Housepred from './component/LMS/DatasetModule/Housepred.jsx';
 import Cifar from './component/LMS/DatasetModule/Cifar.jsx';
+import LearningPath from "./component/LMS Manager/LearningPath.jsx";
 
 
 
@@ -251,6 +252,9 @@ function App() {
             <Route path="/leaderboard" element={<LeaderBoard />} />
             <Route path="/chatbot" element={<Chatbot />} />
 
+
+
+            <Route path="/LmsManager" element={<LearningPath />} />    
             {/* LMS */}
             <Route path="/Lms" element={<Lms />} />
             <Route path="/teaching-modules" element={<TeachingModules />} />
