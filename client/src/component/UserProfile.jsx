@@ -19,9 +19,15 @@ import EditProfileModal from './EditProfileModal';
 import DiscussionModal from './discussion/DiscussionModal.jsx';
 import AddUserEvent from './AddUserEvent.jsx';
 import AddUserBlog from './AddUserBlog.jsx';
+<<<<<<< Updated upstream
 import UserQuiz from './UserQuiz.jsx'; 
 import UserContentTabs from './UserContentTabs';
 import UserAvatar from './UserAvatar';
+=======
+
+import UserQuiz from './UserQuiz.jsx';
+import { compressImage } from '../utils/compressImage.js';
+>>>>>>> Stashed changes
 
 const UserProfile = (props) => {
   const [showEmailInput, setShowEmailInput] = useState(false);
@@ -63,6 +69,7 @@ const UserProfile = (props) => {
     return doc.body.textContent || "";
   };
 
+<<<<<<< Updated upstream
   const handleImageChange = (eventOrUrl) => {
     if (typeof eventOrUrl === 'string') {
       // Direct URL case
@@ -74,6 +81,67 @@ const UserProfile = (props) => {
         const imageUrl = URL.createObjectURL(file);
         setBackgroundImage(imageUrl);
       }
+=======
+  const handleImageChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      // 1. Show preview
+      const imageUrl = URL.createObjectURL(file);
+      setBackgroundImage(imageUrl);
+
+      // 2. Validate (same as before)
+      const allowedFormats = ["image/jpeg", "image/png", "image/webp"];
+      const maxSize = 2 * 1024 * 1024; // 2MB
+
+      if (!allowedFormats.includes(file.type)) {
+        Swal.fire({ icon: 'error', title: 'Invalid Format', text: 'Only JPEG/PNG/WEBP allowed.' });
+        return;
+      }
+
+      if (file.size > maxSize) {
+        Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Max size: 2MB.' });
+        return;
+      }
+
+      // 3. Compress image (if needed)
+      const compressedFile = await compressImage(file);
+
+      // 4. Prepare FormData
+      const formData = new FormData();
+      formData.append('profilePicture', compressedFile);
+
+      // 5. Upload (DIRECT FETCH, bypassing fetchData)
+      setLoading(true);
+      const response = await fetchData(`userprofile/updateProfilePicture`, {
+        method: 'POST',
+        headers: {
+          'auth-token': userToken, // Reuse the token from context
+          // Let browser auto-set Content-Type for FormData!
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      setLoading(false);
+
+      if (!response.ok) throw new Error(result.message || "Upload failed");
+
+      // 6. Success: Update UI
+      if (props.setUser) {
+        props.setUser(prev => ({ ...prev, ProfilePicture: result.data.profilePicture }));
+      }
+
+      Swal.fire({ icon: 'success', title: 'Success!', text: 'Profile picture updated.' });
+      setBackgroundImage(result.data.profilePicture); // Use server URL
+
+    } catch (err) {
+      setLoading(false);
+      console.error("Upload error:", err);
+      Swal.fire({ icon: 'error', title: 'Error', text: err.message || "Upload failed" });
+      setBackgroundImage(user?.ProfilePicture || images.defaultProfile); // Revert
+>>>>>>> Stashed changes
     }
   };
 
@@ -258,12 +326,48 @@ const UserProfile = (props) => {
         )}
         <div className="md:my-4 flex flex-col 2xl:flex-row space-y-4 2xl:space-y-0 2xl:space-x-4">
           <div className="w-full flex flex-col 2xl:w-1/3 sticky top-4 h-[calc(100vh-2rem)] overflow-y-auto">
+<<<<<<< Updated upstream
             <UserAvatar 
               user={user} 
               handleImageChange={handleImageChange} 
               profileImage={profileImage}
             />
             
+=======
+            <div className="bg-DGXwhite w-full rounded-lg shadow-xl  pb-6 border border-DGXgreen">
+              <div className="w-full h-[250px] rounded-t-lg border border-t-0 border-l-0 border-r-0 border-b-DGXgreen border-b-4">
+                <img src={images.NvidiaBackground} className="w-full h-full rounded-tl-lg rounded-tr-lg" alt="Profile background" />
+              </div>
+              <div className="flex flex-col items-center -mt-20 relative">
+                <div className="w-40 h-40 border-4 border-DGXgreen rounded-full relative group">
+                  <img src={user?.ProfilePicture || images.defaultProfile} className='object-contain aspect-square rounded-full' />
+                  <div className="absolute inset-0 bg-black bg-opacity-30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <FaEdit className="text-white text-3xl" />
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={handleImageChange}
+                    title="Click to change profile picture"
+                  />
+                </div>
+                <div>
+                  {/* <FaEdit className="text-DGXblack text-3xl" /> */}
+                </div>
+                <div className="flex items-center space-x-2 mt-2">
+                  <p className="text-2xl">{user.Name}</p>
+                  <span className="bg-[#2563eb] rounded-full p-1" title="Verified">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="text-DGXwhite h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                </div>
+                <p className="text-DGXgray">{user.Designation}</p>
+                <p className="text-sm text-[#6b7280]">{user.EmailId}</p>
+              </div>
+            </div>
+>>>>>>> Stashed changes
             <div className="my-4 flex flex-col 2xl:flex-row 2xl:space-y-0 2xl:space-x-4">
               <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
                 <div className="flex-1 bg-DGXwhite rounded-lg shadow-xl p-8 border border-DGXgreen">
@@ -357,6 +461,7 @@ const UserProfile = (props) => {
               </div>
             </div>
           </div>
+<<<<<<< Updated upstream
           
           <UserContentTabs 
             activeTab={activeTab}
@@ -371,6 +476,75 @@ const UserProfile = (props) => {
             quiz={props.quiz}
             setQuiz={props.setQuiz}
           />
+=======
+          <div className="w-full lg:w-3/4 bg-DGXwhite rounded-lg shadow-xl md:p-4 md:border border-DGXgreen mx-auto">
+            {activeTab === 'posts' && (
+              <div>
+                <div className='post_bar pt-4 flex flex-col space-y-6'>
+                  <div className='flex-col'>
+                    <h4 className="text-xl text-[#0f172a] font-bold">My Posts</h4>
+                  </div>
+                  {
+                    userDisscussions.map((discussion, index) => (
+                      <div key={index} className='post shadow-xl rounded-md p-2'>
+                        <a href="#" className="m-2 shadow-xl flex flex-col md:flex-row bg-white border border-DGXgreen rounded-lg hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">
+                          <div className="w-full md:w-1/4">
+                            <img className="object-cover w-full h-96 md:h-auto md:rounded-none rounded-t-lg md:rounded-s-lg" src={discussion.Image} alt="" />
+                          </div>
+                          <div className="w-full md:w-3/4 flex flex-col justify-between p-4 leading-normal">
+                            <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{discussion.Title}</h5>
+                            <p className="mb-3 font-normal text-gray-700 dark:text-gray-400">{stripHtmlTags(discussion.Content)}</p>
+                            <div className="flex justify-between items-center">
+                              <span className="inline-flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                                onClick={() => handleClickDiscussion(discussion)}>
+                                Read more
+                                <FaArrowRight className="ml-1 text-blue-600 dark:text-blue-400" />
+                              </span>
+                              <div className="flex items-center gap-x-4">
+                                <FaTrash className="text-gray-600 hover:text-red-600 cursor-pointer text-xl transition-transform transform hover:scale-110"
+                                  onClick={() => handleDeleteDiscussion(discussion)} />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
+            {activeTab === 'events' && (
+              <div className='w-full'>
+                <div className='flex-col'>
+                  <h4 className="text-xl text-[#0f172a] font-bold">My Events</h4>
+                </div>
+                <AddUserEvent events={props.events} setEvents={props.setEvents} />
+              </div>
+            )}
+            {activeTab === 'blogs' && (
+              <div className='w-full'>
+                <div className='flex-col'>
+                  <h4 className="text-xl text-[#0f172a] font-bold">My Blogs</h4>
+                </div>
+                <AddUserBlog blogs={props.blogs} setBlogs={props.setBlogs} />
+              </div>
+            )}
+            {activeTab === 'quiz' && (
+              <div className='w-full'>
+                <div className='flex-col'>
+                  <h4 className="text-xl text-[#0f172a] font-bold">User Quiz</h4>
+                </div>
+                <UserQuiz quiz={props.quiz} setQuiz={props.setQuiz} />
+              </div>
+            )}
+            {activeTab === 'password' && (
+              <div>
+                <h4 className="text-xl text-[#0f172a] font-bold">Change Password</h4>
+                <ChangePassword />
+              </div>
+            )}
+          </div>
+>>>>>>> Stashed changes
         </div>
       </div>
   );

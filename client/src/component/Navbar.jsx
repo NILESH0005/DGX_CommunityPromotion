@@ -31,8 +31,10 @@ const Navbar = () => {
 
     useEffect(() => {
         if (userToken && user) {
+            
             setIsLoggedIn(true);
         } else {
+            console.log("User not found");
             setIsLoggedIn(false);
         }
     }, [user, userToken]);
