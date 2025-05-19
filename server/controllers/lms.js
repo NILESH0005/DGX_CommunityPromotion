@@ -79,6 +79,8 @@ export class LMS {
     }
 
     const { ModuleName, ModuleImage, ModuleDescription, subModules } = req.body.module;
+ 
+    
     const userEmail = req.user.id;
     
     const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');

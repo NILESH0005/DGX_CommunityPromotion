@@ -152,7 +152,6 @@ const LearningMaterialManager = () => {
           subModuleImageBase64 = await compressImage(subModule.SubModuleImage);
         }
 
-        // Process units with safe UnitImg handling
         const processedUnits = await Promise.all(
           (subModule.units || []).map(async (unit) => {
             if (!unit.UnitName) {
@@ -160,22 +159,18 @@ const LearningMaterialManager = () => {
             }
 
             // Handle UnitImg - can be File, string (base64), null, or undefined
-            let unitImageBase64 = '';
+            let unitImageBase64 = null;
             if (unit.UnitImg instanceof File) {
               unitImageBase64 = await compressImage(unit.UnitImg);
-            } else if (unit.UnitImg) {
-              // If it's not a File but has value, assume it's already base64 string
+            } else if (typeof unit.UnitImg === 'string' && unit.UnitImg.startsWith('data:')) {
               unitImageBase64 = unit.UnitImg;
             }
-            // else case: unitImageBase64 remains empty string
-
             return {
               UnitName: unit.UnitName,
               UnitImg: unitImageBase64, // Will be empty string if no image
               UnitDescription: unit.UnitDescription || "",
               AuthAdd: currentUser,
               AddOnDt: now,
-              editOnDt: now,
               delStatus: 0,
               Files: (unit.files || []).map(file => ({
                 FilesName: file.originalName || `file_${Date.now()}`,
@@ -183,7 +178,6 @@ const LearningMaterialManager = () => {
                 FileType: file.fileType || '',
                 AuthAdd: currentUser,
                 AddOnDt: now,
-                editOnDt: now,
                 delStatus: 0
               }))
             };
@@ -196,7 +190,6 @@ const LearningMaterialManager = () => {
           SubModuleDescription: subModule.SubModuleDescription || "",
           AuthAdd: currentUser,
           AddOnDt: now,
-          editOnDt: now,
           delStatus: 0,
           Units: processedUnits
         };
@@ -211,7 +204,7 @@ const LearningMaterialManager = () => {
       AddOnDt: now,
       editOnDt: now,
       delStatus: 0,
-      SubModules: processedSubModules
+      subModules: processedSubModules
     };
   };
 
@@ -325,129 +318,60 @@ const LearningMaterialManager = () => {
     }
   };
 
-  // const handleSubmitAllData = async () => {
-  //   if (!formState.module) {
-  //     Swal.fire('Error', 'No module data to submit', 'error');
-  //     return;
-  //   }
-
-  //   if (!userToken) {
-  //     Swal.fire('Error', 'Authentication token missing. Please log in again.', 'error');
-  //     return;
-  //   }
-
-  //   setIsSubmitting(true);
-  //   setError(null);
-
-  //   try {
-  //     const savedData = JSON.parse(localStorage.getItem('learningMaterials'));
-  //     if (!savedData?.module) {
-  //       throw new Error("No module data found in local storage");
-  //     }
-
-  //     const payload = await transformForBackend(savedData.module);
-  //     console.log("Processed payload:", payload);
-
-  //     if (!payload.ModuleName || !Array.isArray(payload.SubModules)) {
-  //       throw new Error("Invalid module structure - missing required fields");
-  //     }
-  //     console.log("tttookkkeeen", userToken)
-  //     const endpoint = "lms/save-learning-materials";
-  //     const body = JSON.stringify(payload)
-  //     const method = "POST";
-  //     const headers = {
-  //       // 'Content-Type': 'application/json',
-  //       'auth-token': userToken
-  //     };
-
-
-  //     // Stringify the payload before sending
-  //     const response = await fetchData(
-  //       endpoint,
-  //       method,
-  //       body, // Stringify here
-  //       headers
-  //     );
-
-  //     if (!response) {
-  //       throw new Error("No response received from server");
-  //     }
-
-  //     if (response.success) {
-  //       Swal.fire('Success', 'All learning materials submitted successfully', 'success');
-  //       localStorage.removeItem('learningMaterials');
-  //       dispatch({ type: 'RESET' });
-  //     } else {
-  //       throw new Error(response.message || "Submission failed");
-  //     }
-  //   } catch (error) {
-  //     console.error("Detailed submission error:", error);
-  //     setError(error.message);
-  //     Swal.fire('Error', error.message || 'Failed to submit learning materials', 'error');
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
-
-
   const handleSubmitAllData = async () => {
-  if (!formState.module) {
-    Swal.fire('Error', 'No module data to submit', 'error');
-    return;
-  }
-
-  if (!userToken) {
-    Swal.fire('Error', 'Authentication token missing. Please log in again.', 'error');
-    return;
-  }
-
-  setIsSubmitting(true);
-  setError(null);
-
-  try {
-    const savedData = JSON.parse(localStorage.getItem('learningMaterials'));
-    if (!savedData?.module) {
-      throw new Error("No module data found in local storage");
+    if (!formState.module) {
+      Swal.fire('Error', 'No module data to submit', 'error');
+      return;
     }
 
-    const payload = await transformForBackend(savedData.module);
-    console.log("Processed payload for submission:", payload);
-
-    // Additional validation
-    if (!payload.ModuleName || !Array.isArray(payload.SubModules)) {
-      throw new Error("Invalid module structure - missing required fields");
+    if (!userToken) {
+      Swal.fire('Error', 'Authentication token missing. Please log in again.', 'error');
+      return;
     }
 
-    // Stringify the payload before sending
-    const response = await fetchData(
-      'lms/save-learning-materials',
-      'POST',
-      JSON.stringify(payload), 
-      {
-        // 'Content-Type': 'application/json',
-        'auth-token': userToken
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const savedData = JSON.parse(localStorage.getItem('learningMaterials'));
+      if (!savedData?.module) {
+        throw new Error("No module data found in local storage");
       }
-    );
 
-    if (!response) {
-      throw new Error("No response received from server");
-    }
+      const payload = await transformForBackend(savedData.module);
+      console.log("Processed payload for submission:", payload);
 
-    if (response.success) {
-      Swal.fire('Success', 'All learning materials submitted successfully', 'success');
-      localStorage.removeItem('learningMaterials');
-      dispatch({ type: 'RESET' });
-    } else {
-      throw new Error(response.message || "Submission failed");
+      const requestBody = JSON.stringify({ module: payload });
+      console.log("Request body being sent:", requestBody);
+      const response = await fetchData(
+        'lms/save-learning-materials',
+        'POST',
+      { module: payload }, // Send as plain object
+        {
+          'Content-Type': 'application/json',
+          'auth-token': userToken
+        }
+      );
+
+      if (!response) {
+        throw new Error("No response received from server");
+      }
+
+      if (response.success) {
+        Swal.fire('Success', 'All learning materials submitted successfully', 'success');
+        localStorage.removeItem('learningMaterials');
+        dispatch({ type: 'RESET' });
+      } else {
+        throw new Error(response.message || "Submission failed");
+      }
+    } catch (error) {
+      console.error("Detailed submission error:", error);
+      setError(error.message);
+      Swal.fire('Error', error.message || 'Failed to submit learning materials', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error("Detailed submission error:", error);
-    setError(error.message);
-    Swal.fire('Error', error.message || 'Failed to submit learning materials', 'error');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleModuleCreated = (newModule) => {
     const learningData = { ...newModule, subModules: [] };
