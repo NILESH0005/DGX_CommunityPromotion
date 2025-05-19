@@ -390,64 +390,60 @@ const LearningMaterialManager = () => {
   // };
 
 
-  const handleSubmitAllData = async () => {
-  if (!formState.module) {
-    Swal.fire('Error', 'No module data to submit', 'error');
-    return;
-  }
-
-  if (!userToken) {
-    Swal.fire('Error', 'Authentication token missing. Please log in again.', 'error');
-    return;
-  }
-
-  setIsSubmitting(true);
-  setError(null);
-
-  try {
-    const savedData = JSON.parse(localStorage.getItem('learningMaterials'));
-    if (!savedData?.module) {
-      throw new Error("No module data found in local storage");
+const handleSubmitAllData = async () => {
+    if (!formState.module) {
+      Swal.fire('Error', 'No module data to submit', 'error');
+      return;
     }
 
-    const payload = await transformForBackend(savedData.module);
-    console.log("Processed payload for submission:", payload);
-
-    // Additional validation
-    if (!payload.ModuleName || !Array.isArray(payload.SubModules)) {
-      throw new Error("Invalid module structure - missing required fields");
+    if (!userToken) {
+      Swal.fire('Error', 'Authentication token missing. Please log in again.', 'error');
+      return;
     }
 
-    // Stringify the payload before sending
-    const response = await fetchData(
-      'lms/save-learning-materials',
-      'POST',
-      JSON.stringify(payload), 
-      {
-        // 'Content-Type': 'application/json',
-        'auth-token': userToken
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const savedData = JSON.parse(localStorage.getItem('learningMaterials'));
+      if (!savedData?.module) {
+        throw new Error("No module data found in local storage");
       }
-    );
 
-    if (!response) {
-      throw new Error("No response received from server");
-    }
+      const payload = await transformForBackend(savedData.module);
+      console.log("Processed payload for submission:", payload);
 
-    if (response.success) {
-      Swal.fire('Success', 'All learning materials submitted successfully', 'success');
-      localStorage.removeItem('learningMaterials');
-      dispatch({ type: 'RESET' });
-    } else {
-      throw new Error(response.message || "Submission failed");
+      const requestBody = JSON.stringify({ module: payload });
+      console.log("Request body being sent:", requestBody);
+      const response = await fetchData(
+        'lms/save-learning-materials',
+        'POST',
+      { module: payload }, // Send as plain object
+        {
+          'Content-Type': 'application/json',
+          'auth-token': userToken
+        }
+      );
+
+      if (!response) {
+        throw new Error("No response received from server");
+      }
+
+      if (response.success) {
+        Swal.fire('Success', 'All learning materials submitted successfully', 'success');
+        localStorage.removeItem('learningMaterials');
+        dispatch({ type: 'RESET' });
+      } else {
+        throw new Error(response.message || "Submission failed");
+      }
+    } catch (error) {
+      console.error("Detailed submission error:", error);
+      setError(error.message);
+      Swal.fire('Error', error.message || 'Failed to submit learning materials', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error("Detailed submission error:", error);
-    setError(error.message);
-    Swal.fire('Error', error.message || 'Failed to submit learning materials', 'error');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleModuleCreated = (newModule) => {
     const learningData = { ...newModule, subModules: [] };
