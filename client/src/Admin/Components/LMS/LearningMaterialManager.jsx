@@ -433,7 +433,7 @@ const LearningMaterialManager = () => {
       const response = await fetchData(
         'lms/save-learning-materials',
         'POST',
-        payload, // Send as object, let fetchData handle stringification
+        payload, 
         {
           'Content-Type': 'application/json',
           'auth-token': userToken
