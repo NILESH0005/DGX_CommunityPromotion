@@ -66,42 +66,26 @@ import Design from '../../public/Design.png'
 
 export default {
     nvidiaPP,
-    // verifyImg,
-    // Refresh,
-    // robo,
-    // robot,
-    // secure,
     nvbackground,
     NvidiaBackground,
-
     giventures,
     HeroImg,
-    // nvidiaEvent01,
-    // nvidiaEvent02,
-    // Team,
     Globe,
     DGX,
     AnimatedDGX,
     ABESIT,
     PatrickSir,
     AshwiniSir,
-
     Event1,
     Event2,
     Event3,
     Event4,
     Event5,
     Event6,
-
     Certificate1,
     Certificate2,
-
     glogo,
     gilogowhite,
-
-    // rvce,
-    // BMS,
-    // utu,
     aisummit,
     Design,
     // us1,

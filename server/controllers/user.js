@@ -479,7 +479,6 @@ export const login = async (req, res) => {
   }
 };
 
-//Route 3) To change the password of the user
 
 export const changePassword = async (req, res) => {
   let success = false;

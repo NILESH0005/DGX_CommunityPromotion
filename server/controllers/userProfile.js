@@ -115,11 +115,18 @@ export const getUserDiscussion = async (req, res) => {
             }
 
             try {
-
                 const query = `SELECT UserID, Name FROM Community_User WHERE isnull(delStatus,0) = 0 AND EmailId = ?`;
                 const rows = await queryAsync(conn, query, [userId]);
+                
+                // Get the total count of discussions first
+                const countQuery = `SELECT COUNT(*) as totalCount FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND UserID = ? AND Reference = 0`;
+                const countResult = await queryAsync(conn, countQuery, [rows[0].UserID]);
+                const totalCount = countResult[0].totalCount;
+                
+                // Then get the discussions as before
                 const discussionGetQuery = `SELECT DiscussionID, UserID, AuthAdd as UserName, Title, Content, Image, Tag, ResourceUrl, AddOnDt as timestamp FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND UserID = ? AND Reference = 0 ORDER BY AddOnDt DESC`;
                 const discussionGet = await queryAsync(conn, discussionGetQuery, [rows[0].UserID]);
+                
                 const updatedDiscussions = [];
 
                 for (const item of discussionGet) {
@@ -179,7 +186,14 @@ export const getUserDiscussion = async (req, res) => {
                 closeConnection();
                 const infoMessage = "Discussion Get Successfully";
                 logInfo(infoMessage);
-                res.status(200).json({ success, data: { updatedDiscussions }, message: infoMessage });
+                res.status(200).json({ 
+                    success, 
+                    data: { 
+                        updatedDiscussions, 
+                        totalCount 
+                    }, 
+                    message: infoMessage 
+                });
             }
             catch (queryErr) {
                 logError(queryErr);

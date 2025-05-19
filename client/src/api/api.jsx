@@ -1,4 +1,3 @@
-
 const BASE_URL = import.meta.env.VITE_API_BASEURL
 // const BASE_URL = "http://192.168.209.47:8000/"
 
@@ -9,6 +8,7 @@ const apiRequest = async (endpoint, method = 'GET', body = {}, headers = { 'Cont
         headers,
         body: Object.keys(body).length ? JSON.stringify(body) : undefined,
     };
+    console.log("heeader", headers)
     if (method === 'GET') {
         options = {
             method,
