@@ -66,7 +66,13 @@ export class LMS {
       });
     }
 
+<<<<<<< HEAD
     const { ModuleName, ModuleImage, ModuleDescription, subModules = [] } = req.body.module;
+=======
+    const { ModuleName, ModuleImage, ModuleDescription, subModules } = req.body.module;
+ 
+    
+>>>>>>> c68a157debeca6d590effe5b86fb7c12f88d2bcd
     const userEmail = req.user.id;
     const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
     

@@ -107,6 +107,8 @@ import Humanevol from './component/LMS/DatasetModule/Humanevol.jsx';
 import Housepred from './component/LMS/DatasetModule/Housepred.jsx';
 import Cifar from './component/LMS/DatasetModule/Cifar.jsx';
 import LearningPath from "./component/LMS Manager/LearningPath.jsx";
+import ModuleCard from "./component/LMS Manager/ModuleCard.jsx";
+import SubModuleCard from "./Admin/Components/LMS/EditableComponents/SubModuleCard.jsx";
 
 
 
@@ -131,8 +133,8 @@ function App() {
             <Route path="/SignInn" element={<SignInn />} />
             <Route path="/ForgotPassword" element={<ForgotPassword />} />
             <Route path="/ChangePassword" element={<ChangePassword />} />
-           
-           {/* User Profile  */}
+
+            {/* User Profile  */}
             <Route
               path="/UserProfile"
               element={
@@ -144,7 +146,7 @@ function App() {
                 />
               }
             />
-            
+
             <Route path="/Discussion" element={<Discussion />} />
             <Route path="/ContactUs" element={<ContactUs />} />
             <Route path="/Blog" element={<Blog />} />
@@ -254,7 +256,7 @@ function App() {
 
 
 
-            <Route path="/LmsManager" element={<LearningPath />} />    
+            {/* <Route path="/LmsM  anager" element={<LearningPath />} /> */}
             {/* LMS */}
             <Route path="/Lms" element={<Lms />} />
             <Route path="/teaching-modules" element={<TeachingModules />} />
@@ -339,6 +341,16 @@ function App() {
             {/* Digital Learning Models */}
             <Route path="/tutorials" element={<Tutorials />} />
             <Route path="/resources" element={<Resource />} />
+
+
+
+
+
+
+            <Route path="/modules" element={<ModuleCard />} />
+            <Route path="/module/:moduleId" element={<SubModuleCard />} />
+
+
           </Routes>
         </div>
         <Footer />

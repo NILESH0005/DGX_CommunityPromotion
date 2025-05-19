@@ -15,7 +15,7 @@ console.log(module);
 
     if (!expanded && subModules.length === 0) {
       setLoading(true);
-      const response = await fetchData(`lms/getSubModules?moduleId=${module.ModuleID}`, "GET");
+      const response = await fetchData('lms/getSubModules?moduleId=${module.ModuleID}', "GET");
       console.log("response is", response)
       if (response?.success) {
         setSubModules(response.data);
