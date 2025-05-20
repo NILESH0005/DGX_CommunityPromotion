@@ -211,11 +211,33 @@ const LearningMaterialManager = () => {
   useEffect(() => {
     const savedData = localStorage.getItem('learningMaterials');
     if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      dispatch({
-        type: 'SET_MODULE',
-        payload: parsedData.module
-      });
+      try {
+        const parsedData = JSON.parse(savedData);
+        if (parsedData.module) {
+          // Convert any file metadata back to proper structure
+          const moduleWithFiles = {
+            ...parsedData.module,
+            subModules: parsedData.module.subModules.map(subModule => ({
+              ...subModule,
+              units: subModule.units.map(unit => ({
+                ...unit,
+                files: unit.files.map(file => ({
+                  ...file,
+                  // Add any transformations needed
+                  isUploaded: !!file.filePath // Example flag
+                }))
+              }))
+            }))
+          };
+
+          dispatch({
+            type: 'SET_MODULE',
+            payload: moduleWithFiles
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing saved data:", error);
+      }
     }
   }, []);
 
@@ -236,13 +258,32 @@ const LearningMaterialManager = () => {
             UnitName: unit.UnitName,
             UnitImg: unit.UnitImg,
             UnitDescription: unit.UnitDescription,
-            files: unit.files || []
+            files: (unit.files || []).map(file => ({
+              id: file.id,
+              originalName: file.originalName,
+              fileType: file.fileType,
+              fileSize: file.fileSize,
+              uploadedAt: file.uploadedAt,
+              filePath: file.filePath,
+              downloadUrl: file.downloadUrl,
+              // …and any other fields you care about
+            }))
           }))
         }))
       }
     };
     localStorage.setItem('learningMaterials', JSON.stringify(dataToSave));
+
+
   };
+
+
+  // const saveToLocalStorage = (moduleData) => {
+  //   localStorage.setItem(
+  //     'learningMaterials',
+  //     JSON.stringify({ module: moduleData })
+  //   );
+  // };
 
   const handleSubmit = async () => {
     if (!formState.unit || !formState.fileData) {
@@ -287,11 +328,13 @@ const LearningMaterialManager = () => {
                         ...(unit.files || []),
                         {
                           id: uuidv4(),
-                          originalName: uploadResponse.file.originalName,
+                          originalName: formState.fileData.name,
                           filePath: uploadResponse.file.filePath,
-                          fileType: uploadResponse.file.fileType,
-                          fileSize: uploadResponse.file.fileSize,
-                          uploadedAt: getCurrentDateTime()
+                          fileType: formState.fileData.type,
+                          fileSize: formState.fileData.size,
+                          uploadedAt: new Date().toISOString(),
+                          serverName: uploadResponse.file.storedName,
+                          storagePath: uploadResponse.file.storagePath
                         }
                       ]
                     };
@@ -303,7 +346,7 @@ const LearningMaterialManager = () => {
             return subModule;
           })
         };
-
+        console.log('About to save this module:', updatedModule);
         saveToLocalStorage(updatedModule);
         dispatch({ type: 'SET_MODULE', payload: updatedModule });
 
@@ -333,7 +376,9 @@ const LearningMaterialManager = () => {
     setError(null);
 
     try {
+      console.log('🏁 handleSubmitAllData firing, reading from LS…');
       const savedData = JSON.parse(localStorage.getItem('learningMaterials'));
+      console.log('📦 savedData.module =', savedData.module);
       if (!savedData?.module) {
         throw new Error("No module data found in local storage");
       }
@@ -346,7 +391,7 @@ const LearningMaterialManager = () => {
       const response = await fetchData(
         'lms/save-learning-materials',
         'POST',
-      { module: payload }, // Send as plain object
+        { module: payload }, // Send as plain object
         {
           'Content-Type': 'application/json',
           'auth-token': userToken

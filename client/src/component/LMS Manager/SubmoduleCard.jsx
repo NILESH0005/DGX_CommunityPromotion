@@ -96,8 +96,10 @@ const SubModuleCard = () => {
       }
     };
 
-    fetchAllData();
-  }, [moduleId, fetchData, userProgress]);
+    fetchAllSubModules();
+  }, [moduleId, fetchData]);
+  console.log("Submodule: ", filteredSubModules);
+  
 
   if (loading) {
     return (
@@ -159,10 +161,13 @@ const SubModuleCard = () => {
               >
                 <div className="h-40 bg-gray-100 overflow-hidden">
                   {subModule.SubModuleImage ? (
+                    <>
+                    <span>{JSON.stringify(subModule.SubModuleImage.data)}</span>
                     <ByteArrayImage
-                      byteArray={subModule.SubModuleImage}
+                      byteArray={subModule.SubModuleImage.data}
                       className="w-full h-full object-cover"
                     />
+                    </>
                   ) : (
                     <div className="flex items-center justify-center text-gray-400 text-sm h-full">
                       No Image

@@ -112,6 +112,10 @@ import SubModuleCard from "./component/LMS Manager/SubmoduleCard.jsx";
 import UnitsWithFiles from "./component/LMS Manager/UnitsWithFiles.jsx";
 
 
+import { pdfjs } from 'react-pdf';
+
+// Use CDN to load the worker (best option with Vite)
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 
 function App() {

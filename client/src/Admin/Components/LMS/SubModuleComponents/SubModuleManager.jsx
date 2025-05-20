@@ -186,6 +186,8 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             }
 
             const result = await response.json();
+            console.log("result is----- ", result);
+            
 
             const updatedSubModules = subModules.map(subModule => {
                 if (subModule.id === subModuleId) {
@@ -197,12 +199,9 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                                     ...(unit.files || []),
                                     {
                                         id: uuidv4(),
-                                        originalName: result.file.originalName,
-                                        serverName: result.file.storedName,
-                                        filePath: result.file.filePath,
-                                        storagePath: result.file.storagePath,
-                                        fileType: result.file.fileType,
-                                        fileSize: result.file.fileSize,
+                                        originalName: result.file.name,
+                                        filePath: result.file.path,
+                                        fileType: result.file.type,
                                         uploadedAt: new Date().toISOString()
                                     }
                                 ]
@@ -210,6 +209,8 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                         }
                         return unit;
                     });
+                    console.log("ffffff", updatedUnits);
+                    
                     return { ...subModule, units: updatedUnits };
                 }
                 return subModule;
@@ -222,6 +223,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             console.error('Upload error:', error);
             return false;
         }
+
     };
 
     const handleSaveAll = () => {
