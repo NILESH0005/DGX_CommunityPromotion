@@ -349,6 +349,7 @@ function App() {
 
 
 
+            <Route path="/LearningPath" element={<LearningPath />} />
             <Route path="/modules" element={<ModuleCard />} />
             <Route path="/module/:moduleId" element={<SubModuleCard />} />
             <Route path="/submodule/:subModuleId" element={<UnitsWithFiles />} />

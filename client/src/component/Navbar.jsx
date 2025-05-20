@@ -59,7 +59,7 @@ const Navbar = () => {
         { label: 'Contact Us', to: '/ContactUs', icon: faEnvelope },
         { label: 'Community Guidelines', to: '/CommunityGuidelines', icon: faBook },
         { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher },
-        { label: 'LMS', to: '/modules', icon: faChalkboardTeacher }
+        { label: 'LMS', to: '/LearningPath', icon: faChalkboardTeacher }
     ];
 
     const mobileMenuLinks = [
@@ -71,7 +71,7 @@ const Navbar = () => {
         { label: 'Contact', to: '/ContactUs', icon: faEnvelope },
         { label: 'Guidelines', to: '/CommunityGuidelines', icon: faBook },
         { label: 'Learn Hub', to: '/Lms', icon: faChalkboardTeacher },
-        { label: 'Learn Hub', to: '/LmsManager', icon: faChalkboardTeacher }
+        { label: 'Learn Hub', to: '/LearningPath', icon: faChalkboardTeacher }
     ];
 
     const getProfileImage = () => {
