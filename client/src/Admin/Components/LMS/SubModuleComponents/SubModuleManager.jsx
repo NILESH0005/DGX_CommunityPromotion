@@ -34,7 +34,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                 if (selectedSubModule?.id === id) {
                     setSelectedSubModule(null);
                 }
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Deleted!',
@@ -67,7 +67,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                     return sub;
                 });
                 setSubModules(updatedSubModules);
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Deleted!',
@@ -94,10 +94,16 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
         try {
             let bannerBase64 = null;
             if (newSubModule.SubModuleImage) {
-                bannerBase64 = await compressImage(newSubModule.SubModuleImage);
+                // bannerBase64 = await compressImage(newSubModule.SubModuleImage);
+                try {
+                    bannerBase64 = await compressImage(newSubModule.SubModuleImage);
+                } catch (error) {
+                    console.error('Image compression failed:', error);
+                    bannerBase64 = await convertFileToBase64(newSubModule.SubModuleImage);
+                }
             }
             const subModuleToAdd = {
-                id: uuidv4(),
+                id: uuidv4(), 
                 SubModuleName: newSubModule.SubModuleName.trim(),
                 SubModuleDescription: newSubModule.SubModuleDescription.trim(),
                 SubModuleImage: bannerBase64,
@@ -105,7 +111,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             };
             setSubModules([...subModules, subModuleToAdd]);
             setResetForm(prev => !prev);
-            
+
             Swal.fire({
                 icon: 'success',
                 title: 'Submodule Added',
@@ -152,7 +158,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
 
         setSubModules(updatedSubModules);
         setErrors({ ...errors, UnitName: null });
-        
+
         Swal.fire({
             icon: 'success',
             title: 'Unit Added',
@@ -187,7 +193,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
 
             const result = await response.json();
             console.log("result is----- ", result);
-            
+
 
             const updatedSubModules = subModules.map(subModule => {
                 if (subModule.id === subModuleId) {
@@ -210,7 +216,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                         return unit;
                     });
                     console.log("ffffff", updatedUnits);
-                    
+
                     return { ...subModule, units: updatedUnits };
                 }
                 return subModule;
@@ -247,7 +253,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                     subModules: subModules
                 };
                 onSave(updatedModule);
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Saved!',
@@ -262,7 +268,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
     return (
         <div className="space-y-6">
             {/* Header Section */}
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center justify-between mb-6 p-4 bg-DGXgray/5 rounded-xl"
@@ -281,7 +287,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
 
             {/* Error Message */}
             {errors.subModules && (
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="p-4 rounded-lg bg-red-100 border border-red-200 text-red-700 flex items-start gap-3"
@@ -292,7 +298,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             )}
 
             {/* Add Submodule Form */}
-            <AddSubModuleForm 
+            <AddSubModuleForm
                 key={resetForm ? 'reset' : 'normal'}
                 onAddSubModule={handleAddSubModule}
                 errors={errors}
@@ -303,7 +309,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Submodule List */}
                 <div className="lg:col-span-1">
-                    <SubModuleList 
+                    <SubModuleList
                         subModules={subModules}
                         selectedSubModule={selectedSubModule}
                         onSelectSubModule={setSelectedSubModule}
@@ -340,7 +346,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             </div>
 
             {/* Footer Actions */}
-            <motion.div 
+            <motion.div
                 className="flex justify-between pt-6 mt-6 border-t border-DGXgray/20"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -374,11 +380,10 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                     whileTap={{ scale: 0.98 }}
                     onClick={handleSaveAll}
                     disabled={subModules.length === 0}
-                    className={`px-6 py-2.5 rounded-lg flex items-center gap-2 ${
-                        subModules.length === 0
+                    className={`px-6 py-2.5 rounded-lg flex items-center gap-2 ${subModules.length === 0
                             ? 'bg-DGXgray/30 text-DGXgray cursor-not-allowed'
                             : 'bg-DGXgreen hover:bg-[#68a600] text-DGXwhite'
-                    }`}
+                        }`}
                 >
                     <Save className="w-5 h-5" />
                     Save & Continue

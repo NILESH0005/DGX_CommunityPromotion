@@ -12,7 +12,7 @@ const SubModuleCard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAllSubModules = async () => {
+    const fetchAllSubModules = async () => { 
       try {
         setLoading(true);
         setError(null);
@@ -23,7 +23,7 @@ const SubModuleCard = () => {
             subModule => subModule.ModuleID?.toString() === moduleId
           );
           setFilteredSubModules(filtered);
-          console.log('Filtered submodules:', filtered);
+          // console.log('Filtered submodules:', filtered);
         } else {
           setError(response?.message || "Failed to fetch submodules");
         }
@@ -37,7 +37,6 @@ const SubModuleCard = () => {
 
     fetchAllSubModules();
   }, [moduleId, fetchData]);
-  console.log("Submodule: ", filteredSubModules);
   
 
   if (loading) {
@@ -92,13 +91,10 @@ const SubModuleCard = () => {
               >
                 <div className="h-40 bg-gray-100 overflow-hidden">
                   {subModule.SubModuleImage ? (
-                    <>
-                    <span>{JSON.stringify(subModule.SubModuleImage.data)}</span>
                     <ByteArrayImage
                       byteArray={subModule.SubModuleImage.data}
                       className="w-full h-full object-cover"
                     />
-                    </>
                   ) : (
                     <div className="flex items-center justify-center text-gray-400 text-sm h-full">
                       No Image
