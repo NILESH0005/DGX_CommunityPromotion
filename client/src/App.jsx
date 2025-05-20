@@ -108,7 +108,8 @@ import Housepred from './component/LMS/DatasetModule/Housepred.jsx';
 import Cifar from './component/LMS/DatasetModule/Cifar.jsx';
 import LearningPath from "./component/LMS Manager/LearningPath.jsx";
 import ModuleCard from "./component/LMS Manager/ModuleCard.jsx";
-import SubModuleCard from "./Admin/Components/LMS/EditableComponents/SubModuleCard.jsx";
+import SubModuleCard from "./component/LMS Manager/SubmoduleCard.jsx";
+import UnitsWithFiles from "./component/LMS Manager/UnitsWithFiles.jsx";
 
 
 
@@ -192,7 +193,8 @@ function App() {
               element={<QuizPanel />}
             />
             <Route path="/QuizList" element={<QuizList />} />
-            <Route path="/quiz/:quizId" element={<Quiz />} />            <Route path="/QuizQuestions" element={<QuizQuestions />} />
+            <Route path="/quiz/:quizId" element={<Quiz />} />
+            <Route path="/QuizQuestions" element={<QuizQuestions />} />
             <Route path="/quiz-result" element={<QuizResult />} />
 
             <Route path="/CreateQuiz" element={<CreateQuiz />} />
@@ -349,6 +351,8 @@ function App() {
 
             <Route path="/modules" element={<ModuleCard />} />
             <Route path="/module/:moduleId" element={<SubModuleCard />} />
+            <Route path="/submodule/:subModuleId" element={<UnitsWithFiles />} />
+
 
 
           </Routes>

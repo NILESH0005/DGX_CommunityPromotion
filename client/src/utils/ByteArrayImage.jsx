@@ -1,19 +1,42 @@
 import React, { useEffect, useState } from 'react';
 
-export default function ByteArrayImage({ byteArray }) {
+export default function ByteArrayImage({ byteArray, className }) {
   const [imageSrc, setImageSrc] = useState(null);
 
   useEffect(() => {
-    if (!byteArray || !Array.isArray(byteArray)) return;
+    if (!byteArray) return;
 
-    const blob = new Blob([new Uint8Array(byteArray)], { type: 'image/jpeg' });
-    const reader = new FileReader();
+    try {
+      // Handle both direct arrays and Buffer objects
+      const bytes = Array.isArray(byteArray) ? byteArray : 
+                   (byteArray.type === 'Buffer' ? byteArray.data : null);
 
-    reader.onloadend = () => setImageSrc(reader.result);
-    reader.readAsDataURL(blob);
+      if (!bytes || bytes.length === 0) return;
+
+      // Convert to base64 directly
+      const binary = bytes.map(b => String.fromCharCode(b)).join('');
+      const base64 = window.btoa(binary);
+      setImageSrc(`data:image/jpeg;base64,${base64}`);
+
+    } catch (error) {
+      console.error('Image processing error:', error);
+    }
   }, [byteArray]);
 
-  if (!imageSrc) return <p>Loading image...</p>;
+  if (!imageSrc) {
+    return (
+      <div className="flex items-center justify-center text-gray-400 text-sm h-full">
+        {byteArray ? 'Loading image...' : 'No Image'}
+      </div>
+    );
+  }
 
-  return <img src={imageSrc} alt="Image from byte array" />;
+  return (
+    <img 
+      src={imageSrc}
+      alt="Content"
+      className={className || "w-full h-full object-cover"}
+      onError={() => setImageSrc(null)}
+    />
+  );
 }
