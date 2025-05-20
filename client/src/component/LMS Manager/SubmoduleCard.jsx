@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ApiContext from '../../context/ApiContext';
 import ByteArrayImage from '../../utils/ByteArrayImage';
-import ProgressBar from './ProgressBar';
 
 const SubModuleCard = () => {
   const { moduleId } = useParams();
@@ -15,11 +14,40 @@ const SubModuleCard = () => {
   const navigate = useNavigate();
   const [userProgress, setUserProgress] = useState({});
 
+  // Dynamic progress bar component (maintains same dimensions as Teaching Modules)
+  const DynamicProgressBar = ({ progress }) => {
+    const [animatedProgress, setAnimatedProgress] = useState(0);
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setAnimatedProgress(progress);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }, [progress]);
+
+    return (
+      <div className="w-full mt-4">
+        <div className="flex justify-between text-xs text-gray-600 mb-1">
+          <span>Progress</span>
+          <span>{animatedProgress}%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <motion.div
+            className="bg-blue-500 h-2 rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${animatedProgress}%` }}
+            transition={{ duration: 0.8, type: 'spring', damping: 10 }}
+          />
+        </div>
+      </div>
+    );
+  };
+
   // Fetch user progress data
   useEffect(() => {
     const fetchUserProgress = async () => {
       try {
-        // Replace "userId" with your actual user ID retrieval logic
         const userId = localStorage.getItem('userId') || '123';
         const progressResponse = await fetchData(`progress/getUserProgress/${userId}`, "GET");
         
@@ -96,10 +124,8 @@ const SubModuleCard = () => {
       }
     };
 
-    fetchAllSubModules();
+    fetchAllData();
   }, [moduleId, fetchData]);
-  console.log("Submodule: ", filteredSubModules);
-  
 
   if (loading) {
     return (
@@ -144,13 +170,13 @@ const SubModuleCard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Module Title and Description (matches Teaching Modules layout) */}
+        {/* Module Title and Description */}
         <div className="mb-8 bg-white p-6 rounded-xl shadow-lg">
           <h1 className="text-3xl font-bold mb-2">{moduleInfo.title || 'Module'}</h1>
           <p className="text-gray-600">{moduleInfo.description || 'No description available'}</p>
         </div>
 
-        {/* Submodule Cards (maintaining exact original dimensions) */}
+        {/* Submodule Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSubModules.length > 0 ? (
             filteredSubModules.map((subModule) => (
@@ -161,13 +187,10 @@ const SubModuleCard = () => {
               >
                 <div className="h-40 bg-gray-100 overflow-hidden">
                   {subModule.SubModuleImage ? (
-                    <>
-                    <span>{JSON.stringify(subModule.SubModuleImage.data)}</span>
                     <ByteArrayImage
                       byteArray={subModule.SubModuleImage.data}
                       className="w-full h-full object-cover"
                     />
-                    </>
                   ) : (
                     <div className="flex items-center justify-center text-gray-400 text-sm h-full">
                       No Image
@@ -182,8 +205,7 @@ const SubModuleCard = () => {
                     {subModule.SubModuleDescription || "No description available"}
                   </p>
                   
-                  {/* Progress Bar */}
-                  <ProgressBar progress={subModule.progress} />
+                  <DynamicProgressBar progress={subModule.progress} />
                   
                   <button
                     className="w-full mt-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-300"
