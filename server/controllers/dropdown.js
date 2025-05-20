@@ -363,6 +363,92 @@ export const getSubModules = async (req, res) => {
     }
 };
 
+export const getUnitsWithFiles = async (req, res) => {
+    let success = false;
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError(err);
+                return res.status(500).json({
+                    success,
+                    message: "Database connection error"
+                });
+            }
+
+            try {
+                // First get all units
+                const unitsQuery = `
+                    SELECT 
+                        UnitID,
+                        UnitName,
+                        UnitImg,
+                        UnitDescription,
+                        SubModuleID,
+                        AuthAdd
+                    FROM UnitsDetails
+                    WHERE ISNULL(delStatus, 0) = 0
+                    ORDER BY UnitID
+                `;
+
+                const units = await queryAsync(conn, unitsQuery);
+
+                // Then get all files
+                const filesQuery = `
+                    SELECT 
+                        FileID,
+                        FilesName,
+                        FilePath,
+                        FileType,
+                        UnitID,
+                        AuthAdd,
+                        Percentage
+                    FROM FilesDetails
+                    WHERE ISNULL(delStatus, 0) = 0
+                    ORDER BY FileID
+                `;
+
+                const files = await queryAsync(conn, filesQuery);
+
+                // Group files by UnitID
+                const filesByUnit = files.reduce((acc, file) => {
+                    if (!acc[file.UnitID]) {
+                        acc[file.UnitID] = [];
+                    }
+                    acc[file.UnitID].push(file);
+                    return acc;
+                }, {});
+
+                // Combine units with their files
+                const result = units.map(unit => ({
+                    ...unit,
+                    files: filesByUnit[unit.UnitID] || []
+                }));
+
+                success = true;
+                res.status(200).json({
+                    success,
+                    data: result,
+                    message: "Units with files fetched successfully"
+                });
+            } catch (queryErr) {
+                logError(queryErr);
+                res.status(500).json({
+                    success,
+                    message: "Error fetching units with files"
+                });
+            } finally {
+                closeConnection();
+            }
+        });
+    } catch (error) {
+        logError(error);
+        res.status(500).json({
+            success,
+            message: "Server error"
+        });
+    }
+};
 
 
 
