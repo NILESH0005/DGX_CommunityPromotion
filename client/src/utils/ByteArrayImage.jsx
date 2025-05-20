@@ -5,7 +5,6 @@ export default function ByteArrayImage({ byteArray, className }) {
 
   useEffect(() => {
     if (!byteArray) return;
-
     try {
       // Handle both direct arrays and Buffer objects
       const bytes = Array.isArray(byteArray) ? byteArray : 
@@ -22,7 +21,6 @@ export default function ByteArrayImage({ byteArray, className }) {
       console.error('Image processing error:', error);
     }
   }, [byteArray]);
-
   if (!imageSrc) {
     return (
       <div className="flex items-center justify-center text-gray-400 text-sm h-full">

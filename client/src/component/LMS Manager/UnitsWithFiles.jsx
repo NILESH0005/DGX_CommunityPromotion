@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import PropTypes from 'prop-types';
 import { useParams } from 'react-router-dom'; // Add this import
 import ApiContext from '../../context/ApiContext';
+import FileViewer from '../../utils/FileViewer';
 
 const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
   const { subModuleId } = useParams(); // Get the ID from URL
@@ -11,6 +12,8 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
   const [error, setError] = useState(null);
   const { fetchData } = useContext(ApiContext);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [files, setFiles] = useState([]);
+
 
   useEffect(() => {
     console.log('subModuleId changed:', subModuleId, typeof subModuleId);
@@ -34,8 +37,6 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
 
           console.log('Filtered Units:', filtered);
           setFilteredUnits(filtered);
-
-          // Set the first file of the first unit as default selection if available
           if (filtered.length > 0 && filtered[0].files?.length > 0) {
             const firstFile = filtered[0].files[0];
             setSelectedFile({
@@ -76,6 +77,21 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
     document.body.removeChild(link);
   };
 
+  const getFileType = (mimeType) => {
+    if (!mimeType) return 'unknown';
+
+    if (mimeType.includes('pdf')) return 'pdf';
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'ppt';
+    if (mimeType.includes('word')) return 'doc';
+    if (mimeType.includes('excel')) return 'xls';
+    if (mimeType.includes('image')) return 'image';
+    if (mimeType.includes('text')) return 'text';
+
+    return 'unknown';
+  };
+
+
+
   const renderFileContent = () => {
     if (!selectedFile) return (
       <div className="flex items-center justify-center h-full text-gray-500">
@@ -83,35 +99,52 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
       </div>
     );
 
-    switch (selectedFile.FileType) {
+    const fileType = getFileType(selectedFile.FileType);
+    const fileUrl = `localhost:8000${selectedFile.FilePath}`;
+    console.log('File URL:', fileUrl); 
+
+    switch (fileType) {
       case "pdf":
         return (
           <iframe
             key={selectedFile.FileID}
-            src={selectedFile.FilePath}
+            src={fileUrl}
             className="w-full h-full"
             allowFullScreen
             title={`${selectedFile.FilesName} Viewer`}
             sandbox="allow-scripts allow-same-origin"
           />
         );
-      case "ipynb":
-      case "docx":
+      case "ppt":
       case "pptx":
         return (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <div className="text-6xl mb-4">
-              {selectedFile.FileType === "ipynb" ? "📓" :
-                selectedFile.FileType === "docx" ? "📄" : "📊"}
-            </div>
-            <h3 className="text-xl font-semibold mb-2">{selectedFile.FilesName}</h3>
-            <p className="text-gray-500 mb-6">{selectedFile.FileDescription || "No description available"}</p>
-            <button
-              onClick={() => handleDownload(selectedFile)}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Download File
-            </button>
+          <iframe
+            // src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`}
+            className="w-full h-full"
+            allowFullScreen
+            title={`${selectedFile.FilesName} Viewer`}
+            sandbox="allow-scripts allow-same-origin"
+          />
+        );
+      case "doc":
+      case "docx":
+        return (
+          <iframe
+            // src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`}
+            className="w-full h-full"
+            allowFullScreen
+            title={`${selectedFile.FilesName} Viewer`}
+            sandbox="allow-scripts allow-same-origin"
+          />
+        );
+      case "image":
+        return (
+          <div className="flex items-center justify-center h-full">
+            <img
+              src={fileUrl}
+              alt={selectedFile.FilesName}
+              className="max-h-full max-w-full object-contain"
+            />
           </div>
         );
       default:
@@ -220,8 +253,8 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
                     <div
                       key={file.FileID}
                       className={`py-1 px-2 rounded text-sm flex items-center ${selectedFile?.FileID === file.FileID
-                          ? "bg-gray-600 text-white"
-                          : "text-gray-300 hover:text-white"
+                        ? "bg-gray-600 text-white"
+                        : "text-gray-300 hover:text-white"
                         }`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -233,9 +266,9 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
                       }}
                     >
                       <span className="mr-2">
-                        {file.FileType === "pdf" ? "📄" :
-                          file.FileType === "ipynb" ? "📓" :
-                            file.FileType === "docx" ? "📝" : "📁"}
+                        {file.fileType === "pdf" ? "📄" :
+                          file.fileType === "ipynb" ? "📓" :
+                            file.fileType === "docx" ? "📝" : "📁"}
                       </span>
                       <span className="truncate">{file.FilesName}</span>
                     </div>
@@ -263,8 +296,9 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
           )}
         </div>
 
-        <div className="flex-1 w-full border rounded-xl shadow-lg relative overflow-hidden bg-white">
-          {renderFileContent()}
+        <div className="flex-1 w-full border rounded-xl shadow-lg relative ov erflow-hidden bg-white">
+          {/* {renderFileContent()} */}
+          <FileViewer fileUrl={`http://localhost:8000${selectedFile.FilePath}`} />
         </div>
       </div>
     </div>

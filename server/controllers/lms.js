@@ -11,16 +11,14 @@ export class LMS {
   static async uploadFile(req, res) {
     try {
       if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'No file uploaded'
-        });
+        const file = req.file;
+        if (!file) {
+          return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
       }
 
-      // Extract additional form data
       const { moduleId, subModuleId, unitId } = req.body;
 
-      // Here you would typically save to database
       const fileData = {
         name: req.file.originalname,
         path: `/uploads/${req.file.filename}`,
@@ -31,15 +29,15 @@ export class LMS {
         unitId,
         uploadedBy: req.user.id // From fetchUser middleware
       };
+      // console.log("daaaataaa", fileData);
 
-      // Save to database (pseudo-code)
-      // const savedFile = await FileModel.create(fileData);
 
       res.status(201).json({
         success: true,
         message: 'File uploaded successfully',
         file: fileData
       });
+
     } catch (error) {
       console.error('Upload error:', error);
       res.status(500).json({
@@ -79,12 +77,12 @@ export class LMS {
     }
 
     const { ModuleName, ModuleImage, ModuleDescription, subModules } = req.body.module;
- 
-    
+
+
     const userEmail = req.user.id;
-    
+
     const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    
+
     let conn;
 
     try {
@@ -120,8 +118,8 @@ export class LMS {
       OUTPUT INSERTED.ModuleID
       VALUES (?, ?, ?, ?, ?, ?)
     `;
-    console.log(req.body);
-    
+      console.log(req.body);
+
       const moduleResult = await queryAsync(conn, moduleInsertQuery, [
         ModuleName,
         // ModuleImage ? Buffer.from(ModuleImage, 'base64') : null,
@@ -138,7 +136,7 @@ export class LMS {
       const moduleId = moduleResult[0].ModuleID;
       console.log("Success in Module Query : Module ID - ", moduleId);
       console.log("Submodule here :- ", subModules);
-      
+
       for (const subModule of subModules) {
         const subModuleInsertQuery = `
         INSERT INTO SubModulesDetails 
@@ -159,7 +157,7 @@ export class LMS {
           throw new Error('Failed to insert submodule - no ID returned');
         }
         const subModuleId = subModuleResult[0].SubModuleID;
-      console.log("Success in submodule Query : sub Module ID - ", subModuleId);
+        console.log("Success in submodule Query : sub Module ID - ", subModuleId);
 
         for (const unit of subModule.Units || []) {
           const unitInsertQuery = `
@@ -184,7 +182,10 @@ export class LMS {
 
           // ✅ Fixed file insert logic (loop one-by-one)
           if (unit.Files && unit.Files.length > 0) {
+            console.log("file data", unit.Files);
+
             for (const file of unit.Files) {
+
               const fileInsertQuery = `
               INSERT INTO FilesDetails 
               (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus) 
