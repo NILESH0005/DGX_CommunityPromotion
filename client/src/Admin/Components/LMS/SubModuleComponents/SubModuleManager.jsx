@@ -103,7 +103,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                 }
             }
             const subModuleToAdd = {
-                id: uuidv4(), 
+                id: uuidv4(),
                 SubModuleName: newSubModule.SubModuleName.trim(),
                 SubModuleDescription: newSubModule.SubModuleDescription.trim(),
                 SubModuleImage: bannerBase64,
@@ -169,69 +169,91 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
     };
 
     const handleUploadFile = async (subModuleId, unitId, file) => {
-        if (!file) return;
+        if (!file) {
+            Swal.fire('Error', 'No file selected', 'error');
+            return false;
+        }
 
         try {
+            const uploadToast = Swal.fire({
+                title: 'Uploading file...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            // Log FormData contents for debugging
             const formData = new FormData();
             formData.append('file', file);
             formData.append('moduleId', module.id);
             formData.append('subModuleId', subModuleId);
             formData.append('unitId', unitId);
 
+            // Debugging: Log FormData entries
+            for (let [key, value] of formData.entries()) {
+                console.log(key, value);
+            }
+
+            // Ensure userToken exists
+            if (!userToken) {
+                throw new Error('Authentication token missing');
+            }
+
             const response = await fetch('http://localhost:8000/lms/upload-learning-material', {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'auth-token': userToken
+                    // Don't set Content-Type - let the browser set it with boundary
                 }
             });
 
+            // Handle non-OK responses
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Upload failed');
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    errorData = { message: await response.text() };
+                }
+                throw new Error(errorData.message || `Server responded with ${response.status}`);
             }
 
             const result = await response.json();
-            console.log("result is----- ", result);
+            await uploadToast.close();
 
-
-            const updatedSubModules = subModules.map(subModule => {
+            // Update state
+            setSubModules(prev => prev.map(subModule => {
                 if (subModule.id === subModuleId) {
                     const updatedUnits = subModule.units.map(unit => {
                         if (unit.id === unitId) {
+                            const newFile = {
+                                id: uuidv4(),
+                                originalName: result.file?.name || file.name,
+                                filePath: result.file?.path || URL.createObjectURL(file),
+                                fileType: result.file?.type || file.type,
+                                uploadedAt: new Date().toISOString()
+                            };
                             return {
                                 ...unit,
-                                files: [
-                                    ...(unit.files || []),
-                                    {
-                                        id: uuidv4(),
-                                        originalName: result.file.name,
-                                        filePath: result.file.path,
-                                        fileType: result.file.type,
-                                        uploadedAt: new Date().toISOString()
-                                    }
-                                ]
+                                files: [...(unit.files || []), newFile]
                             };
                         }
                         return unit;
                     });
-                    console.log("ffffff", updatedUnits);
-
                     return { ...subModule, units: updatedUnits };
                 }
                 return subModule;
-            });
+            }));
 
-            setSubModules(updatedSubModules);
-
+            Swal.fire('Success', 'File uploaded successfully', 'success');
             return true;
         } catch (error) {
+            await Swal.close();
             console.error('Upload error:', error);
+            Swal.fire('Error', `Upload failed: ${error.message}`, 'error');
             return false;
         }
-
     };
-
     const handleSaveAll = () => {
         if (subModules.length === 0) {
             setErrors({ subModules: 'Please add at least one submodule' });
@@ -381,8 +403,8 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                     onClick={handleSaveAll}
                     disabled={subModules.length === 0}
                     className={`px-6 py-2.5 rounded-lg flex items-center gap-2 ${subModules.length === 0
-                            ? 'bg-DGXgray/30 text-DGXgray cursor-not-allowed'
-                            : 'bg-DGXgreen hover:bg-[#68a600] text-DGXwhite'
+                        ? 'bg-DGXgray/30 text-DGXgray cursor-not-allowed'
+                        : 'bg-DGXgreen hover:bg-[#68a600] text-DGXwhite'
                         }`}
                 >
                     <Save className="w-5 h-5" />
