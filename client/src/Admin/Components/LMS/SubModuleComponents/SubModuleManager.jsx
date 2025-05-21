@@ -197,8 +197,9 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             if (!userToken) {
                 throw new Error('Authentication token missing');
             }
+console.log(`${import.meta.env.VITE_API_BASEURL}lms/upload-learning-material`);
 
-            const response = await fetch('http://localhost:8000/lms/upload-learning-material', {
+            const response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/upload-learning-material`, {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -254,6 +255,8 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             return false;
         }
     };
+
+    
     const handleSaveAll = () => {
         if (subModules.length === 0) {
             setErrors({ subModules: 'Please add at least one submodule' });
