@@ -1,6 +1,4 @@
 import React, { useState, useReducer, useContext, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, FileText, UploadCloud, X, Plus, Trash2, ArrowLeft, Save, ChevronLeft, RefreshCw } from 'lucide-react';
 import ApiContext from '../../../context/ApiContext';
 import Swal from "sweetalert2";
 import ModuleComponent from './ModuleComponent';
@@ -8,6 +6,7 @@ import SubModuleComponent from './SubModuleComponent';
 import UnitComponent from './UnitComponent';
 import { v4 as uuidv4 } from 'uuid';
 import { compressImage } from '../../../utils/compressImage';
+
 
 const initialState = {
   module: null,
@@ -124,6 +123,7 @@ const LearningMaterialManager = () => {
   const [formState, dispatch] = useReducer(formReducer, initialState);
   const [error, setError] = useState(null);
 
+
   const getCurrentDateTime = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
   const transformForBackend = async (moduleData) => {
     const currentUser = user?.username || 'system';
@@ -152,7 +152,6 @@ const LearningMaterialManager = () => {
           subModuleImageBase64 = await compressImage(subModule.SubModuleImage);
         }
 
-        // Process units with safe UnitImg handling
         const processedUnits = await Promise.all(
           (subModule.units || []).map(async (unit) => {
             if (!unit.UnitName) {
@@ -160,22 +159,18 @@ const LearningMaterialManager = () => {
             }
 
             // Handle UnitImg - can be File, string (base64), null, or undefined
-            let unitImageBase64 = '';
+            let unitImageBase64 = null;
             if (unit.UnitImg instanceof File) {
               unitImageBase64 = await compressImage(unit.UnitImg);
-            } else if (unit.UnitImg) {
-              // If it's not a File but has value, assume it's already base64 string
+            } else if (typeof unit.UnitImg === 'string' && unit.UnitImg.startsWith('data:')) {
               unitImageBase64 = unit.UnitImg;
             }
-            // else case: unitImageBase64 remains empty string
-
             return {
               UnitName: unit.UnitName,
               UnitImg: unitImageBase64, // Will be empty string if no image
               UnitDescription: unit.UnitDescription || "",
               AuthAdd: currentUser,
               AddOnDt: now,
-              editOnDt: now,
               delStatus: 0,
               Files: (unit.files || []).map(file => ({
                 FilesName: file.originalName || `file_${Date.now()}`,
@@ -183,7 +178,6 @@ const LearningMaterialManager = () => {
                 FileType: file.fileType || '',
                 AuthAdd: currentUser,
                 AddOnDt: now,
-                editOnDt: now,
                 delStatus: 0
               }))
             };
@@ -196,7 +190,6 @@ const LearningMaterialManager = () => {
           SubModuleDescription: subModule.SubModuleDescription || "",
           AuthAdd: currentUser,
           AddOnDt: now,
-          editOnDt: now,
           delStatus: 0,
           Units: processedUnits
         };
@@ -211,18 +204,40 @@ const LearningMaterialManager = () => {
       AddOnDt: now,
       editOnDt: now,
       delStatus: 0,
-      SubModules: processedSubModules
+      subModules: processedSubModules
     };
   };
 
   useEffect(() => {
     const savedData = localStorage.getItem('learningMaterials');
     if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      dispatch({
-        type: 'SET_MODULE',
-        payload: parsedData.module
-      });
+      try {
+        const parsedData = JSON.parse(savedData);
+        if (parsedData.module) {
+          // Convert any file metadata back to proper structure
+          const moduleWithFiles = {
+            ...parsedData.module,
+            subModules: parsedData.module.subModules.map(subModule => ({
+              ...subModule,
+              units: subModule.units.map(unit => ({
+                ...unit,
+                files: unit.files.map(file => ({
+                  ...file,
+                  // Add any transformations needed
+                  isUploaded: !!file.filePath // Example flag
+                }))
+              }))
+            }))
+          };
+
+          dispatch({
+            type: 'SET_MODULE',
+            payload: moduleWithFiles
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing saved data:", error);
+      }
     }
   }, []);
 
@@ -243,13 +258,32 @@ const LearningMaterialManager = () => {
             UnitName: unit.UnitName,
             UnitImg: unit.UnitImg,
             UnitDescription: unit.UnitDescription,
-            files: unit.files || []
+            files: (unit.files || []).map(file => ({
+              id: file.id,
+              originalName: file.originalName,
+              fileType: file.fileType,
+              fileSize: file.fileSize,
+              uploadedAt: file.uploadedAt,
+              filePath: file.filePath,
+              downloadUrl: file.downloadUrl,
+              // …and any other fields you care about
+            }))
           }))
         }))
       }
     };
     localStorage.setItem('learningMaterials', JSON.stringify(dataToSave));
+
+
   };
+
+
+  // const saveToLocalStorage = (moduleData) => {
+  //   localStorage.setItem(
+  //     'learningMaterials',
+  //     JSON.stringify({ module: moduleData })
+  //   );
+  // };
 
   const handleSubmit = async () => {
     if (!formState.unit || !formState.fileData) {
@@ -294,11 +328,13 @@ const LearningMaterialManager = () => {
                         ...(unit.files || []),
                         {
                           id: uuidv4(),
-                          originalName: uploadResponse.file.originalName,
+                          originalName: formState.fileData.name,
                           filePath: uploadResponse.file.filePath,
-                          fileType: uploadResponse.file.fileType,
-                          fileSize: uploadResponse.file.fileSize,
-                          uploadedAt: getCurrentDateTime()
+                          fileType: formState.fileData.type,
+                          fileSize: formState.fileData.size,
+                          uploadedAt: new Date().toISOString(),
+                          serverName: uploadResponse.file.storedName,
+                          storagePath: uploadResponse.file.storagePath
                         }
                       ]
                     };
@@ -310,7 +346,7 @@ const LearningMaterialManager = () => {
             return subModule;
           })
         };
-
+        console.log('About to save this module:', updatedModule);
         saveToLocalStorage(updatedModule);
         dispatch({ type: 'SET_MODULE', payload: updatedModule });
 
@@ -340,7 +376,9 @@ const LearningMaterialManager = () => {
     setError(null);
 
     try {
+      console.log('🏁 handleSubmitAllData firing, reading from LS…');
       const savedData = JSON.parse(localStorage.getItem('learningMaterials'));
+      console.log('📦 savedData.module =', savedData.module);
       if (!savedData?.module) {
         throw new Error("No module data found in local storage");
       }
@@ -348,25 +386,12 @@ const LearningMaterialManager = () => {
       const payload = await transformForBackend(savedData.module);
       console.log("Processed payload for submission:", payload);
 
-      if (!payload.ModuleName || !Array.isArray(payload.SubModules)) {
-        throw new Error("Invalid module structure - missing required fields");
-      }
-
-      payload.SubModules.forEach(subModule => {
-        if (!subModule.SubModuleName) {
-          throw new Error("SubModule name is required");
-        }
-        subModule.Units.forEach(unit => {
-          if (!unit.UnitName) {
-            throw new Error("Unit name is required");
-          }
-        });
-      });
-
+      const requestBody = JSON.stringify({ module: payload });
+      console.log("Request body being sent:", requestBody);
       const response = await fetchData(
         'lms/save-learning-materials',
         'POST',
-        payload, 
+        { module: payload }, // Send as plain object
         {
           'Content-Type': 'application/json',
           'auth-token': userToken
@@ -421,126 +446,60 @@ const LearningMaterialManager = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      {/* Header Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8 p-6 bg-DGXgray/5 rounded-xl"
-      >
-        <h2 className="text-3xl font-bold text-DGXblue flex items-center gap-3">
-          <BookOpen className="w-8 h-8 text-DGXgreen" />
-          Learning Management System
-        </h2>
-        <p className="text-DGXgray mt-2">Create and organize your educational content</p>
-      </motion.div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Learning Management System</h2>
+        <p className="text-gray-600">Create and organize your educational content</p>
+      </div>
 
       <div className="space-y-6">
-        <AnimatePresence mode="wait">
-          {formState.isCreatingModule ? (
-            <motion.div
-              key="create-module"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ModuleComponent
-                mode="create"
-                onCancel={() => dispatch({ type: 'RESET' })}
-                onCreate={handleModuleCreated}
-              />
-            </motion.div>
-          ) : !formState.module ? (
-            <motion.div
-              key="empty-state"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ModuleComponent
-                mode="empty"
-                onCreateModule={() => dispatch({ type: 'START_CREATING_MODULE' })}
-              />
-            </motion.div>
-          ) : formState.isEditingSubmodules ? (
-            <motion.div
-              key="edit-submodules"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <SubModuleComponent
-                module={formState.module}
-                onSave={handleSubmoduleCreated}
-                onCancel={() => dispatch({ type: 'SET_MODULE', payload: formState.module })}
-                onSelectSubmodule={(subModule) => dispatch({
-                  type: 'START_EDITING_UNITS',
-                  payload: subModule
-                })}
-              />
-            </motion.div>
-          ) : formState.isEditingUnits ? (
-            <motion.div
-              key="edit-units"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <UnitComponent
-                subModule={formState.subModule}
-                onUnitsUpdated={(units) => handleUnitsUpdated(formState.subModule.id, units)}
-                onBack={() => dispatch({ type: 'SET_MODULE', payload: formState.module })}
-                onSelectUnit={(unit) => dispatch({ type: 'SET_UNIT', payload: unit })}
-              />
-            </motion.div>
-          ) : formState.unit ? (
-            <motion.div
-              key="upload-file"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <UnitComponent
-                mode="upload"
-                unit={formState.unit}
-                fileData={formState.fileData}
-                onFileSelect={(file) => dispatch({ type: 'SET_FILE', payload: file })}
-                onBack={() => dispatch({ type: 'SET_UNIT', payload: null })}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="view-module"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ModuleComponent
-                mode="view"
-                module={formState.module}
-                onManageSubmodules={() => dispatch({ type: 'SET_MODULE', payload: formState.module })}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {formState.isCreatingModule ? (
+          <ModuleComponent
+            mode="create"
+            onCancel={() => dispatch({ type: 'RESET' })}
+            onCreate={handleModuleCreated}
+          />
+        ) : !formState.module ? (
+          <ModuleComponent
+            mode="empty"
+            onCreateModule={() => dispatch({ type: 'START_CREATING_MODULE' })}
+          />
+        ) : formState.isEditingSubmodules ? (
+          <SubModuleComponent
+            module={formState.module}
+            onSave={handleSubmoduleCreated}
+            onCancel={() => dispatch({ type: 'SET_MODULE', payload: formState.module })}
+            onSelectSubmodule={(subModule) => dispatch({
+              type: 'START_EDITING_UNITS',
+              payload: subModule
+            })}
+          />
+        ) : formState.isEditingUnits ? (
+          <UnitComponent
+            subModule={formState.subModule}
+            onUnitsUpdated={(units) => handleUnitsUpdated(formState.subModule.id, units)}
+            onBack={() => dispatch({ type: 'SET_MODULE', payload: formState.module })}
+            onSelectUnit={(unit) => dispatch({ type: 'SET_UNIT', payload: unit })}
+          />
+        ) : formState.unit ? (
+          <UnitComponent
+            mode="upload"
+            unit={formState.unit}
+            fileData={formState.fileData}
+            onFileSelect={(file) => dispatch({ type: 'SET_FILE', payload: file })}
+            onBack={() => dispatch({ type: 'SET_UNIT', payload: null })}
+          />
+        ) : (
+          <ModuleComponent
+            mode="view"
+            module={formState.module}
+            onManageSubmodules={() => dispatch({ type: 'SET_MODULE', payload: formState.module })}
+          />
+        )}
 
-        {/* Footer Actions */}
-        <motion.div 
-          className="flex justify-between pt-6 mt-6 border-t border-DGXgray/20"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
+        <div className="flex justify-between pt-6 border-t">
           <div>
             {formState.module && (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <button
                 onClick={() => {
                   if (formState.unit) {
                     dispatch({ type: 'SET_UNIT', payload: null });
@@ -550,70 +509,45 @@ const LearningMaterialManager = () => {
                     dispatch({ type: 'RESET' });
                   }
                 }}
-                className="px-4 py-2.5 rounded-lg border border-DGXgray/30 text-DGXblue hover:bg-DGXgray/10 flex items-center gap-2 transition-colors"
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <svg className="w-5 h-5 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
                 Back
-              </motion.button>
+              </button>
             )}
           </div>
 
-          <div className="flex gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+          <div className="flex space-x-2">
+            <button
               onClick={() => dispatch({ type: 'RESET' })}
-              className="px-4 py-2.5 rounded-lg border border-DGXgray/30 text-DGXblue hover:bg-DGXgray/10 flex items-center gap-2 transition-colors"
+              className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
               disabled={isSubmitting}
             >
-              <RefreshCw className="w-5 h-5" />
               Start Over
-            </motion.button>
+            </button>
 
             {/* Show different buttons based on state */}
             {formState.unit && formState.fileData ? (
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+              <button
                 onClick={handleSubmit}
-                className="px-6 py-2.5 rounded-lg bg-DGXgreen hover:bg-[#68a600] text-DGXwhite flex items-center gap-2 transition-colors"
+                className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <UploadCloud className="w-5 h-5" />
-                    Upload File
-                  </>
-                )}
-              </motion.button>
+                {isSubmitting ? 'Uploading...' : 'Upload File'}
+              </button>
             ) : formState.module && hasUploadedFiles(formState.module) ? (
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+              <button
                 onClick={handleSubmitAllData}
-                className="px-6 py-2.5 rounded-lg bg-DGXblue hover:bg-[#013045] text-DGXwhite flex items-center gap-2 transition-colors"
+                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Submit All Content
-                  </>
-                )}
-              </motion.button>
+                {isSubmitting ? 'Submitting...' : 'Submit All Content'}
+              </button>
             ) : null}
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

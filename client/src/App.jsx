@@ -106,8 +106,16 @@ import Imageclass from './component/LMS/DatasetModule/Imageclass.jsx';
 import Humanevol from './component/LMS/DatasetModule/Humanevol.jsx';
 import Housepred from './component/LMS/DatasetModule/Housepred.jsx';
 import Cifar from './component/LMS/DatasetModule/Cifar.jsx';
+import LearningPath from "./component/LMS Manager/LearningPath.jsx";
+import ModuleCard from "./component/LMS Manager/ModuleCard.jsx";
+import SubModuleCard from "./component/LMS Manager/SubmoduleCard.jsx";
+import UnitsWithFiles from "./component/LMS Manager/UnitsWithFiles.jsx";
 
 
+import { pdfjs } from 'react-pdf';
+
+// Use CDN to load the worker (best option with Vite)
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 
 function App() {
@@ -130,8 +138,8 @@ function App() {
             <Route path="/SignInn" element={<SignInn />} />
             <Route path="/ForgotPassword" element={<ForgotPassword />} />
             <Route path="/ChangePassword" element={<ChangePassword />} />
-           
-           {/* User Profile  */}
+
+            {/* User Profile  */}
             <Route
               path="/UserProfile"
               element={
@@ -143,7 +151,7 @@ function App() {
                 />
               }
             />
-            
+
             <Route path="/Discussion" element={<Discussion />} />
             <Route path="/ContactUs" element={<ContactUs />} />
             <Route path="/Blog" element={<Blog />} />
@@ -189,7 +197,8 @@ function App() {
               element={<QuizPanel />}
             />
             <Route path="/QuizList" element={<QuizList />} />
-            <Route path="/quiz/:quizId" element={<Quiz />} />            <Route path="/QuizQuestions" element={<QuizQuestions />} />
+            <Route path="/quiz/:quizId" element={<Quiz />} />
+            <Route path="/QuizQuestions" element={<QuizQuestions />} />
             <Route path="/quiz-result" element={<QuizResult />} />
 
             <Route path="/CreateQuiz" element={<CreateQuiz />} />
@@ -251,6 +260,9 @@ function App() {
             <Route path="/leaderboard" element={<LeaderBoard />} />
             <Route path="/chatbot" element={<Chatbot />} />
 
+
+
+            {/* <Route path="/LmsM  anager" element={<LearningPath />} /> */}
             {/* LMS */}
             <Route path="/Lms" element={<Lms />} />
             <Route path="/teaching-modules" element={<TeachingModules />} />
@@ -335,6 +347,18 @@ function App() {
             {/* Digital Learning Models */}
             <Route path="/tutorials" element={<Tutorials />} />
             <Route path="/resources" element={<Resource />} />
+
+
+
+
+
+
+            <Route path="/modules" element={<ModuleCard />} />
+            <Route path="/module/:moduleId" element={<SubModuleCard />} />
+            <Route path="/submodule/:subModuleId" element={<UnitsWithFiles />} />
+
+
+
           </Routes>
         </div>
         <Footer />

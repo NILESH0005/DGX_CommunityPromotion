@@ -374,14 +374,13 @@ const FileUploader = ({
       };
 
       const updatedFiles = [...localFiles, uploadData];
-      localStorage.setItem('pendingUploads', JSON.stringify(updatedFiles));
+      localStorage.setItem('learningMaterials', JSON.stringify(updatedFiles));
       setLocalFiles(updatedFiles);
     }
   };
 
   const removeFile = () => {
     onClearFile();
-    // Remove from localStorage
     const newFiles = localFiles.filter(file => 
       !(file.moduleId === moduleId && 
         file.submoduleId === submoduleId && 
