@@ -70,7 +70,7 @@ const Navbar = () => {
         { label: 'Quiz', to: '/QuizInterface', icon: FaBrain },
         { label: 'Contact', to: '/ContactUs', icon: faEnvelope },
         { label: 'Guidelines', to: '/CommunityGuidelines', icon: faBook },
-        { label: 'Learn Hub', to: '/Lms', icon: faChalkboardTeacher },
+        // { label: 'Learn Hub', to: '/Lms', icon: faChalkboardTeacher },
         { label: 'Learn Hub', to: '/LmsManager', icon: faChalkboardTeacher }
     ];
 
