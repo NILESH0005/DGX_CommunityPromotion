@@ -13,18 +13,22 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const filetypes = /jpeg|jpg|png|gif|pdf|doc|docx|ppt|pptx|mp4|mov/;
-  const mimetype = filetypes.test(file.mimetype);
+  const filetypes = /jpeg|jpg|png|gif|pdf|doc|docx|ppt|pptx|mp4|mov|ipynb/;
   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
   
-  if (mimetype && extname) {
+  // Special handling for IPYNB files
+  const isIpynb = path.extname(file.originalname).toLowerCase() === '.ipynb';
+  
+  // Allow IPYNB regardless of MIME type, or other files with matching MIME type
+  if (isIpynb || filetypes.test(file.mimetype)) {
     return cb(null, true);
   }
-  cb(new Error('Only image, PDF, document, presentation, and video files are allowed'));
+  
+  cb(new Error('Only image, PDF, document, presentation, video, and Jupyter Notebook files are allowed'));
 };
 
 export const upload = multer({ 
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
   fileFilter
 });

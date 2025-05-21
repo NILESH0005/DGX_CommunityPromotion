@@ -129,18 +129,15 @@ const LearningMaterialManager = () => {
     const currentUser = user?.username || 'system';
     const now = getCurrentDateTime();
 
-    // Validate required fields
     if (!moduleData?.ModuleName || !moduleData?.subModules) {
       throw new Error("Module name and at least one submodule are required");
     }
 
-    // Convert module image to base64 if it exists
     let moduleImageBase64 = moduleData.ModuleImage;
     if (moduleData.ModuleImage instanceof File) {
       moduleImageBase64 = await compressImage(moduleData.ModuleImage);
     }
 
-    // Process submodules
     const processedSubModules = await Promise.all(
       moduleData.subModules.map(async (subModule) => {
         if (!subModule.SubModuleName) {

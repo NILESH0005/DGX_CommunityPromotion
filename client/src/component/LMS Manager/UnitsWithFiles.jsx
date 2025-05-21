@@ -298,7 +298,7 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
 
         <div className="flex-1 w-full border rounded-xl shadow-lg relative ov erflow-hidden bg-white">
           {/* {renderFileContent()} */}
-          <FileViewer fileUrl={`http://localhost:8000${selectedFile.FilePath}`} />
+          <FileViewer fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile.FilePath}`} />
         </div>
       </div>
     </div>
