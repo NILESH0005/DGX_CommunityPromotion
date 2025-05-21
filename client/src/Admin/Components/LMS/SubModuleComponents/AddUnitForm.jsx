@@ -82,7 +82,7 @@ const AddUnitForm = ({ onAddUnit, errors, setErrors }) => {
                     </div>
 
                     {/* Image Upload Field */}
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                         <label className="block text-sm font-medium text-DGXblue">
                             Unit Image
                         </label>
@@ -141,7 +141,7 @@ const AddUnitForm = ({ onAddUnit, errors, setErrors }) => {
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Description Field */}
                     <div className="space-y-2">

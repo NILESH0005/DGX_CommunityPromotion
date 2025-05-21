@@ -159,15 +159,15 @@ const LearningMaterialManager = () => {
             }
 
             // Handle UnitImg - can be File, string (base64), null, or undefined
-            let unitImageBase64 = null;
-            if (unit.UnitImg instanceof File) {
-              unitImageBase64 = await compressImage(unit.UnitImg);
-            } else if (typeof unit.UnitImg === 'string' && unit.UnitImg.startsWith('data:')) {
-              unitImageBase64 = unit.UnitImg;
-            }
+            // let unitImageBase64 = null;
+            // if (unit.UnitImg instanceof File) {
+            //   unitImageBase64 = await compressImage(unit.UnitImg);
+            // } else if (typeof unit.UnitImg === 'string' && unit.UnitImg.startsWith('data:')) {
+            //   unitImageBase64 = unit.UnitImg;
+            // }
             return {
               UnitName: unit.UnitName,
-              UnitImg: unitImageBase64, // Will be empty string if no image
+              // UnitImg: unitImageBase64, // Will be empty string if no image
               UnitDescription: unit.UnitDescription || "",
               AuthAdd: currentUser,
               AddOnDt: now,
@@ -256,7 +256,7 @@ const LearningMaterialManager = () => {
           units: subModule.units.map(unit => ({
             id: unit.id || uuidv4(),
             UnitName: unit.UnitName,
-            UnitImg: unit.UnitImg,
+            // UnitImg: unit.UnitImg,
             UnitDescription: unit.UnitDescription,
             files: (unit.files || []).map(file => ({
               id: file.id,

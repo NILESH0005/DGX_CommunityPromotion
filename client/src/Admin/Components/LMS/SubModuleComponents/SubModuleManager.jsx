@@ -147,7 +147,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                             id: uuidv4(),
                             UnitName: newUnit.UnitName.trim(),
                             UnitDescription: newUnit.UnitDescription.trim(),
-                            UnitImg: newUnit.UnitImg,
+                            // UnitImg: newUnit.UnitImg,
                             files: []
                         }
                     ]
