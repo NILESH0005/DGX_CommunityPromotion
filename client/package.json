@@ -20,6 +20,7 @@
     "@react-pdf/renderer": "^3.4.4",
     "@shadcn/ui": "^0.0.4",
     "@tabler/icons-react": "^3.11.0",
+    "@tailwindcss/line-clamp": "^0.4.4",
     "axios": "^1.7.9",
     "bootstrap": "^5.3.3",
     "browser-image-compression": "^2.0.2",

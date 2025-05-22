@@ -16,7 +16,7 @@ export default {
         'DGXgray': '#6b7280',
         'Approved': '#76B900',
         'Rejected': '#FF8989',
-        'Pending' : '#F8ED8C'
+        'Pending': '#F8ED8C'
       },
       keyframes: {
         spin: {
@@ -48,5 +48,7 @@ export default {
       }),
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/line-clamp'),
+  ],
 }

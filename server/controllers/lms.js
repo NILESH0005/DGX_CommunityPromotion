@@ -6,7 +6,7 @@ import { log } from 'console';
 
 
 export class LMS {
-  static upload = upload; // Make Multer instance available to routes
+  static upload = upload; 
 
   static async uploadFile(req, res) {
     try {

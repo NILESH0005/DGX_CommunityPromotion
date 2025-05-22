@@ -66,7 +66,9 @@ const ModuleCard = () => {
             >
               <div className="h-40 bg-gray-100 overflow-hidden">
                 {module.ModuleImage ? (
+                  <>
                   <ByteArrayImage byteArray={module.ModuleImage.data} />
+                  </>
                 ) : (
                   <div className="flex items-center justify-center text-gray-400 text-sm h-full">
                     No Image

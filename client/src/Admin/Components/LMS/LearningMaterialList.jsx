@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useContext } from "react";
 import ApiContext from "../../../context/ApiContext";
-import ModuleCard from "../../../Admin/Components/LMS/EditableComponents/ModuleCard.jsx";
+// import ModuleCard from "../../../component/LMS Manager/ModuleCard.jsx";
+import EditModule from "./EditableComponents/EditModule.jsx";
+// import ModuleCard from "../../../Admin/Components/LMS/EditableComponents/ModuleCard.jsx";
 
 const LearningMaterialList = () => {
   const [modules, setModules] = useState([]);
@@ -57,7 +59,7 @@ const LearningMaterialList = () => {
   return (
     <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {modules.map((module) => (
-        <ModuleCard 
+        <EditModule
           key={module.ModuleID} 
           module={module} 
         />
