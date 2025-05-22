@@ -174,6 +174,17 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             return false;
         }
 
+        // Client-side validation
+        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf',
+            '.doc', '.docx', '.ppt', '.pptx', '.mp4',
+            '.mov', '.ipynb'];
+        const fileExt = file.name.split('.').pop().toLowerCase();
+
+        if (!allowedExtensions.includes(`.${fileExt}`)) {
+            Swal.fire('Error', 'File type not allowed. Please upload a valid file type.', 'error');
+            return false;
+        }
+
         try {
             const uploadToast = Swal.fire({
                 title: 'Uploading file...',
@@ -181,41 +192,27 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                 didOpen: () => Swal.showLoading()
             });
 
-            // Log FormData contents for debugging
             const formData = new FormData();
             formData.append('file', file);
             formData.append('moduleId', module.id);
             formData.append('subModuleId', subModuleId);
             formData.append('unitId', unitId);
 
-            // Debugging: Log FormData entries
-            for (let [key, value] of formData.entries()) {
-                console.log(key, value);
-            }
-
-            // Ensure userToken exists
             if (!userToken) {
                 throw new Error('Authentication token missing');
             }
 
-            const response = await fetch('http://localhost:8000/lms/upload-learning-material', {
+            const response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/upload-learning-material`, {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'auth-token': userToken
-                    // Don't set Content-Type - let the browser set it with boundary
                 }
             });
 
-            // Handle non-OK responses
             if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    errorData = { message: await response.text() };
-                }
-                throw new Error(errorData.message || `Server responded with ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Upload failed');
             }
 
             const result = await response.json();
@@ -248,12 +245,13 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             Swal.fire('Success', 'File uploaded successfully', 'success');
             return true;
         } catch (error) {
-            await Swal.close();
             console.error('Upload error:', error);
-            Swal.fire('Error', `Upload failed: ${error.message}`, 'error');
+            Swal.fire('Error', error.message || 'Upload failed', 'error');
             return false;
         }
     };
+
+
     const handleSaveAll = () => {
         if (subModules.length === 0) {
             setErrors({ subModules: 'Please add at least one submodule' });
