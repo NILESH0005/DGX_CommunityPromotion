@@ -8,8 +8,6 @@ const router = express.Router();
 router.post('/profileDetail', fetchUser, profileDetail)
 router.post('/getUserDiscussion', fetchUser, getUserDiscussion)
 router.post('/deleteUserDiscussion', fetchUser, deleteUserDiscussion)
-router.post('/uploadUserAvatar', fetchUser, uploadUserAvatar)
-
-
+router.post('/updateProfilePicture', fetchUser, uploadUserAvatar)
 
 export default router;
