@@ -1,6 +1,7 @@
 import React, { useState, useContext, useRef } from "react";
 import ApiContext from "../../../../context/ApiContext";
 import ByteArrayImage from "../../../../utils/ByteArrayImage";
+import { compressImage } from "../../../../utils/compressImage";
 
 const EditModule = ({ module, onCancel, onSave, onDelete }) => {
     const [editedModule, setEditedModule] = useState(module);
@@ -26,30 +27,31 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
     };
 
     const handleImageChange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
 
-        try {
-            // Validate file
-            if (!file.type.match('image.*')) {
-                setError("Only image files are allowed");
-                return;
-            }
-            if (file.size > 2 * 1024 * 1024) {
-                setError("Image size must be less than 2MB");
-                return;
-            }
-
-            // Compress and process image
-            const compressedDataURL = await compressImage(file);
-            setImagePreview(compressedDataURL);
-            setNewImageFile(compressedDataURL.split(',')[1]); // Store just the base64 data
-            setError(null);
-        } catch (error) {
-            console.error("Image processing error:", error);
-            setError("Failed to process image");
+    try {
+        // Validate file
+        if (!file.type.match('image.*')) {
+            setError("Only image files are allowed");
+            return;
         }
-    };
+        if (file.size > 2 * 1024 * 1024) {
+            setError("Image size must be less than 2MB");
+            return;
+        }
+
+        // Get the raw binary data instead of base64
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new ByteArrayImage(arrayBuffer);
+        setNewImageFile(Array.from(uint8Array)); // Store as byte array
+        setImagePreview(URL.createObjectURL(file)); // Create preview URL
+        setError(null);
+    } catch (error) {
+        console.error("Image processing error:", error);
+        setError("Failed to process image");
+    }
+};
 
 
     const handleSubmit = async (e) => {
@@ -58,17 +60,19 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
         setError(null);
 
         try {
-            const payload = {
+            const payload =  {
                 ModuleName: editedModule.ModuleName,
                 ModuleDescription: editedModule.ModuleDescription,
                 ModuleImage: newImageFile !== null ? newImageFile :
                     (module.ModuleImage ? module.ModuleImage.data : null)
             };
 
+
             console.log("Submitting payload:", {
                 ...payload,
                 ModuleImage: payload.ModuleImage ? `${payload.ModuleImage.substring(0, 30)}...` : null
             });
+
 
             const headers = {
                 'Content-Type': 'application/json',
@@ -81,6 +85,13 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
                 payload,
                 headers
             );
+            console.log("headerrrr", headers);
+            console.log("module id", editedModule.ModuleID);
+            console.log("paaayyyload", payload);
+
+
+
+            console.log("rreeessppoonsse", response)
 
             if (response?.success) {
                 onSave(response.data);
