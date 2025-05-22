@@ -34,7 +34,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                 if (selectedSubModule?.id === id) {
                     setSelectedSubModule(null);
                 }
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Deleted!',
@@ -67,7 +67,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                     return sub;
                 });
                 setSubModules(updatedSubModules);
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Deleted!',
@@ -94,7 +94,13 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
         try {
             let bannerBase64 = null;
             if (newSubModule.SubModuleImage) {
-                bannerBase64 = await compressImage(newSubModule.SubModuleImage);
+                // bannerBase64 = await compressImage(newSubModule.SubModuleImage);
+                try {
+                    bannerBase64 = await compressImage(newSubModule.SubModuleImage);
+                } catch (error) {
+                    console.error('Image compression failed:', error);
+                    bannerBase64 = await convertFileToBase64(newSubModule.SubModuleImage);
+                }
             }
             const subModuleToAdd = {
                 id: uuidv4(),
@@ -105,7 +111,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             };
             setSubModules([...subModules, subModuleToAdd]);
             setResetForm(prev => !prev);
-            
+
             Swal.fire({
                 icon: 'success',
                 title: 'Submodule Added',
@@ -141,7 +147,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                             id: uuidv4(),
                             UnitName: newUnit.UnitName.trim(),
                             UnitDescription: newUnit.UnitDescription.trim(),
-                            UnitImg: newUnit.UnitImg,
+                            // UnitImg: newUnit.UnitImg,
                             files: []
                         }
                     ]
@@ -152,7 +158,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
 
         setSubModules(updatedSubModules);
         setErrors({ ...errors, UnitName: null });
-        
+
         Swal.fire({
             icon: 'success',
             title: 'Unit Added',
@@ -163,69 +169,91 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
     };
 
     const handleUploadFile = async (subModuleId, unitId, file) => {
-        if (!file) return;
+        if (!file) {
+            Swal.fire('Error', 'No file selected', 'error');
+            return false;
+        }
 
         try {
+            const uploadToast = Swal.fire({
+                title: 'Uploading file...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            // Log FormData contents for debugging
             const formData = new FormData();
             formData.append('file', file);
             formData.append('moduleId', module.id);
             formData.append('subModuleId', subModuleId);
             formData.append('unitId', unitId);
 
+            // Debugging: Log FormData entries
+            for (let [key, value] of formData.entries()) {
+                console.log(key, value);
+            }
+
+            // Ensure userToken exists
+            if (!userToken) {
+                throw new Error('Authentication token missing');
+            }
+
             const response = await fetch('http://localhost:8000/lms/upload-learning-material', {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'auth-token': userToken
+                    // Don't set Content-Type - let the browser set it with boundary
                 }
             });
 
+            // Handle non-OK responses
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Upload failed');
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    errorData = { message: await response.text() };
+                }
+                throw new Error(errorData.message || `Server responded with ${response.status}`);
             }
 
             const result = await response.json();
-            console.log("result is----- ", result);
-            
+            await uploadToast.close();
 
-            const updatedSubModules = subModules.map(subModule => {
+            // Update state
+            setSubModules(prev => prev.map(subModule => {
                 if (subModule.id === subModuleId) {
                     const updatedUnits = subModule.units.map(unit => {
                         if (unit.id === unitId) {
+                            const newFile = {
+                                id: uuidv4(),
+                                originalName: result.file?.name || file.name,
+                                filePath: result.file?.path || URL.createObjectURL(file),
+                                fileType: result.file?.type || file.type,
+                                uploadedAt: new Date().toISOString()
+                            };
                             return {
                                 ...unit,
-                                files: [
-                                    ...(unit.files || []),
-                                    {
-                                        id: uuidv4(),
-                                        originalName: result.file.name,
-                                        filePath: result.file.path,
-                                        fileType: result.file.type,
-                                        uploadedAt: new Date().toISOString()
-                                    }
-                                ]
+                                files: [...(unit.files || []), newFile]
                             };
                         }
                         return unit;
                     });
-                    console.log("ffffff", updatedUnits);
-                    
                     return { ...subModule, units: updatedUnits };
                 }
                 return subModule;
-            });
+            }));
 
-            setSubModules(updatedSubModules);
-
+            Swal.fire('Success', 'File uploaded successfully', 'success');
             return true;
         } catch (error) {
+            await Swal.close();
             console.error('Upload error:', error);
+            Swal.fire('Error', `Upload failed: ${error.message}`, 'error');
             return false;
         }
-
     };
-
     const handleSaveAll = () => {
         if (subModules.length === 0) {
             setErrors({ subModules: 'Please add at least one submodule' });
@@ -247,7 +275,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                     subModules: subModules
                 };
                 onSave(updatedModule);
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Saved!',
@@ -262,7 +290,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
     return (
         <div className="space-y-6">
             {/* Header Section */}
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center justify-between mb-6 p-4 bg-DGXgray/5 rounded-xl"
@@ -281,7 +309,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
 
             {/* Error Message */}
             {errors.subModules && (
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="p-4 rounded-lg bg-red-100 border border-red-200 text-red-700 flex items-start gap-3"
@@ -292,7 +320,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             )}
 
             {/* Add Submodule Form */}
-            <AddSubModuleForm 
+            <AddSubModuleForm
                 key={resetForm ? 'reset' : 'normal'}
                 onAddSubModule={handleAddSubModule}
                 errors={errors}
@@ -303,7 +331,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Submodule List */}
                 <div className="lg:col-span-1">
-                    <SubModuleList 
+                    <SubModuleList
                         subModules={subModules}
                         selectedSubModule={selectedSubModule}
                         onSelectSubModule={setSelectedSubModule}
@@ -340,7 +368,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             </div>
 
             {/* Footer Actions */}
-            <motion.div 
+            <motion.div
                 className="flex justify-between pt-6 mt-6 border-t border-DGXgray/20"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -374,11 +402,10 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                     whileTap={{ scale: 0.98 }}
                     onClick={handleSaveAll}
                     disabled={subModules.length === 0}
-                    className={`px-6 py-2.5 rounded-lg flex items-center gap-2 ${
-                        subModules.length === 0
-                            ? 'bg-DGXgray/30 text-DGXgray cursor-not-allowed'
-                            : 'bg-DGXgreen hover:bg-[#68a600] text-DGXwhite'
-                    }`}
+                    className={`px-6 py-2.5 rounded-lg flex items-center gap-2 ${subModules.length === 0
+                        ? 'bg-DGXgray/30 text-DGXgray cursor-not-allowed'
+                        : 'bg-DGXgreen hover:bg-[#68a600] text-DGXwhite'
+                        }`}
                 >
                     <Save className="w-5 h-5" />
                     Save & Continue
