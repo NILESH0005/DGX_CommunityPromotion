@@ -81,11 +81,13 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
     if (!mimeType) return 'unknown';
 
     if (mimeType.includes('pdf')) return 'pdf';
-    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'ppt';
-    if (mimeType.includes('word')) return 'doc';
-    if (mimeType.includes('excel')) return 'xls';
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint') ||
+      mimeType.includes('ppt') || mimeType.endsWith('.pptx')) return 'ppt';
+    if (mimeType.includes('word') || mimeType.endsWith('.docx')) return 'doc';
+    if (mimeType.includes('excel') || mimeType.endsWith('.xlsx')) return 'xls';
     if (mimeType.includes('image')) return 'image';
     if (mimeType.includes('text')) return 'text';
+    if (mimeType.includes('ipynb') || mimeType.endsWith('.ipynb')) return 'ipynb';
 
     return 'unknown';
   };
@@ -100,8 +102,8 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
     );
 
     const fileType = getFileType(selectedFile.FileType);
-    const fileUrl = `localhost:8000${selectedFile.FilePath}`;
-    console.log('File URL:', fileUrl); 
+    const fileUrl = `${import.meta.env.VITE_API_UPLOADSURL}${selectedFile.FilePath}`;
+    console.log('File URL:', fileUrl);
 
     switch (fileType) {
       case "pdf":
@@ -119,7 +121,17 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
       case "pptx":
         return (
           <iframe
-            // src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`}
+            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`}
+            className="w-full h-full"
+            allowFullScreen
+            title={`${selectedFile.FilesName} Viewer`}
+            sandbox="allow-scripts allow-same-origin"
+          />
+        );
+      case "ipynb":
+        return (
+          <iframe
+            src={`https://nbviewer.jupyter.org/url/${encodeURIComponent(fileUrl)}`}
             className="w-full h-full"
             allowFullScreen
             title={`${selectedFile.FilesName} Viewer`}
@@ -130,7 +142,7 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
       case "docx":
         return (
           <iframe
-            // src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`}
+            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`}
             className="w-full h-full"
             allowFullScreen
             title={`${selectedFile.FilesName} Viewer`}
@@ -298,7 +310,7 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
 
         <div className="flex-1 w-full border rounded-xl shadow-lg relative ov erflow-hidden bg-white">
           {/* {renderFileContent()} */}
-          <FileViewer fileUrl={`http://localhost:8000${selectedFile.FilePath}`} />
+          <FileViewer fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile.FilePath}`} />
         </div>
       </div>
     </div>
