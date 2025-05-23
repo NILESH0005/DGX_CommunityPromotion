@@ -3,7 +3,7 @@ import ApiContext from "../../../../context/ApiContext";
 import ByteArrayImage from "../../../../utils/ByteArrayImage";
 import { compressImage } from "../../../../utils/compressImage";
 
-const EditModule = ({ module, onCancel, onSave, onDelete }) => {
+const EditModule = ({ module, onCancel, onSave, onDelete, onViewSubmodules  }) => {
     const [editedModule, setEditedModule] = useState(module);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -13,10 +13,10 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
     const [imagePreview, setImagePreview] = useState(
         module.ModuleImage ? `data:image/jpeg;base64,${module.ModuleImage.data}` : null
     );
+    const [isCompressing, setIsCompressing] = useState(false);
     const fileInputRef = useRef(null);
 
     const { fetchData, userToken } = useContext(ApiContext);
-
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -27,32 +27,35 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
     };
 
     const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+        const file = e.target.files[0];
+        if (!file) return;
 
-    try {
-        // Validate file
-        if (!file.type.match('image.*')) {
-            setError("Only image files are allowed");
-            return;
+        try {
+            if (!file.type.match('image.*')) {
+                setError("Only image files are allowed");
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) { 
+                setError("Image size must be less than 2MB");
+                return;
+            }
+
+            setIsCompressing(true);
+            setError(null);
+            const previewUrl = URL.createObjectURL(file);
+            setImagePreview(previewUrl);
+            const compressedImage = await compressImage(file);
+            setNewImageFile(compressedImage);
+
+        } catch (error) {
+            console.error("Image processing error:", error);
+            setError("Failed to process image");
+            setImagePreview(null);
+            setNewImageFile(null);
+        } finally {
+            setIsCompressing(false);
         }
-        if (file.size > 2 * 1024 * 1024) {
-            setError("Image size must be less than 2MB");
-            return;
-        }
-
-        // Get the raw binary data instead of base64
-        const arrayBuffer = await file.arrayBuffer();
-        const uint8Array = new ByteArrayImage(arrayBuffer);
-        setNewImageFile(Array.from(uint8Array)); // Store as byte array
-        setImagePreview(URL.createObjectURL(file)); // Create preview URL
-        setError(null);
-    } catch (error) {
-        console.error("Image processing error:", error);
-        setError("Failed to process image");
-    }
-};
-
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -60,66 +63,66 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
         setError(null);
 
         try {
-            const payload =  {
+            const payload = {
                 ModuleName: editedModule.ModuleName,
                 ModuleDescription: editedModule.ModuleDescription,
-                ModuleImage: newImageFile !== null ? newImageFile :
-                    (module.ModuleImage ? module.ModuleImage.data : null)
             };
 
-
-            console.log("Submitting payload:", {
-                ...payload,
-                ModuleImage: payload.ModuleImage ? `${payload.ModuleImage.substring(0, 30)}...` : null
-            });
-
-
-            const headers = {
-                'Content-Type': 'application/json',
-                'auth-token': userToken,
+            let requestBody;
+            let headers = {
+                'auth-token': userToken
             };
+
+            if (newImageFile) {
+                const formData = new FormData();
+                formData.append("ModuleName", editedModule.ModuleName);
+                formData.append("ModuleDescription", editedModule.ModuleDescription);
+
+                formData.append("ModuleImage", newImageFile);
+
+                requestBody = formData;
+            } else if (!imagePreview && module.ModuleImage) {
+                payload.ModuleImage = null;
+                headers['Content-Type'] = 'application/json';
+                requestBody = JSON.stringify(payload);
+            } else {
+                headers['Content-Type'] = 'application/json';
+                requestBody = JSON.stringify(payload);
+            }
 
             const response = await fetchData(
                 `lmsEdit/updateModule/${editedModule.ModuleID}`,
                 "POST",
-                payload,
-                headers
+                requestBody,
+                headers,
             );
-            console.log("headerrrr", headers);
-            console.log("module id", editedModule.ModuleID);
-            console.log("paaayyyload", payload);
-
-
-
-            console.log("rreeessppoonsse", response)
 
             if (response?.success) {
                 onSave(response.data);
                 setIsEditing(false);
                 setIsImageEditing(false);
+                setNewImageFile(null);
+                setImagePreview(null);
             } else {
                 setError(response?.message || "Failed to update module");
             }
         } catch (err) {
-            setError(err.message || "An error occurred while updating the module");
             console.error("Error updating module:", err);
+            setError(err.message || "An error occurred while updating the module");
         } finally {
             setIsSaving(false);
         }
     };
 
+
     const handleCancelImageEdit = () => {
         setIsImageEditing(false);
-        setNewImage(null);
-        setImagePreview(null);
+        setNewImageFile(null);
+        setImagePreview(module.ModuleImage ? `data:image/jpeg;base64,${module.ModuleImage.data}` : null);
     };
 
     const handleDeleteImage = () => {
-        setEditedModule(prev => ({
-            ...prev,
-            ModuleImage: null
-        }));
-        setNewImage(null);
+        setNewImageFile(null);
         setImagePreview(null);
     };
 
@@ -153,25 +156,32 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
                             onChange={handleImageChange}
                             accept="image/*"
                             className="hidden"
+                            disabled={isCompressing}
                         />
                         <div className="flex gap-2">
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current.click()}
                                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                                disabled={isCompressing}
                             >
-                                {imagePreview ? "Change Image" : "Upload Image"}
+                                {isCompressing ? "Processing..." :
+                                    (imagePreview ? "Change Image" : "Upload Image")}
                             </button>
-                            {module.ModuleImage && (
+                            {(module.ModuleImage || imagePreview) && (
                                 <button
                                     type="button"
                                     onClick={handleDeleteImage}
                                     className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                                    disabled={isCompressing}
                                 >
                                     Remove Image
                                 </button>
                             )}
                         </div>
+                        {isCompressing && (
+                            <p className="text-sm text-gray-500 mt-2">Compressing image...</p>
+                        )}
                     </div>
                 ) : module.ModuleImage ? (
                     <>
@@ -234,7 +244,7 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
                         <div className="flex gap-2">
                             <button
                                 type="submit"
-                                disabled={isSaving}
+                                disabled={isSaving || isCompressing}
                                 className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
                             >
                                 {isSaving ? "Saving..." : "Save Changes"}
@@ -244,8 +254,10 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
                                 onClick={() => {
                                     setIsEditing(false);
                                     setIsImageEditing(false);
-                                    setNewImage(null);
-                                    setImagePreview(null);
+                                    setNewImageFile(null);
+                                    setImagePreview(
+                                        module.ModuleImage ? `data:image/jpeg;base64,${module.ModuleImage.data}` : null
+                                    );
                                 }}
                                 className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
                             >
@@ -258,22 +270,29 @@ const EditModule = ({ module, onCancel, onSave, onDelete }) => {
                         <p className="text-gray-600 mb-4">
                             {module.ModuleDescription}
                         </p>
-                        <button
-                            onClick={() => setIsEditing(true)}
-                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                        >
-                            Edit
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                            >
+                                Edit
+                            </button>
+                        </div>
                     </div>
                 )}
-
                 {/* Delete Button */}
-                <div className="flex justify-end mt-4">
+                <div className="flex justify-end mt-4 space-x-2">
                     <button
                         onClick={handleDelete}
                         className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
                     >
                         Delete Module
+                    </button>
+                    <button
+                        onClick={() => onViewSubmodules && onViewSubmodules(module)}
+                        className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
+                    >
+                        View Submodules
                     </button>
                 </div>
             </div>

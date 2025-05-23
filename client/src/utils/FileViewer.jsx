@@ -164,6 +164,7 @@ const FileViewer = ({ fileUrl }) => {
                     <Page 
                       pageNumber={index + 1} 
                       width={800}
+		      renderTextLayer={false}
                       loading={
                         <div className="flex justify-center items-center h-64">
                           Loading page {index + 1}...

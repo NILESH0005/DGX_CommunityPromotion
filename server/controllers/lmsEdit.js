@@ -23,7 +23,20 @@ export const updateModule = async (req, res) => {
 
     const userId = req.user?.UserID;
     const moduleId = parseInt(req.params.id, 10);
-    const { ModuleName, ModuleDescription, ModuleImage } = req.body;
+
+    // Handle multipart form data (image upload)
+    let ModuleName, ModuleDescription, ModuleImage;
+
+    if (req.is('multipart/form-data')) {
+        ModuleName = req.body.ModuleName;
+        ModuleDescription = req.body.ModuleDescription;
+        ModuleImage = req.file ? req.file.buffer : null; // Assuming multer middleware is used
+    } else {
+        // Handle JSON data
+        ModuleName = req.body.ModuleName;
+        ModuleDescription = req.body.ModuleDescription;
+        ModuleImage = req.body.ModuleImage === null ? null : undefined; // Only set to null if explicitly set
+    }
 
     try {
         connectToDatabase(async (err, conn) => {
@@ -46,22 +59,9 @@ export const updateModule = async (req, res) => {
                 const userName = userRows[0].Name;
                 const currentDateTime = new Date();
 
-                // Step 2: Prepare the ModuleImage parameter
-                let moduleImageParam = null;
-
-                if (typeof ModuleImage === 'string') {
-                    if (ModuleImage.startsWith('data:')) {
-                        const base64Data = ModuleImage.split(',')[1];
-                        moduleImageParam = Buffer.from(base64Data, 'base64');
-                    } else {
-                        moduleImageParam = Buffer.from(ModuleImage, 'base64');
-                    }
-                }
-
-
                 // Step 3: Perform the update
                 const updateQuery = `
-                   UPDATE ModulesDetails
+                    UPDATE ModulesDetails
                     SET 
                         ModuleName = ?,
                         ModuleDescription = ?,
@@ -76,12 +76,9 @@ export const updateModule = async (req, res) => {
                     ModuleDescription || null,
                     userName,
                     currentDateTime,
-                    moduleImageParam, // Use the prepared image parameter
+                    ModuleImage !== undefined ? ModuleImage : null, // Only update image if explicitly set
                     moduleId
                 ]);
-
-                console.log('Params:', { ModuleName, ModuleDescription, userName, currentDateTime, moduleImageParam, moduleId });
-
 
                 if (result.affectedRows === 0) {
                     closeConnection(conn);
@@ -143,6 +140,165 @@ export const updateModule = async (req, res) => {
         });
     }
 }
+
+export const deleteModule = (req, res) => {
+    const { moduleId } = req.body;
+
+    // Input validation
+    if (!moduleId || isNaN(moduleId)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid module ID provided",
+        });
+    }
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError(err);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database connection error",
+                });
+            }
+
+            try {
+                // Check if module exists and isn't deleted
+                const checkQuery = `
+                    SELECT * FROM ModulesDetails 
+                    WHERE ModuleID = ? AND (delStatus IS NULL OR delStatus = 0)
+                `;
+                const [existingModule] = await queryAsync(conn, checkQuery, [moduleId]);
+
+                if (!existingModule) {
+                    closeConnection(conn);
+                    return res.status(404).json({
+                        success: false,
+                        message: "Module not found or already deleted",
+                    });
+                }
+
+                // Perform the soft delete
+                const deleteQuery = `
+                    UPDATE ModulesDetails
+                    SET 
+                        delStatus = 1,
+                        delOnDt = GETDATE()
+                    WHERE ModuleID = ? AND (delStatus IS NULL OR delStatus = 0)
+                `;
+
+                const result = await queryAsync(conn, deleteQuery, [moduleId]);
+                closeConnection(conn);
+
+                // Check if update was successful
+
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        moduleId: moduleId,
+                        deletedAt: new Date().toISOString()
+                    },
+                    message: "Module deleted successfully",
+                });
+
+            } catch (error) {
+                closeConnection(conn);
+                logError(`Error deleting module: ${error.message}`);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database error during deletion",
+                });
+            }
+        });
+    } catch (outerError) {
+        logError(`Unexpected error: ${outerError.message}`);
+        return res.status(500).json({
+            success: false,
+            message: "Unexpected server error",
+        });
+    }
+};
+
+export const deleteSubModule = (req, res) => {
+    const { subModuleId } = req.body;
+
+    // Input validation
+    if (!subModuleId || isNaN(subModuleId)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid sub-module ID provided",
+        });
+    }
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError(err);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database connection error",
+                });
+            }
+
+            try {
+                // Check if sub-module exists and isn't deleted
+                const checkQuery = `
+                    SELECT * FROM SubModulesDetails 
+                    WHERE SubModuleID = ? AND (delStatus IS NULL OR delStatus = 0)
+                `;
+                const [existingSubModule] = await queryAsync(conn, checkQuery, [subModuleId]);
+
+                if (!existingSubModule) {
+                    closeConnection(conn);
+                    return res.status(404).json({
+                        success: false,
+                        message: "Sub-module not found or already deleted",
+                    });
+                }
+
+                // Perform the soft delete
+                const deleteQuery = `
+                    UPDATE SubModulesDetails
+                    SET 
+                        delStatus = 1,
+                        delOnDt = GETDATE(),
+                        AddDel = ?
+                    WHERE SubModuleID = ? AND (delStatus IS NULL OR delStatus = 0)
+                `;
+
+                const adminId = req.user?.id; // Get current user ID
+                await queryAsync(conn, deleteQuery, [adminId, subModuleId]);
+                closeConnection(conn);
+
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        subModuleId: subModuleId,
+                        deletedAt: new Date().toISOString(),
+                        deletedBy: adminId
+                    },
+                    message: "Sub-module deleted successfully",
+                });
+
+            } catch (error) {
+                closeConnection(conn);
+                logError(`Error deleting sub-module: ${error.message}`);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database error during deletion",
+                });
+            }
+        });
+    } catch (outerError) {
+        logError(`Unexpected error: ${outerError.message}`);
+        return res.status(500).json({
+            success: false,
+            message: "Unexpected server error",
+        });
+    }
+};
+
+
 
 
 

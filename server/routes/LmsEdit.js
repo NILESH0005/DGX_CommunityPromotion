@@ -2,11 +2,15 @@ import express from "express";
 import { fetchUser } from '../middleware/fetchUser.js';
 
 
-import { updateModule } from "../controllers/lmsEdit.js";
+import { updateModule, deleteModule, deleteSubModule } from "../controllers/lmsEdit.js";
 
 const router = express.Router();
 
 router.post('/updateModule/:id', fetchUser, updateModule)
+router.post('/deleteModule', fetchUser, deleteModule)
+router.post('/deleteSubModule', fetchUser, deleteSubModule)
+
+
 
 
 export default router;

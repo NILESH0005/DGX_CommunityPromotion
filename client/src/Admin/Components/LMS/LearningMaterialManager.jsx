@@ -18,6 +18,15 @@ const initialState = {
   isEditingUnits: false
 };
 
+const calculateFilePercentages = (files) => {
+  if (!files || files.length === 0) return [];
+  const equalPercentage = 100 / files.length;
+  return files.map(file => ({
+    ...file,
+    percentage: equalPercentage
+  }));
+};
+
 const hasUploadedFiles = (module) => {
   if (!module || !module.subModules) return false;
 
@@ -155,16 +164,8 @@ const LearningMaterialManager = () => {
               throw new Error("Unit name is required");
             }
 
-            // Handle UnitImg - can be File, string (base64), null, or undefined
-            // let unitImageBase64 = null;
-            // if (unit.UnitImg instanceof File) {
-            //   unitImageBase64 = await compressImage(unit.UnitImg);
-            // } else if (typeof unit.UnitImg === 'string' && unit.UnitImg.startsWith('data:')) {
-            //   unitImageBase64 = unit.UnitImg;
-            // }
             return {
               UnitName: unit.UnitName,
-              // UnitImg: unitImageBase64, // Will be empty string if no image
               UnitDescription: unit.UnitDescription || "",
               AuthAdd: currentUser,
               AddOnDt: now,
@@ -173,6 +174,7 @@ const LearningMaterialManager = () => {
                 FilesName: file.originalName || `file_${Date.now()}`,
                 FilePath: file.filePath || '',
                 FileType: file.fileType || '',
+                Percentage: file.percentage || 0, // Include percentage in database payload
                 AuthAdd: currentUser,
                 AddOnDt: now,
                 delStatus: 0
@@ -211,25 +213,21 @@ const LearningMaterialManager = () => {
       try {
         const parsedData = JSON.parse(savedData);
         if (parsedData.module) {
-          // Convert any file metadata back to proper structure
-          const moduleWithFiles = {
+          // Calculate percentages for all files when loading
+          const moduleWithPercentages = {
             ...parsedData.module,
             subModules: parsedData.module.subModules.map(subModule => ({
               ...subModule,
               units: subModule.units.map(unit => ({
                 ...unit,
-                files: unit.files.map(file => ({
-                  ...file,
-                  // Add any transformations needed
-                  isUploaded: !!file.filePath // Example flag
-                }))
+                files: calculateFilePercentages(unit.files || [])
               }))
             }))
           };
 
           dispatch({
             type: 'SET_MODULE',
-            payload: moduleWithFiles
+            payload: moduleWithPercentages
           });
         }
       } catch (error) {
@@ -255,7 +253,7 @@ const LearningMaterialManager = () => {
             UnitName: unit.UnitName,
             // UnitImg: unit.UnitImg,
             UnitDescription: unit.UnitDescription,
-            files: (unit.files || []).map(file => ({
+            files: calculateFilePercentages(unit.files || []).map(file => ({
               id: file.id,
               originalName: file.originalName,
               fileType: file.fileType,
@@ -263,7 +261,8 @@ const LearningMaterialManager = () => {
               uploadedAt: file.uploadedAt,
               filePath: file.filePath,
               downloadUrl: file.downloadUrl,
-              // …and any other fields you care about
+              percentage: file.percentage
+
             }))
           }))
         }))
@@ -319,21 +318,29 @@ const LearningMaterialManager = () => {
                 ...subModule,
                 units: subModule.units.map(unit => {
                   if (unit.id === formState.unit.id) {
+                    // Create new files array with the uploaded file
+                    const newFiles = [
+                      ...(unit.files || []),
+                      {
+                        id: uuidv4(),
+                        originalName: formState.fileData.name,
+                        filePath: uploadResponse.file.filePath,
+                        fileType: formState.fileData.type,
+                        fileSize: formState.fileData.size,
+                        uploadedAt: new Date().toISOString(),
+                        serverName: uploadResponse.file.storedName,
+                        storagePath: uploadResponse.file.storagePath,
+                        percentage: 0 // Will be recalculated
+
+                      }
+                    ];
+
+                    // Calculate equal percentages for all files
+                    const filesWithPercentages = calculateFilePercentages(newFiles);
+
                     return {
                       ...unit,
-                      files: [
-                        ...(unit.files || []),
-                        {
-                          id: uuidv4(),
-                          originalName: formState.fileData.name,
-                          filePath: uploadResponse.file.filePath,
-                          fileType: formState.fileData.type,
-                          fileSize: formState.fileData.size,
-                          uploadedAt: new Date().toISOString(),
-                          serverName: uploadResponse.file.storedName,
-                          storagePath: uploadResponse.file.storagePath
-                        }
-                      ]
+                      files: filesWithPercentages
                     };
                   }
                   return unit;
@@ -343,7 +350,7 @@ const LearningMaterialManager = () => {
             return subModule;
           })
         };
-        console.log('About to save this module:', updatedModule);
+
         saveToLocalStorage(updatedModule);
         dispatch({ type: 'SET_MODULE', payload: updatedModule });
 

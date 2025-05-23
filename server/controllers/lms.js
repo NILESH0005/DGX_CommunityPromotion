@@ -6,7 +6,7 @@ import { log } from 'console';
 
 
 export class LMS {
-  static upload = upload; 
+  static upload = upload;
 
   static async uploadFile(req, res) {
     try {
@@ -188,8 +188,8 @@ export class LMS {
 
               const fileInsertQuery = `
               INSERT INTO FilesDetails 
-              (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus) 
-              VALUES (?, ?, ?, ?, ?, ?, 0)
+              (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage) 
+              VALUES (?, ?, ?, ?, ?, ?, 0, ?)
             `;
               await queryAsync(conn, fileInsertQuery, [
                 file.FilesName,
@@ -197,7 +197,9 @@ export class LMS {
                 file.FileType,
                 unitId,
                 user.Name,
-                currentDateTime
+                currentDateTime,
+                file.Percentage || 0  
+
               ]);
               console.log("Success in unit Query ");
             }
