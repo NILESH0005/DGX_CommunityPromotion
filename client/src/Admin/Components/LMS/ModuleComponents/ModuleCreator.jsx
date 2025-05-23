@@ -58,15 +58,15 @@ const ModuleCreator = ({ onCreate, onCancel, existingModules = [] }) => {
     });
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check file size (500KB = 500 * 1024 bytes)
-    if (file.size > 500 * 1024) {
+    // Check file size (200KB = 200 * 1024 bytes)
+    if (file.size > 200 * 1024) {
       setErrors({
         ...errors,
-        banner: 'Image size must be 500KB or less'
+        banner: 'Image size must be 200KB or less'
       });
       // Clear the file input
       e.target.value = '';
@@ -218,7 +218,7 @@ const ModuleCreator = ({ onCreate, onCancel, existingModules = [] }) => {
           </label>
           <div className="relative">
             <div className="text-xs text-DGXblue mb-1">
-              <span>Recommended size: 800x400px | Max size: 500KB</span>
+              <span>Recommended size: 800x400px | Max size: 200KB</span>
             </div>
             <div className="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
               {newModule.banner ? (
@@ -241,13 +241,13 @@ const ModuleCreator = ({ onCreate, onCancel, existingModules = [] }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                   </svg>
                   <p className="text-sm text-gray-500 mb-1">Click to upload or drag and drop</p>
-                  <p className="text-xs text-gray-400">PNG, JPG up to 500KB</p>
+                  <p className="text-xs text-gray-400">PNG, JPG up to 200KB</p>
                   <input
                     type="file"
                     className="hidden"
                     id="module-banner-upload"
                     accept="image/*"
-                    onChange={handleImageUpload}
+                    onChange={handleImageChange}
                   />
                 </label>
               )}
@@ -266,7 +266,7 @@ const ModuleCreator = ({ onCreate, onCancel, existingModules = [] }) => {
         </button>
         <button
           onClick={handleCreate}
-          disabled={isCompressing || !!errors.banner}
+          disabled={isCompressing || (newModule.banner && newModule.banner.size > 200 * 1024)}
           className="px-4 py-2 bg-DGXblue text-white rounded-md hover:bg-blue-600 transition disabled:opacity-70"
         >
           {isCompressing ? 'Creating...' : 'Create Module'}
