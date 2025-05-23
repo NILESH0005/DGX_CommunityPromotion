@@ -18,41 +18,53 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        setError(null);
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
 
-        try {
-            const payload = {
-                ...unitData,
-                SubModuleID: submodule.SubModuleID
+    try {
+        const payload = {
+            ...unitData,
+            SubModuleID: submodule.SubModuleID
+        };
+
+        const response = await fetchData(
+            `lmsEdit/addUnit`,
+            "POST",
+            payload,
+            {
+                'Content-Type': 'application/json',
+                'auth-token': userToken
+            }
+        );
+
+        if (response?.success) {
+            Swal.fire('Success!', 'Unit added successfully', 'success');
+            
+            // Create a complete unit object with all required fields
+            const completeUnit = {
+                UnitID: response.data?.UnitID || Date.now(), // Use temporary ID if not provided
+                UnitName: unitData.UnitName,
+                UnitDescription: unitData.UnitDescription,
+                SubModuleID: submodule.SubModuleID,
+                // Add any other default fields your application expects
+                files: [],
+                delStatus: 0
             };
 
-            const response = await fetchData(
-                `lmsEdit/addUnit`,
-                "POST",
-                payload,
-                {
-                    'Content-Type': 'application/json',
-                    'auth-token': userToken
-                }
-            );
-
-            if (response?.success) {
-                Swal.fire('Success!', 'Unit added successfully', 'success');
-                onAddUnit(response.data); // Pass the new unit back to parent
-                onClose();
-                setUnitData({ UnitName: '', UnitDescription: '' }); // Reset form
-            } else {
-                throw new Error(response?.message || "Failed to add unit");
-            }
-        } catch (err) {
-            console.error("Error:", err);
-            setError(err.message);
-        } finally {
-            setIsSubmitting(false);
+            onAddUnit(completeUnit);
+            onClose();
+            setUnitData({ UnitName: '', UnitDescription: '' });
+        } else {
+            throw new Error(response?.message || "Failed to add unit");
         }
-    };
+    } catch (err) {
+        console.error("Error:", err);
+        setError(err.message);
+    } finally {
+        setIsSubmitting(false);
+    }
+};
 
     if (!isOpen) return null;
 
@@ -114,7 +126,15 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
                             className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? 'Adding...' : 'Add Unit'}
+                            {isSubmitting ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Adding...
+                                </>
+                            ) : 'Add Unit'}
                         </button>
                     </div>
                 </form>

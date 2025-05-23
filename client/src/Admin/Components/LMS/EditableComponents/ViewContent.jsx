@@ -31,10 +31,13 @@ const ViewContent = ({ submodule, onBack }) => {
                 );
 
                 if (response?.success) {
-                    setUnits(response.data);
+                    // Filter out any null/undefined units first
                     const validUnits = response.data.filter(unit => unit);
                     setUnits(validUnits);
-                    const filtered = response.data.filter(unit => unit.SubModuleID === submodule.SubModuleID);
+                    // Then filter for the current submodule
+                    const filtered = validUnits.filter(unit =>
+                        unit.SubModuleID === submodule.SubModuleID
+                    );
                     setFilteredUnits(filtered);
                 } else {
                     setError(response?.message || "Failed to fetch units");
@@ -271,9 +274,24 @@ const ViewContent = ({ submodule, onBack }) => {
     };
 
     const handleAddUnitSuccess = (newUnit) => {
+        // Verify the newUnit has required properties
+        if (!newUnit || !newUnit.UnitID) {
+            console.error("Invalid unit data received:", newUnit);
+            return;
+        }
+
         // Update both units and filteredUnits states with the new unit
         setUnits(prev => [...prev, newUnit]);
-        setFilteredUnits(prev => [...prev, newUnit]);
+
+        // Only add to filteredUnits if it belongs to current submodule
+        if (newUnit.SubModuleID === submodule.SubModuleID) {
+            setFilteredUnits(prev => [...prev, newUnit]);
+        }
+
+        // Select the newly added unit
+        setSelectedUnit(newUnit);
+        // Close the modal
+        setShowAddUnitModal(false);
     };
 
     if (loading) {
