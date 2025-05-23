@@ -12,8 +12,12 @@ const EditSubModule = ({ module, onBack }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editingSubmodule, setEditingSubmodule] = useState(null);
-    const [editedData, setEditedData] = useState({});
-    const [isSaving, setIsSaving] = useState(false);
+    const [editedData, setEditedData] = useState({
+        SubModuleName: '',
+        SubModuleDescription: '',
+        SubModuleImage: null,
+    }); const [isSaving, setIsSaving] = useState(false);
+    const [isEditing, setIsEditing] = useState(false); // Added missing state
     const [isImageEditing, setIsImageEditing] = useState(false);
     const [newImageFile, setNewImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -90,21 +94,23 @@ const EditSubModule = ({ module, onBack }) => {
         }
     };
 
-    const handleEditSubmodule = (submodule) => {
+    const handleEditSubmoduleInit = (submodule) => {
         setEditingSubmodule(submodule);
         setEditedData({
             SubModuleName: submodule.SubModuleName,
             SubModuleDescription: submodule.SubModuleDescription,
-            Duration: submodule.Duration
+            SubModuleImage: submodule.SubModuleImage,
         });
         setImagePreview(
-            submodule.SubModuleImage
+            submodule.SubModuleImage && submodule.SubModuleImage.data
                 ? `data:image/jpeg;base64,${submodule.SubModuleImage.data}`
                 : null
         );
+        setIsEditing(true);
     };
 
     const handleCancelEdit = () => {
+        setIsEditing(false);
         setEditingSubmodule(null);
         setEditedData({});
         setImagePreview(null);
@@ -159,49 +165,62 @@ const EditSubModule = ({ module, onBack }) => {
     };
 
     const handleSubmit = async (e) => {
+        console.log("Current editedData:", editedData); // Add this line
+
         e.preventDefault();
         setIsSaving(true);
         setError(null);
 
         try {
-            const payload = {
-                SubModuleName: editedData.SubModuleName,
-                SubModuleDescription: editedData.SubModuleDescription,
-                Duration: editedData.Duration,
-                ModuleID: module.ModuleID
-            };
+            // Validate required fields
+            if (!editedData.SubModuleName?.trim()) {
+                throw new Error("Submodule name is required");
+            }
 
-            let requestBody;
+            let payload;
             let headers = { 'auth-token': userToken };
+            let isMultipart = false;
 
             if (newImageFile) {
+                // Handle image upload with FormData
                 const formData = new FormData();
-                Object.entries(payload).forEach(([key, value]) => {
-                    formData.append(key, value);
-                });
+                formData.append("SubModuleName", editedData.SubModuleName);
+                formData.append("SubModuleDescription", editedData.SubModuleDescription || "");
+                if (editedData.Duration) {
+                    formData.append("Duration", editedData.Duration);
+                }
                 formData.append("SubModuleImage", newImageFile);
-                requestBody = formData;
-            } else if (!imagePreview && editingSubmodule?.SubModuleImage) {
-                payload.SubModuleImage = null;
-                headers['Content-Type'] = 'application/json';
-                requestBody = JSON.stringify(payload);
+                payload = formData;
+                isMultipart = true;
             } else {
+                // Handle regular JSON payload
                 headers['Content-Type'] = 'application/json';
-                requestBody = JSON.stringify(payload);
+                payload = {
+                    SubModuleName: editedData.SubModuleName,
+                    SubModuleDescription: editedData.SubModuleDescription || "",
+                    Duration: editedData.Duration || 0
+                };
+
+                // If there's an existing image but no new image, include it
+                if (editedData.SubModuleImage?.data) {
+                    payload.SubModuleImage = {
+                        data: editedData.SubModuleImage.data
+                    };
+                }
             }
 
             const response = await fetchData(
                 `lmsEdit/updateSubModule/${editingSubmodule.SubModuleID}`,
                 "POST",
-                requestBody,
+                payload,
                 headers,
-                !!newImageFile
+                isMultipart
             );
 
             if (response?.success) {
                 setSubmodules(prev => prev.map(sub =>
                     sub.SubModuleID === editingSubmodule.SubModuleID
-                        ? response.data
+                        ? { ...sub, ...response.data }
                         : sub
                 ));
                 handleCancelEdit();
@@ -212,6 +231,7 @@ const EditSubModule = ({ module, onBack }) => {
         } catch (err) {
             console.error("Error:", err);
             setError(err.message);
+            Swal.fire('Error!', err.message, 'error');
         } finally {
             setIsSaving(false);
         }
@@ -221,20 +241,6 @@ const EditSubModule = ({ module, onBack }) => {
         navigate(`/lmsEdit/addSubmodule/${module.ModuleID}`);
     };
 
-
-    if (loading) {
-        return <div>Loading...</div>;
-    }
-
-    if (error) {
-        return (
-            <div>
-                <p className="text-red-500">{error}</p>
-                <button onClick={onBack}>Back</button>
-            </div>
-        );
-    }
-
     const handleViewContent = (submodule) => {
         setViewingContent(submodule);
     };
@@ -243,10 +249,28 @@ const EditSubModule = ({ module, onBack }) => {
         setViewingContent(null);
     };
 
+    if (loading) {
+        return <div className="text-center py-10">Loading submodules...</div>;
+    }
+
+    if (error) {
+        return (
+            <div className="text-center py-10">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                    onClick={onBack}
+                    className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                    Back to Modules
+                </button>
+            </div>
+        );
+    }
+
     if (viewingContent) {
         return (
-            <ViewContent 
-                submodule={viewingContent} 
+            <ViewContent
+                submodule={viewingContent}
                 onBack={handleBackToSubmodules}
             />
         );
@@ -278,9 +302,9 @@ const EditSubModule = ({ module, onBack }) => {
                         submodules.map((submodule) => (
                             <div
                                 key={submodule.SubModuleID}
-                                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl"
+                                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow"
                             >
-                                {editingSubmodule?.SubModuleID === submodule.SubModuleID ? (
+                                {isEditing && editingSubmodule?.SubModuleID === submodule.SubModuleID ? (
                                     <div className="p-6">
                                         <form onSubmit={handleSubmit} className="space-y-4">
                                             {/* Image Editing */}
@@ -351,7 +375,6 @@ const EditSubModule = ({ module, onBack }) => {
                                                 )}
                                             </div>
 
-                                            {/* Form Fields */}
                                             <input
                                                 type="text"
                                                 name="SubModuleName"
@@ -369,14 +392,7 @@ const EditSubModule = ({ module, onBack }) => {
                                                 className="w-full border p-2 rounded"
                                                 placeholder="Description"
                                             />
-                                            <input
-                                                type="number"
-                                                name="Duration"
-                                                value={editedData.Duration || ''}
-                                                onChange={handleChange}
-                                                className="w-full border p-2 rounded"
-                                                placeholder="Duration (minutes)"
-                                            />
+
 
                                             {error && <p className="text-red-500 text-sm">{error}</p>}
 
@@ -419,19 +435,17 @@ const EditSubModule = ({ module, onBack }) => {
                                             <p className="text-gray-600 text-sm mb-3">
                                                 {submodule.SubModuleDescription || "No description"}
                                             </p>
-                                            <p className="text-gray-500 text-sm mb-4">
-                                                Duration: {submodule.Duration || 'N/A'} minutes
-                                            </p>
+
                                             <div className="flex space-x-2">
                                                 <button
-                                                    onClick={() => handleEditSubmodule(submodule)}
-                                                    className="flex-1 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                    onClick={() => handleEditSubmoduleInit(submodule)}
+                                                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                                                 >
                                                     Edit
                                                 </button>
                                                 <button
                                                     onClick={() => handleViewContent(submodule)}
-                                                    className="flex-1 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+                                                    className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600"
                                                 >
                                                     View Content
                                                 </button>
@@ -439,7 +453,7 @@ const EditSubModule = ({ module, onBack }) => {
                                             <div className="mt-2">
                                                 <button
                                                     onClick={() => handleDeleteSubmodule(submodule.SubModuleID)}
-                                                    className="w-full py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                                                    className="w-full py-1.5 bg-red-500 text-white rounded hover:bg-red-600"
                                                 >
                                                     Delete
                                                 </button>
@@ -451,7 +465,7 @@ const EditSubModule = ({ module, onBack }) => {
                         ))
                     ) : (
                         <div className="col-span-full bg-white rounded-xl shadow-lg p-6 text-center">
-                            <p className="text-gray-600">No submodules found</p>
+                            <p className="text-gray-600">No submodules found for this module</p>
                             <button
                                 onClick={handleAddSubmodule}
                                 className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"

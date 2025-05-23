@@ -1,9 +1,11 @@
 import React, { useState, useContext, useRef } from "react";
-import ApiContext from "../../../../context/ApiContext";
 import ByteArrayImage from "../../../../utils/ByteArrayImage";
 import { compressImage } from "../../../../utils/compressImage";
+import Swal from "sweetalert2";
+import ApiContext from "../../../../context/ApiContext";
 
-const EditModule = ({ module, onCancel, onSave, onDelete, onViewSubmodules  }) => {
+
+const EditModule = ({ module, onCancel, onSave, onDelete, onViewSubmodules }) => {
     const [editedModule, setEditedModule] = useState(module);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -16,7 +18,7 @@ const EditModule = ({ module, onCancel, onSave, onDelete, onViewSubmodules  }) =
     const [isCompressing, setIsCompressing] = useState(false);
     const fileInputRef = useRef(null);
 
-    const { fetchData, userToken } = useContext(ApiContext);
+    const { fetchData, userToken, user } = useContext(ApiContext);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -35,7 +37,7 @@ const EditModule = ({ module, onCancel, onSave, onDelete, onViewSubmodules  }) =
                 setError("Only image files are allowed");
                 return;
             }
-            if (file.size > 2 * 1024 * 1024) { 
+            if (file.size > 2 * 1024 * 1024) {
                 setError("Image size must be less than 2MB");
                 return;
             }
@@ -59,60 +61,71 @@ const EditModule = ({ module, onCancel, onSave, onDelete, onViewSubmodules  }) =
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Confirm dialog
+        const confirmResult = await Swal.fire({
+            title: "Confirm Update",
+            text: "Are you sure you want to update this module?",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Yes, update it",
+            cancelButtonText: "Cancel",
+        });
+
+        if (!confirmResult.isConfirmed) return;
+
         setIsSaving(true);
         setError(null);
 
+        // Prepare payload
+        const payload = {
+            ModuleName: editedModule.ModuleName,
+            ModuleDescription: editedModule.ModuleDescription,
+            ModuleImage: newImageFile  // Include the image if available
+        };
+
+        const headers = {
+            "Content-Type": "application/json",
+            "auth-token": userToken,
+        };
+
         try {
-            const payload = {
-                ModuleName: editedModule.ModuleName,
-                ModuleDescription: editedModule.ModuleDescription,
-            };
-
-            let requestBody;
-            let headers = {
-                'auth-token': userToken
-            };
-
-            if (newImageFile) {
-                const formData = new FormData();
-                formData.append("ModuleName", editedModule.ModuleName);
-                formData.append("ModuleDescription", editedModule.ModuleDescription);
-
-                formData.append("ModuleImage", newImageFile);
-
-                requestBody = formData;
-            } else if (!imagePreview && module.ModuleImage) {
-                payload.ModuleImage = null;
-                headers['Content-Type'] = 'application/json';
-                requestBody = JSON.stringify(payload);
-            } else {
-                headers['Content-Type'] = 'application/json';
-                requestBody = JSON.stringify(payload);
-            }
-
             const response = await fetchData(
                 `lmsEdit/updateModule/${editedModule.ModuleID}`,
                 "POST",
-                requestBody,
-                headers,
+                payload,
+                headers
+
             );
 
+            console.log("rreessspoonnsse", response)
+
             if (response?.success) {
-                onSave(response.data);
+                // onSave({
+                //     ...editedModule,
+                //     ModuleImage: response.data.ModuleImage || module.ModuleImage
+                // }); 
                 setIsEditing(false);
                 setIsImageEditing(false);
                 setNewImageFile(null);
                 setImagePreview(null);
+                Swal.fire("Success", "Module updated successfully", "success");
             } else {
-                setError(response?.message || "Failed to update module");
+                const errorMessage = response?.message || "Failed to update module";
+                setError(errorMessage);
+                Swal.fire("Error", errorMessage, "error");
             }
         } catch (err) {
             console.error("Error updating module:", err);
-            setError(err.message || "An error occurred while updating the module");
+            const message = err.message || "An error occurred while updating the module";
+            setError(message);
+            Swal.fire("Error", message, "error");
         } finally {
             setIsSaving(false);
         }
     };
+
+
 
 
     const handleCancelImageEdit = () => {
