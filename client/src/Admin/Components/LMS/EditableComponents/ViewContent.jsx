@@ -16,6 +16,9 @@ const ViewContent = ({ submodule, onBack }) => {
     const [newFile, setNewFile] = useState(null);
     const fileInputRef = useRef(null);
     const [showAddUnitModal, setShowAddUnitModal] = useState(false);
+    const [fileLink, setFileLink] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
+
 
 
     const { fetchData, userToken } = useContext(ApiContext);
@@ -212,30 +215,80 @@ const ViewContent = ({ submodule, onBack }) => {
     };
 
     const handleUploadFile = async () => {
-        if (!newFile || !selectedUnit) return;
+        if ((!newFile && !fileLink.trim()) || !selectedUnit) return;
 
+        setIsUploading(true);
         try {
-            const formData = new FormData();
-            formData.append("file", newFile);
-            formData.append("unitId", selectedUnit.UnitID);
-            formData.append("fileName", newFile.name);
+            let response;
+            const uploadToast = Swal.fire({
+                title: 'Uploading...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
-            const response = await fetchData(
-                "lms/uploadFile",
-                "POST",
-                formData,
-                { 'auth-token': userToken },
-                true
-            );
+            if (newFile) {
+                // Client-side validation
+                const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf',
+                    '.doc', '.docx', '.ppt', '.pptx', '.mp4',
+                    '.mov', '.ipynb'];
+                const fileExt = newFile.name.split('.').pop().toLowerCase();
 
-            if (response?.success) {
-                setFiles(prev => [...prev, response.data]);
+                if (!allowedExtensions.includes(`.${fileExt}`)) {
+                    throw new Error('File type not allowed. Please upload a valid file type.');
+                }
+
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('file', newFile);
+                formData.append('unitId', selectedUnit.UnitID);
+                formData.append('percentage', 0); // Default percentage
+
+                response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'auth-token': userToken
+                    }
+                });
+            } else {
+                // Handle link save
+                response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'auth-token': userToken
+                    },
+                    body: JSON.stringify({
+                        unitId: selectedUnit.UnitID,
+                        link: fileLink.trim(),
+                        fileName: fileLink.trim().split('/').pop() || 'External Link',
+                        fileType: 'link',
+                        percentage: 0 // Default percentage
+                    })
+                });
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Upload failed');
+            }
+
+            const result = await response.json();
+            await uploadToast.close();
+
+            if (result.success) {
+                setFiles(prev => [...prev, result.data]);
                 setNewFile(null);
-                Swal.fire('Success!', 'File uploaded successfully', 'success');
+                setFileLink('');
+                Swal.fire('Success!', newFile ? 'File uploaded successfully' : 'Link saved successfully', 'success');
+            } else {
+                throw new Error(result.message || "Failed to save");
             }
         } catch (err) {
             console.error("Upload error:", err);
-            Swal.fire('Error!', 'Failed to upload file', 'error');
+            Swal.fire('Error!', err.message || 'Failed to save', 'error');
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -441,7 +494,7 @@ const ViewContent = ({ submodule, onBack }) => {
                                             <div className="mt-6">
                                                 <h3 className="text-lg font-semibold mb-4">Files</h3>
 
-                                                {/* File Upload */}
+                                                {/* File Upload Section */}
                                                 <div className="mb-6 p-4 border border-dashed border-gray-300 rounded-lg">
                                                     <input
                                                         type="file"
@@ -449,23 +502,47 @@ const ViewContent = ({ submodule, onBack }) => {
                                                         onChange={handleFileChange}
                                                         className="hidden"
                                                     />
-                                                    <button
-                                                        onClick={() => fileInputRef.current.click()}
-                                                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mb-2"
-                                                    >
-                                                        Select File
-                                                    </button>
-                                                    {newFile && (
-                                                        <div className="mt-2 flex items-center justify-between">
-                                                            <span className="text-sm">{newFile.name}</span>
-                                                            <button
-                                                                onClick={handleUploadFile}
-                                                                className="px-3 py-1 bg-green-500 text-white rounded text-sm"
-                                                            >
-                                                                Upload
-                                                            </button>
+                                                    <div className="space-y-3">
+                                                        <button
+                                                            onClick={() => fileInputRef.current.click()}
+                                                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                        >
+                                                            Select File
+                                                        </button>
+
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex-1">
+                                                                <input
+                                                                    type="text"
+                                                                    value={fileLink}
+                                                                    onChange={(e) => setFileLink(e.target.value)}
+                                                                    placeholder="Or enter a file URL/link"
+                                                                    className="w-full border p-2 rounded"
+                                                                />
+                                                            </div>
+                                                            <span className="text-gray-500">OR</span>
                                                         </div>
-                                                    )}
+
+                                                        {newFile && (
+                                                            <div className="mt-2 flex items-center justify-between">
+                                                                <span className="text-sm">{newFile.name}</span>
+                                                                <button
+                                                                    onClick={() => setNewFile(null)}
+                                                                    className="text-red-500 hover:text-red-700"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        <button
+                                                            onClick={handleUploadFile}
+                                                            disabled={!newFile && !fileLink.trim()}
+                                                            className="px-3 py-1 bg-green-500 text-white rounded text-sm disabled:bg-gray-300"
+                                                        >
+                                                            {isUploading ? 'Uploading...' : 'Save'}
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                                 {files.length > 0 ? (
