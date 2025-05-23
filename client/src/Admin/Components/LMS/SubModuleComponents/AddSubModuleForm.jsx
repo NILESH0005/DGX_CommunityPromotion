@@ -16,11 +16,11 @@ const AddSubModuleForm = ({ onAddSubModule, errors, setErrors }) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Check file size (500KB = 500 * 1024 bytes)
-        if (file.size > 500 * 1024) {
+        // Check file size (200KB = 200 * 1024 bytes)
+        if (file.size > 200 * 1024) {
             setErrors({
                 ...errors,
-                SubModuleImage: 'Image size must be 500KB or less'
+                SubModuleImage: 'Image size must be 200KB or less'
             });
             // Clear the file input
             e.target.value = '';
@@ -147,7 +147,7 @@ const AddSubModuleForm = ({ onAddSubModule, errors, setErrors }) => {
                                 <p className="text-sm text-DGXgray">
                                     {newSubModule.SubModuleImage 
                                         ? newSubModule.SubModuleImage.name 
-                                        : "JPG, PNG or GIF (Max 500KB)"}
+                                        : "JPG, PNG or GIF (Max 200KB)"}
                                 </p>
                                 {errors.SubModuleImage && (
                                     <motion.p 
