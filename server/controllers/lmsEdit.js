@@ -13,168 +13,180 @@ import { Console } from "console";
 
 dotenv.config();
 
-export const updateModule = async (req, res) => {
-    let success = false;
 
-    // 1. Authentication and validation - handle both numeric ID and email
-    const userId = req.user?.UserID || req.user?.id;
-    if (!userId) {
-        return res.status(401).json({ success, message: "User not authenticated" });
+
+export const updateModule = async (req, res) => {
+  let success = false;
+
+  // 1. Authentication check
+  const userId = req.user?.UserID || req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ success, message: "User not authenticated" });
+  }
+
+  // 2. Handle file upload using multer
+  upload(req, res, async (uploadErr) => {
+    if (uploadErr) {
+      logWarning("File upload failed", uploadErr.message);
+      return res.status(400).json({
+        success,
+        message: uploadErr.message || "File upload failed"
+      });
     }
 
+    // 3. Data validation
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        logWarning("Data validation failed", errors.array());
-        return res.status(400).json({
-            success,
-            data: errors.array(),
-            message: "Data is not in the right format",
-        });
+      logWarning("Data validation failed", errors.array());
+      return res.status(400).json({
+        success,
+        data: errors.array(),
+        message: "Data is not in the right format",
+      });
     }
 
-    // 2. Parameter extraction
+    // 4. Parameter extraction
     const moduleId = parseInt(req.params.id, 10);
     if (isNaN(moduleId)) {
-        return res.status(400).json({ success, message: "Invalid module ID" });
+      return res.status(400).json({ success, message: "Invalid module ID" });
     }
 
-    // 3. Extract/update body fields with proper image handling
-    let { ModuleName, ModuleDescription, ModuleImage } = req.body;
-    let imageBuffer = null;
-
-    if (req.is("multipart/form-data")) {
-        // Handle file upload from form-data
-        imageBuffer = req.file ? req.file.buffer : null;
-    } else if (req.body.ModuleImage?.data) {
-        // Handle base64 image string
-        try {
-            imageBuffer = Buffer.from(req.body.ModuleImage.data, 'base64');
-        } catch (e) {
-            logError("Image conversion error", e);
-            return res.status(400).json({
-                success: false,
-                message: "Invalid image format"
-            });
-        }
-    }
+    // 5. Extract fields from both body and file
+    const { ModuleName, ModuleDescription, removeImage } = req.body;
+    const imageFile = req.file;
 
     try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError("Database connection failed", err);
-                return res.status(500).json({
-                    success,
-                    message: "Failed to connect to database",
-                });
-            }
-
-            try {
-                // 4. Fetch user details - handle both numeric ID and email
-                let userQuery, userRows;
-
-                // First try to get user by numeric ID
-                if (!isNaN(Number(userId))) {
-                    userQuery = `
-                        SELECT UserID, Name, isAdmin FROM Community_User 
-                        WHERE ISNULL(delStatus, 0) = 0 AND UserID = ?
-                    `;
-                    userRows = await queryAsync(conn, userQuery, [Number(userId)]);
-                }
-
-                // If not found and userId looks like an email, try by email
-                if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
-                    userQuery = `
-                        SELECT UserID, Name, isAdmin FROM Community_User 
-                        WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?
-                    `;
-                    userRows = await queryAsync(conn, userQuery, [userId]);
-                }
-
-                if (!userRows || userRows.length === 0) {
-                    closeConnection(conn);
-                    return res.status(404).json({ success, message: "User not found" });
-                }
-
-                const user = userRows[0];
-
-                // 5. Build dynamic update query with proper image handling
-                const updateParams = [
-                    ModuleName || null,
-                    ModuleDescription || null,
-                    user.Name,
-                    new Date(),
-                ];
-
-                let updateQuery = `
-                    UPDATE ModulesDetails
-                    SET 
-                        ModuleName = ?,
-                        ModuleDescription = ?,
-                        AuthLstEdit = ?,
-                        editOnDt = ?
-                `;
-
-                // Add image parameter only if we have an image
-                if (imageBuffer !== null && imageBuffer !== undefined) {
-                    updateQuery += `, ModuleImage = ?`;
-                    updateParams.push(imageBuffer);
-                }
-
-                updateQuery += ` WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0`;
-                updateParams.push(moduleId);
-
-                // 6. Execute update
-                const result = await queryAsync(conn, updateQuery, updateParams);
-
-                if (result.affectedRows === 0) {
-                    closeConnection(conn);
-                    return res.status(404).json({
-                        success,
-                        message: "Module not found or already deleted",
-                    });
-                }
-
-                // 7. Fetch updated module
-                const fetchQuery = `
-                    SELECT ModuleID, ModuleName, ModuleDescription, 
-                           AuthLstEdit, editOnDt
-                    FROM ModulesDetails
-                    WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0
-                `;
-
-                const updatedModule = await queryAsync(conn, fetchQuery, [moduleId]);
-
-                success = true;
-                closeConnection(conn);
-                logInfo("Module updated successfully");
-
-                return res.status(200).json({
-                    success,
-                    data: updatedModule[0],
-                    message: "Module updated successfully",
-                });
-            } catch (queryErr) {
-                closeConnection(conn);
-                logError("Database query failed", queryErr);
-                return res.status(500).json({
-                    success,
-                    message: "Database operation failed",
-                    details: queryErr.message.includes('Conversion failed')
-                        ? "Invalid data type in database operation"
-                        : queryErr.message,
-                });
-            }
-        });
-    } catch (error) {
-        logError("Unexpected error", error);
-        return res.status(500).json({
+      connectToDatabase(async (err, conn) => {
+        if (err) {
+          logError("Database connection failed", err);
+          return res.status(500).json({
             success,
-            message: "Unexpected server error",
-            details: error.message,
-        });
-    }
-};
+            message: "Failed to connect to database",
+          });
+        }
 
+        try {
+          // 6. Fetch user details
+          let userQuery = `
+            SELECT UserID, Name, isAdmin FROM Community_User 
+            WHERE ISNULL(delStatus, 0) = 0 AND (UserID = ? OR EmailId = ?)
+          `;
+          const userRows = await queryAsync(conn, userQuery, [userId, userId]);
+
+          if (!userRows || userRows.length === 0) {
+            closeConnection(conn);
+            return res.status(404).json({ success, message: "User not found" });
+          }
+
+          const user = userRows[0];
+
+          // 7. Build dynamic update query
+          const updateParams = [
+            ModuleName || null,
+            ModuleDescription || null,
+            user.Name,
+            new Date(),
+          ];
+
+          let updateQuery = `
+            UPDATE ModulesDetails
+            SET 
+              ModuleName = ?,
+              ModuleDescription = ?,
+              AuthLstEdit = ?,
+              editOnDt = ?
+          `;
+
+          // Handle image cases
+          if (removeImage === 'true') {
+            updateQuery += `, ModuleImage = NULL`;
+          } else if (imageFile) {
+            updateQuery += `, ModuleImage = ?`;
+            updateParams.push(imageFile.buffer);
+          }
+
+          updateQuery += ` WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0`;
+          updateParams.push(moduleId);
+
+          // 8. Execute update
+          const result = await queryAsync(conn, updateQuery, updateParams);
+
+          if (result.affectedRows === 0) {
+            closeConnection(conn);
+            return res.status(404).json({
+              success,
+              message: "Module not found or already deleted",
+            });
+          }
+
+          // 9. Fetch updated module with image
+          const fetchQuery = `
+            SELECT 
+              ModuleID, 
+              ModuleName, 
+              ModuleDescription, 
+              AuthLstEdit, 
+              editOnDt,
+              ModuleImage
+            FROM ModulesDetails
+            WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0
+          `;
+
+          const updatedModule = await queryAsync(conn, fetchQuery, [moduleId]);
+
+          if (!updatedModule || updatedModule.length === 0) {
+            closeConnection(conn);
+            return res.status(404).json({
+              success,
+              message: "Module not found after update",
+            });
+          }
+
+          // 10. Prepare response with image data
+          const moduleData = {
+            ModuleID: updatedModule[0].ModuleID,
+            ModuleName: updatedModule[0].ModuleName,
+            ModuleDescription: updatedModule[0].ModuleDescription,
+            AuthLstEdit: updatedModule[0].AuthLstEdit,
+            editOnDt: updatedModule[0].editOnDt,
+            ModuleImage: updatedModule[0].ModuleImage 
+              ? { 
+                  data: updatedModule[0].ModuleImage.toString('base64'),
+                  contentType: 'image/jpeg' 
+                } 
+              : null
+          };
+
+          success = true;
+          closeConnection(conn);
+          logInfo("Module updated successfully", { moduleId });
+
+          return res.status(200).json({
+            success,
+            data: moduleData,
+            message: "Module updated successfully",
+          });
+
+        } catch (queryErr) {
+          closeConnection(conn);
+          logError("Database query failed", queryErr);
+          return res.status(500).json({
+            success,
+            message: "Database operation failed",
+            details: queryErr.message,
+          });
+        }
+      });
+    } catch (error) {
+      logError("Unexpected error", error);
+      return res.status(500).json({
+        success,
+        message: "Unexpected server error",
+        details: error.message,
+      });
+    }
+  });
+};
 
 export const deleteModule = (req, res) => {
     const { moduleId } = req.body;
