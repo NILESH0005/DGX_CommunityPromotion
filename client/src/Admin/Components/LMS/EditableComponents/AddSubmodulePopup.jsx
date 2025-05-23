@@ -1,6 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useContext } from "react";
 import { compressImage } from "../../../../utils/compressImage";
 import Swal from 'sweetalert2';
+import ApiContext from "../../../../context/ApiContext";
 
 const AddSubmodulePopup = ({ moduleId, onClose, onSave }) => {
     const [formData, setFormData] = useState({
@@ -10,9 +11,11 @@ const AddSubmodulePopup = ({ moduleId, onClose, onSave }) => {
     });
     const [imagePreview, setImagePreview] = useState(null);
     const [isCompressing, setIsCompressing] = useState(false);
-    const [error, setError] = useState(null);
+    const [errors, setErrors] = useState({});
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef(null);
+    
+    const { fetchData, userToken, user } = useContext(ApiContext);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -20,6 +23,10 @@ const AddSubmodulePopup = ({ moduleId, onClose, onSave }) => {
             ...prev,
             [name]: value
         }));
+        // Clear error when user types
+        if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: null }));
+        }
     };
 
     const handleImageChange = async (e) => {
@@ -28,16 +35,16 @@ const AddSubmodulePopup = ({ moduleId, onClose, onSave }) => {
 
         try {
             if (!file.type.match('image.*')) {
-                setError("Only image files are allowed");
+                setErrors(prev => ({ ...prev, image: "Only image files are allowed" }));
                 return;
             }
             if (file.size > 2 * 1024 * 1024) {
-                setError("Image size must be less than 2MB");
+                setErrors(prev => ({ ...prev, image: "Image size must be less than 2MB" }));
                 return;
             }
 
             setIsCompressing(true);
-            setError(null);
+            setErrors(prev => ({ ...prev, image: null }));
 
             const previewUrl = URL.createObjectURL(file);
             setImagePreview(previewUrl);
@@ -50,28 +57,89 @@ const AddSubmodulePopup = ({ moduleId, onClose, onSave }) => {
 
         } catch (error) {
             console.error("Image processing error:", error);
-            setError("Failed to process image");
+            setErrors(prev => ({ ...prev, image: "Failed to process image" }));
             setImagePreview(null);
         } finally {
             setIsCompressing(false);
         }
     };
 
+    const validateForm = () => {
+        const newErrors = {};
+        if (!formData.SubModuleName?.trim()) {
+            newErrors.SubModuleName = "Submodule name is required";
+        }
+        if (!formData.SubModuleImage) {
+            newErrors.image = "Please upload an image";
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (!validateForm()) return;
+        
+        Swal.fire({
+            title: "Confirm Submission",
+            text: "Are you sure you want to add this submodule?",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Confirm",
+            cancelButtonText: "Cancel",
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                await handleConfirmSubmit();
+            }
+        });
+    };
+
+    const handleConfirmSubmit = async () => {
         setIsSaving(true);
-        setError(null);
+
+        const endpoint = "lmsEdit/addSubmodule";
+        const method = "POST";
+        const headers = {
+            "Content-Type": "application/json",
+            "auth-token": userToken,
+        };
+        const body = {
+            SubModuleName: formData.SubModuleName,
+            SubModuleDescription: formData.SubModuleDescription,
+            SubModuleImage: formData.SubModuleImage,
+            ModuleID: moduleId,
+            UserName: user.Name // Assuming you want to track who added it
+        };
 
         try {
-            if (!formData.SubModuleName?.trim()) {
-                throw new Error("Submodule name is required");
-            }
+            const data = await fetchData(endpoint, method, body, headers);
 
-            await onSave(moduleId, formData);
-            onClose();
-        } catch (err) {
-            console.error("Error:", err);
-            setError(err.message);
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: 'Submodule added successfully',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                if (onSave) {
+                    onSave(data.data);
+                }
+
+                onClose();
+            } else {
+                throw new Error(data.message || 'Failed to add submodule');
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message || 'Failed to add submodule',
+            });
         } finally {
             setIsSaving(false);
         }
@@ -118,27 +186,31 @@ const AddSubmodulePopup = ({ moduleId, onClose, onSave }) => {
                             </div>
                         )}
                     </div>
+                    {errors.image && <p className="text-red-500 text-sm">{errors.image}</p>}
 
-                    <input
-                        type="text"
-                        name="SubModuleName"
-                        value={formData.SubModuleName}
-                        onChange={handleChange}
-                        className="w-full border p-2 rounded"
-                        placeholder="Submodule Name"
-                        required
-                    />
+                    <div>
+                        <input
+                            type="text"
+                            name="SubModuleName"
+                            value={formData.SubModuleName}
+                            onChange={handleChange}
+                            className="w-full border p-2 rounded"
+                            placeholder="Submodule Name"
+                            required
+                        />
+                        {errors.SubModuleName && <p className="text-red-500 text-sm">{errors.SubModuleName}</p>}
+                    </div>
 
-                    <textarea
-                        name="SubModuleDescription"
-                        value={formData.SubModuleDescription}
-                        onChange={handleChange}
-                        rows={3}
-                        className="w-full border p-2 rounded"
-                        placeholder="Description"
-                    />
-
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
+                    <div>
+                        <textarea
+                            name="SubModuleDescription"
+                            value={formData.SubModuleDescription}
+                            onChange={handleChange}
+                            rows={3}
+                            className="w-full border p-2 rounded"
+                            placeholder="Description"
+                        />
+                    </div>
 
                     <div className="flex space-x-2">
                         <button

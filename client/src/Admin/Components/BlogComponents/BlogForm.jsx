@@ -15,7 +15,7 @@ const BlogForm = (props) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState([]); 
+  const [categories, setCategories] = useState([]);
 
   const { fetchData, userToken, user } = useContext(ApiContext);
 
@@ -95,7 +95,7 @@ const BlogForm = (props) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Selected Category:", category); 
+    console.log("Selected Category:", category);
     if (validateForm()) {
       Swal.fire({
         title: "Confirm Submission",
@@ -112,10 +112,10 @@ const BlogForm = (props) => {
     }
   };
 
-    const handleConfirmSubmit = async () => {
-      setLoading(true);
+  const handleConfirmSubmit = async () => {
+    setLoading(true);
 
-      const blogStatus = user.role === "admin" ? "approved" : "pending";
+    const blogStatus = user.role === "admin" ? "approved" : "pending";
 
     const endpoint = "blog/blogpost";
     const method = "POST";
@@ -149,9 +149,9 @@ const BlogForm = (props) => {
               image: selectedImage,
               author,
               publishedDate,
-              Status: blogStatus, 
+              Status: blogStatus,
               UserID: user.UserID,
-              UserName: user.Name, 
+              UserName: user.Name,
             },
             ...prevBlogs,
           ]);
