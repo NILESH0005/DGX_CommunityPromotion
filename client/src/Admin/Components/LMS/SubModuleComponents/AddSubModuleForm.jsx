@@ -14,17 +14,36 @@ const AddSubModuleForm = ({ onAddSubModule, errors, setErrors }) => {
 
     const handleSubModuleImageChange = (e) => {
         const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = () => {
-                setNewSubModule({
-                    ...newSubModule,
-                    SubModuleImage: file,
-                    SubModuleImagePreview: reader.result
-                });
-            };
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        // Check file size (500KB = 500 * 1024 bytes)
+        if (file.size > 500 * 1024) {
+            setErrors({
+                ...errors,
+                SubModuleImage: 'Image size must be 500KB or less'
+            });
+            // Clear the file input
+            e.target.value = '';
+            return;
         }
+
+        // Clear any previous image errors
+        if (errors.SubModuleImage) {
+            setErrors({
+                ...errors,
+                SubModuleImage: null
+            });
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            setNewSubModule({
+                ...newSubModule,
+                SubModuleImage: file,
+                SubModuleImagePreview: reader.result
+            });
+        };
+        reader.readAsDataURL(file);
     };
 
     const resetForm = () => {
@@ -99,7 +118,9 @@ const AddSubModuleForm = ({ onAddSubModule, errors, setErrors }) => {
                                 className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-dashed ${
                                     newSubModule.SubModuleImagePreview 
                                         ? 'border-transparent' 
-                                        : 'border-DGXgray/30 hover:border-DGXgreen'
+                                        : errors.SubModuleImage
+                                            ? 'border-red-500'
+                                            : 'border-DGXgray/30 hover:border-DGXgreen'
                                 } flex items-center justify-center cursor-pointer bg-DGXgray/10 relative`}
                             >
                                 {newSubModule.SubModuleImagePreview ? (
@@ -126,9 +147,19 @@ const AddSubModuleForm = ({ onAddSubModule, errors, setErrors }) => {
                                 <p className="text-sm text-DGXgray">
                                     {newSubModule.SubModuleImage 
                                         ? newSubModule.SubModuleImage.name 
-                                        : "JPG, PNG or GIF (Max 5MB)"}
+                                        : "JPG, PNG or GIF (Max 500KB)"}
                                 </p>
-                                {newSubModule.SubModuleImage && (
+                                {errors.SubModuleImage && (
+                                    <motion.p 
+                                        initial={{ opacity: 0, y: -5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="mt-1 text-sm text-red-600 flex items-center gap-1"
+                                    >
+                                        <X className="w-4 h-4" />
+                                        {errors.SubModuleImage}
+                                    </motion.p>
+                                )}
+                                {newSubModule.SubModuleImage && !errors.SubModuleImage && (
                                     <motion.button
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
@@ -174,7 +205,8 @@ const AddSubModuleForm = ({ onAddSubModule, errors, setErrors }) => {
                         whileTap={{ scale: 0.98 }}
                         type="button"
                         onClick={() => onAddSubModule(newSubModule)}
-                        className="px-6 py-2.5 rounded-lg bg-DGXgreen hover:bg-[#68a600] text-DGXwhite font-medium transition duration-200 flex items-center gap-2"
+                        disabled={!!errors.SubModuleImage}
+                        className="px-6 py-2.5 rounded-lg bg-DGXgreen hover:bg-[#68a600] text-DGXwhite font-medium transition duration-200 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                         <Check className="w-5 h-5" />
                         Add Submodule

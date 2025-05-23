@@ -1,19 +1,17 @@
 import React, { useState, useEffect, useContext } from 'react';
 import PropTypes from 'prop-types';
-import { useParams } from 'react-router-dom'; // Add this import
+import { useParams } from 'react-router-dom';
 import ApiContext from '../../context/ApiContext';
 import FileViewer from '../../utils/FileViewer';
 
-const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
-  const { subModuleId } = useParams(); // Get the ID from URL
+const UnitsWithFiles = () => {
+  const { subModuleId } = useParams();
   const [allUnits, setAllUnits] = useState([]);
   const [filteredUnits, setFilteredUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { fetchData } = useContext(ApiContext);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [files, setFiles] = useState([]);
-
 
   useEffect(() => {
     console.log('subModuleId changed:', subModuleId, typeof subModuleId);
@@ -30,7 +28,6 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
         if (response?.success) {
           setAllUnits(response.data);
 
-          // Filter units based on subModuleId with type safety
           const filtered = response.data.filter(unit => {
             return String(unit.SubModuleID) === String(subModuleId);
           });
@@ -65,116 +62,6 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
       setSelectedFile(null);
     }
   }, [subModuleId, fetchData]);
-
-  const handleDownload = (file) => {
-    if (!file.FilePath) return;
-
-    const link = document.createElement('a');
-    link.href = file.FilePath;
-    link.setAttribute('download', `${file.FilesName.toLowerCase().replace(/\s+/g, '_')}.${file.FileType}`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const getFileType = (mimeType) => {
-    if (!mimeType) return 'unknown';
-
-    if (mimeType.includes('pdf')) return 'pdf';
-    if (mimeType.includes('presentation') || mimeType.includes('powerpoint') ||
-      mimeType.includes('ppt') || mimeType.endsWith('.pptx')) return 'ppt';
-    if (mimeType.includes('word') || mimeType.endsWith('.docx')) return 'doc';
-    if (mimeType.includes('excel') || mimeType.endsWith('.xlsx')) return 'xls';
-    if (mimeType.includes('image')) return 'image';
-    if (mimeType.includes('text')) return 'text';
-    if (mimeType.includes('ipynb') || mimeType.endsWith('.ipynb')) return 'ipynb';
-
-    return 'unknown';
-  };
-
-
-
-  const renderFileContent = () => {
-    if (!selectedFile) return (
-      <div className="flex items-center justify-center h-full text-gray-500">
-        Select a file to view its content
-      </div>
-    );
-
-    const fileType = getFileType(selectedFile.FileType);
-    const fileUrl = `${import.meta.env.VITE_API_UPLOADSURL}${selectedFile.FilePath}`;
-    console.log('File URL:', fileUrl);
-
-    switch (fileType) {
-      case "pdf":
-        return (
-          <iframe
-            key={selectedFile.FileID}
-            src={fileUrl}
-            className="w-full h-full"
-            allowFullScreen
-            title={`${selectedFile.FilesName} Viewer`}
-            sandbox="allow-scripts allow-same-origin"
-          />
-        );
-      case "ppt":
-      case "pptx":
-        return (
-          <iframe
-            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`}
-            className="w-full h-full"
-            allowFullScreen
-            title={`${selectedFile.FilesName} Viewer`}
-            sandbox="allow-scripts allow-same-origin"
-          />
-        );
-      case "ipynb":
-        return (
-          <iframe
-            src={`https://nbviewer.jupyter.org/url/${encodeURIComponent(fileUrl)}`}
-            className="w-full h-full"
-            allowFullScreen
-            title={`${selectedFile.FilesName} Viewer`}
-            sandbox="allow-scripts allow-same-origin"
-          />
-        );
-      case "doc":
-      case "docx":
-        return (
-          <iframe
-            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`}
-            className="w-full h-full"
-            allowFullScreen
-            title={`${selectedFile.FilesName} Viewer`}
-            sandbox="allow-scripts allow-same-origin"
-          />
-        );
-      case "image":
-        return (
-          <div className="flex items-center justify-center h-full">
-            <img
-              src={fileUrl}
-              alt={selectedFile.FilesName}
-              className="max-h-full max-w-full object-contain"
-            />
-          </div>
-        );
-      default:
-        return (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <div className="text-6xl mb-4">📁</div>
-            <h3 className="text-xl font-semibold mb-2">{selectedFile.FilesName}</h3>
-            <p className="text-gray-500 mb-6">This file type cannot be previewed</p>
-            <button
-              onClick={() => handleDownload(selectedFile)}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Download File
-            </button>
-          </div>
-        );
-    }
-  };
 
   if (!subModuleId) {
     return (
@@ -264,10 +151,11 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
                   {unit.files.map(file => (
                     <div
                       key={file.FileID}
-                      className={`py-1 px-2 rounded text-sm flex items-center ${selectedFile?.FileID === file.FileID
-                        ? "bg-gray-600 text-white"
-                        : "text-gray-300 hover:text-white"
-                        }`}
+                      className={`py-1 px-2 rounded text-sm flex items-center ${
+                        selectedFile?.FileID === file.FileID
+                          ? "bg-gray-600 text-white"
+                          : "text-gray-300 hover:text-white"
+                      }`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedFile({
@@ -279,8 +167,8 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
                     >
                       <span className="mr-2">
                         {file.fileType === "pdf" ? "📄" :
-                          file.fileType === "ipynb" ? "📓" :
-                            file.fileType === "docx" ? "📝" : "📁"}
+                         file.fileType === "ipynb" ? "📓" :
+                         file.fileType === "docx" ? "📝" : "📁"}
                       </span>
                       <span className="truncate">{file.FilesName}</span>
                     </div>
@@ -304,13 +192,45 @@ const UnitsWithFiles = () => { // Remove the prop since we'll get it from URL
           {selectedFile && (
             <h2 className="text-xl font-semibold text-gray-700 mt-4">
               {selectedFile.FilesName}
+              {selectedFile.fileType === "ipynb" && (
+                <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                  Jupyter Notebook
+                </span>
+              )}
             </h2>
           )}
         </div>
 
-        <div className="flex-1 w-full border rounded-xl shadow-lg relative ov erflow-hidden bg-white">
-          {/* {renderFileContent()} */}
-          <FileViewer fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile.FilePath}`} />
+        <div className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${
+          selectedFile?.fileType === "ipynb" ? 
+            "bg-[#f5f5f5] border border-gray-300" : 
+            "bg-white border"
+        }`}>
+          {selectedFile?.fileType === "ipynb" && (
+            <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
+              <div className="flex space-x-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              </div>
+              <div className="ml-4 text-sm text-gray-600 font-medium">
+                {selectedFile.FilesName}
+              </div>
+            </div>
+          )}
+          <div className={selectedFile?.fileType === "ipynb" ? "h-full pt-8" : "h-full"}>
+            <FileViewer 
+              fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile?.FilePath}`}
+              className="w-full h-full"
+            />
+          </div>
+          {selectedFile?.fileType === "ipynb" && (
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gray-100 flex items-center px-4 border-t border-gray-300 text-xs text-gray-500">
+              <span>Kernel: Python 3</span>
+              <span className="mx-2">|</span>
+              <span>Notebook</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
