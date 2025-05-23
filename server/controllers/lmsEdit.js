@@ -499,6 +499,149 @@ export const updateSubModule = async (req, res) => {
     }
 };
 
+export const addSubmodule = async (req, res) => {
+    console.log("Incoming request body", req.body);
+    let success = false;
+    const userId = req.user.id;
+    console.log("User ID:", userId);
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        const warningMessage = "Data is not in the right format";
+        logWarning(warningMessage);
+        return res.status(400).json({ 
+            success, 
+            data: errors.array(), 
+            message: warningMessage 
+        });
+    }
+
+    try {
+        const { 
+            SubModuleName, 
+            SubModuleDescription, 
+            SubModuleImage,
+            ModuleID // Added ModuleID from request body
+        } = req.body;
+
+        // Validate required ModuleID
+        if (!ModuleID) {
+            const warningMessage = "ModuleID is required";
+            logWarning(warningMessage);
+            return res.status(400).json({ 
+                success: false, 
+                data: {}, 
+                message: warningMessage 
+            });
+        }
+
+        // Connect to database
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                const errorMessage = "Failed to connect to database";
+                logError(errorMessage);
+                return res.status(500).json({ 
+                    success: false, 
+                    data: err, 
+                    message: errorMessage 
+                });
+            }
+
+            try {
+                // Get user details using email
+                const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
+                const userRows = await queryAsync(conn, userQuery, [userId]);
+
+                if (userRows.length === 0) {
+                    closeConnection();
+                    const warningMessage = "User not found";
+                    logWarning(warningMessage);
+                    return res.status(404).json({ 
+                        success: false, 
+                        data: {}, 
+                        message: warningMessage 
+                    });
+                }
+
+                // Convert base64 image to buffer if needed
+                let imageBuffer = null;
+                if (SubModuleImage) {
+                    if (SubModuleImage.startsWith('data:image')) {
+                        const base64Data = SubModuleImage.replace(/^data:image\/\w+;base64,/, '');
+                        imageBuffer = Buffer.from(base64Data, 'base64');
+                    } else {
+                        imageBuffer = Buffer.from(SubModuleImage, 'binary');
+                    }
+                }
+
+                // Insert new submodule with ModuleID
+                const insertQuery = `
+                    INSERT INTO SubModulesDetails 
+                    (
+                        SubModuleName, 
+                        SubModuleImage, 
+                        SubModuleDescription,
+                        ModuleID,
+                        AuthAdd,
+                        AddOnDt,
+                        delStatus
+                    ) 
+                    VALUES (?, CONVERT(IMAGE, ?), ?, ?, ?, GETDATE(), 0);
+                `;
+
+                const insertResult = await queryAsync(
+                    conn, 
+                    insertQuery, 
+                    [
+                        SubModuleName,
+                        imageBuffer,
+                        SubModuleDescription,
+                        ModuleID, // Added ModuleID parameter
+                        userRows[0].Name
+                    ]
+                );
+
+                // Get the newly created submodule
+                const newSubmoduleQuery = `
+                    SELECT * FROM SubModulesDetails 
+                    WHERE SubModuleID = SCOPE_IDENTITY() 
+                    AND ISNULL(delStatus,0) = 0;
+                `;
+                const newSubmodule = await queryAsync(conn, newSubmoduleQuery);
+
+                success = true;
+                closeConnection();
+                
+                const infoMessage = "Submodule added successfully";
+                logInfo(infoMessage);
+                
+                return res.status(200).json({ 
+                    success, 
+                    data: newSubmodule[0], 
+                    message: infoMessage 
+                });
+
+            } catch (queryErr) {
+                closeConnection();
+                console.error("Database Query Error:", queryErr);
+                logError(queryErr);
+                return res.status(500).json({ 
+                    success: false, 
+                    data: queryErr, 
+                    message: 'Failed to add submodule. Please check your input data.' 
+                });
+            }
+        });
+    } catch (error) {
+        logError(error);
+        return res.status(500).json({ 
+            success: false, 
+            data: {}, 
+            message: 'Internal server error' 
+        });
+    }
+};
+
 
 
 

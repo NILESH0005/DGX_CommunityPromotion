@@ -5,6 +5,7 @@ import { compressImage } from "../../../../utils/compressImage";
 import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
 import ViewContent from "./ViewContent";
+import AddSubmodulePopup from "./AddSubmodulePopup";
 
 const EditSubModule = ({ module, onBack }) => {
     const [viewingContent, setViewingContent] = useState(null);
@@ -12,6 +13,7 @@ const EditSubModule = ({ module, onBack }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editingSubmodule, setEditingSubmodule] = useState(null);
+    const [showAddSubmodulePopup, setShowAddSubmodulePopup] = useState(false);
     const [editedData, setEditedData] = useState({
         SubModuleName: '',
         SubModuleDescription: '',
@@ -91,6 +93,53 @@ const EditSubModule = ({ module, onBack }) => {
         } catch (err) {
             console.error("Delete error:", err);
             Swal.fire('Error!', `Failed to delete submodule: ${err.message}`, 'error');
+        }
+    };
+
+    const handleAddSubmodule = () => {
+        setShowAddSubmodulePopup(true);
+    };
+
+    const handleSaveSubmodule = async (moduleId, formData) => {
+        try {
+            const headers = { 'auth-token': userToken };
+            let payload;
+            let isMultipart = false;
+
+            if (formData.SubModuleImage) {
+                const formDataPayload = new FormData();
+                formDataPayload.append("ModuleID", moduleId);
+                formDataPayload.append("SubModuleName", formData.SubModuleName);
+                formDataPayload.append("SubModuleDescription", formData.SubModuleDescription || "");
+                formDataPayload.append("SubModuleImage", formData.SubModuleImage);
+                payload = formDataPayload;
+                isMultipart = true;
+            } else {
+                headers['Content-Type'] = 'application/json';
+                payload = {
+                    ModuleID: moduleId,
+                    SubModuleName: formData.SubModuleName,
+                    SubModuleDescription: formData.SubModuleDescription || ""
+                };
+            }
+
+            const response = await fetchData(
+                "lmsEdit/addSubModule",
+                "POST",
+                payload,
+                headers,
+                isMultipart
+            );
+
+            if (response?.success) {
+                setSubmodules(prev => [...prev, response.data]);
+                Swal.fire('Success!', 'Submodule added successfully', 'success');
+            } else {
+                throw new Error(response?.message || "Failed to add submodule");
+            }
+        } catch (err) {
+            console.error("Error:", err);
+            throw err;
         }
     };
 
@@ -237,9 +286,7 @@ const EditSubModule = ({ module, onBack }) => {
         }
     };
 
-    const handleAddSubmodule = () => {
-        navigate(`/lmsEdit/addSubmodule/${module.ModuleID}`);
-    };
+
 
     const handleViewContent = (submodule) => {
         setViewingContent(submodule);
@@ -476,6 +523,13 @@ const EditSubModule = ({ module, onBack }) => {
                     )}
                 </div>
             </div>
+            {showAddSubmodulePopup && (
+                <AddSubmodulePopup
+                    moduleId={module.ModuleID}
+                    onClose={() => setShowAddSubmodulePopup(false)}
+                    onSave={handleSaveSubmodule}
+                />
+            )}
         </div>
     );
 };
