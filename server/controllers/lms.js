@@ -234,8 +234,12 @@ export class LMS {
   }
 
   static async saveFileOrLink(req, res) {
-    const { unitId, link, percentage = 0, fileName, fileType } = req.body;
-    const userEmail = req.user?.id; // From authentication middleware
+    // Parse percentage as decimal number
+    let percentage = parseFloat(req.body.percentage) || 0;
+    percentage = Math.min(100, Math.max(0, percentage)); // Ensure between 0-100
+
+    const { unitId, link, fileName, fileType } = req.body;
+    const userEmail = req.user?.id;
 
     if (!unitId) {
       return res.status(400).json({
@@ -279,15 +283,15 @@ export class LMS {
           AuthAdd: user.Name,
           AddOnDt: currentDateTime,
           delStatus: 0,
-          Percentage: percentage
+          Percentage: percentage // Using the decimal number directly
         };
 
         await queryAsync(
           conn,
           `INSERT INTO FilesDetails 
                 (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          Object.values(fileData)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, // No CAST needed
+          Object.values(fileData) // Simple array of values
         );
 
         await queryAsync(conn, 'COMMIT TRANSACTION');
@@ -301,31 +305,22 @@ export class LMS {
       // Handle link (with nullable fields)
       else if (link) {
         const linkData = {
-          FilesName: fileName || null,  // Can be null
-          FilePath: link,              // Required for links
-          FileType: fileType || 'link' || null, // Can be null or defaults to 'link'
+          FilesName: fileName || null,
+          FilePath: link,
+          FileType: fileType || 'link' || null,
           UnitID: unitId,
           AuthAdd: user.Name,
           AddOnDt: currentDateTime,
           delStatus: 0,
-          Percentage: percentage
+          Percentage: percentage // Using the decimal number directly
         };
 
         await queryAsync(
           conn,
           `INSERT INTO FilesDetails 
                 (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            linkData.FilesName,
-            linkData.FilePath,
-            linkData.FileType,
-            linkData.UnitID,
-            linkData.AuthAdd,
-            linkData.AddOnDt,
-            linkData.delStatus,
-            linkData.Percentage
-          ]
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, // No CAST needed
+          Object.values(linkData) // Simple array of values
         );
 
         await queryAsync(conn, 'COMMIT TRANSACTION');
@@ -348,7 +343,7 @@ export class LMS {
           console.error('Rollback failed:', rbErr)
         );
       }
-      console.error('Error:', error);
+      console.error('Database Error:', error);
       return res.status(500).json({
         success: false,
         message: error.message || 'Failed to save data'

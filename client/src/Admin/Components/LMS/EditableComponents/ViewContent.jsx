@@ -226,6 +226,10 @@ const ViewContent = ({ submodule, onBack }) => {
                 didOpen: () => Swal.showLoading()
             });
 
+            // Calculate percentage with proper decimal handling
+            const totalFilesAfterUpload = files.length + 1;
+            const equalPercentage = (100 / totalFilesAfterUpload).toFixed(2); // Ensures 2 decimal places
+
             if (newFile) {
                 // Client-side validation
                 const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf',
@@ -237,11 +241,10 @@ const ViewContent = ({ submodule, onBack }) => {
                     throw new Error('File type not allowed. Please upload a valid file type.');
                 }
 
-                // Prepare form data
                 const formData = new FormData();
                 formData.append('file', newFile);
                 formData.append('unitId', selectedUnit.UnitID);
-                formData.append('percentage', 0); // Default percentage
+                formData.append('percentage', equalPercentage);
 
                 response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
                     method: 'POST',
@@ -251,7 +254,7 @@ const ViewContent = ({ submodule, onBack }) => {
                     }
                 });
             } else {
-                // Handle link save
+                // Handle link save with proper percentage value
                 response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
                     method: 'POST',
                     headers: {
@@ -263,7 +266,7 @@ const ViewContent = ({ submodule, onBack }) => {
                         link: fileLink.trim(),
                         fileName: fileLink.trim().split('/').pop() || 'External Link',
                         fileType: 'link',
-                        percentage: 0 // Default percentage
+                        percentage: equalPercentage // Convert to number
                     })
                 });
             }
@@ -277,7 +280,27 @@ const ViewContent = ({ submodule, onBack }) => {
             await uploadToast.close();
 
             if (result.success) {
-                setFiles(prev => [...prev, result.data]);
+                const filesResponse = await fetchData(
+                    `lms/getFiles?unitId=${selectedUnit.UnitID}`,
+                    "GET",
+                    { 'auth-token': userToken }
+                );
+                if (filesResponse?.success) {
+                    setFiles(filesResponse.data);
+                }
+
+
+                const updatedFiles = files.map(file => ({
+                    ...file,
+                    Percentage: equalPercentage
+                }));
+
+                // Add the new file with the same percentage
+                setFiles([...updatedFiles, {
+                    ...result.data,
+                    Percentage: equalPercentage
+                }]);
+
                 setNewFile(null);
                 setFileLink('');
                 Swal.fire('Success!', newFile ? 'File uploaded successfully' : 'Link saved successfully', 'success');
@@ -306,6 +329,7 @@ const ViewContent = ({ submodule, onBack }) => {
         if (!result.isConfirmed) return;
 
         try {
+            setFiles(prev => prev.filter(file => file.FileID !== fileId));
             const response = await fetchData(
                 "lmsEdit/deleteFile",
                 "POST",
@@ -317,6 +341,14 @@ const ViewContent = ({ submodule, onBack }) => {
             );
 
             if (response?.success) {
+                const filesResponse = await fetchData(
+                    `lms/getFiles?unitId=${selectedUnit.UnitID}`,
+                    "GET",
+                    { 'auth-token': userToken }
+                );
+                if (filesResponse?.success) {
+                    setFiles(filesResponse.data);
+                }
                 setFiles(prev => prev.filter(file => file.FileID !== fileId));
                 Swal.fire('Deleted!', 'File has been deleted.', 'success');
             }
