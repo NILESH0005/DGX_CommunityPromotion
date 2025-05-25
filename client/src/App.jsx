@@ -262,7 +262,7 @@ function App() {
 
 
 
-            {/* <Route path="/LmsM  anager" element={<LearningPath />} /> */}
+            {/* <Route path="/LmsManager" element={<LearningPath />} /> */}
             {/* LMS */}
             <Route path="/Lms" element={<Lms />} />
             <Route path="/teaching-modules" element={<TeachingModules />} />

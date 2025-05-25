@@ -6,6 +6,9 @@ import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
 import ViewContent from "./ViewContent";
 import AddSubmodulePopup from "./AddSubmodulePopup";
+import { FaEdit, FaTrash, FaFolder, FaSave, FaTimes, FaUpload, FaImage, FaChevronRight } from "react-icons/fa";
+import { Tooltip as ReactTooltip } from "react-tooltip";
+import { Link } from "react-router-dom";
 
 const EditSubModule = ({ module, onBack }) => {
     const [viewingContent, setViewingContent] = useState(null);
@@ -18,13 +21,15 @@ const EditSubModule = ({ module, onBack }) => {
         SubModuleName: '',
         SubModuleDescription: '',
         SubModuleImage: null,
-    }); const [isSaving, setIsSaving] = useState(false);
-    const [isEditing, setIsEditing] = useState(false); // Added missing state
+    });
+    const [isSaving, setIsSaving] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
     const [isImageEditing, setIsImageEditing] = useState(false);
     const [newImageFile, setNewImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [isCompressing, setIsCompressing] = useState(false);
     const fileInputRef = useRef(null);
+    const textareaRef = useRef(null);
 
     const { fetchData, userToken } = useContext(ApiContext);
     const navigate = useNavigate();
@@ -59,6 +64,13 @@ const EditSubModule = ({ module, onBack }) => {
 
         fetchSubmodules();
     }, [module.ModuleID, fetchData, userToken]);
+
+    useEffect(() => {
+        if (textareaRef.current && isEditing) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${Math.max(textareaRef.current.scrollHeight, 100)}px`;
+        }
+    }, [editedData.SubModuleDescription, isEditing]);
 
     const handleDeleteSubmodule = async (SubModuleID) => {
         const result = await Swal.fire({
@@ -208,20 +220,27 @@ const EditSubModule = ({ module, onBack }) => {
         }
     };
 
+    const handleCancelImageEdit = () => {
+        setIsImageEditing(false);
+        setNewImageFile(null);
+        setImagePreview(
+            editingSubmodule?.SubModuleImage && editingSubmodule.SubModuleImage.data
+                ? `data:image/jpeg;base64,${editingSubmodule.SubModuleImage.data}`
+                : null
+        );
+    };
+
     const handleDeleteImage = () => {
         setNewImageFile(null);
         setImagePreview(null);
     };
 
     const handleSubmit = async (e) => {
-        console.log("Current editedData:", editedData); // Add this line
-
         e.preventDefault();
         setIsSaving(true);
         setError(null);
 
         try {
-            // Validate required fields
             if (!editedData.SubModuleName?.trim()) {
                 throw new Error("Submodule name is required");
             }
@@ -231,7 +250,6 @@ const EditSubModule = ({ module, onBack }) => {
             let isMultipart = false;
 
             if (newImageFile) {
-                // Handle image upload with FormData
                 const formData = new FormData();
                 formData.append("SubModuleName", editedData.SubModuleName);
                 formData.append("SubModuleDescription", editedData.SubModuleDescription || "");
@@ -242,7 +260,6 @@ const EditSubModule = ({ module, onBack }) => {
                 payload = formData;
                 isMultipart = true;
             } else {
-                // Handle regular JSON payload
                 headers['Content-Type'] = 'application/json';
                 payload = {
                     SubModuleName: editedData.SubModuleName,
@@ -250,7 +267,6 @@ const EditSubModule = ({ module, onBack }) => {
                     Duration: editedData.Duration || 0
                 };
 
-                // If there's an existing image but no new image, include it
                 if (editedData.SubModuleImage?.data) {
                     payload.SubModuleImage = {
                         data: editedData.SubModuleImage.data
@@ -285,8 +301,6 @@ const EditSubModule = ({ module, onBack }) => {
             setIsSaving(false);
         }
     };
-
-
 
     const handleViewContent = (submodule) => {
         setViewingContent(submodule);
@@ -324,22 +338,27 @@ const EditSubModule = ({ module, onBack }) => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen p-6">
             <div className="max-w-7xl mx-auto">
+                {/* Header Section */}
                 <div className="flex items-center justify-between mb-6">
-                    <button
-                        onClick={onBack}
-                        className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-                    >
-                        ← Back to Modules
-                    </button>
-                    <h1 className="text-2xl font-bold">
-                        Submodules for: {module.ModuleName}
-                    </h1>
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+                            Submodules for: <span className="text-red-600 dark:text-red-400">{module.ModuleName}</span>
+                        </h1>
+                        <button 
+                            onClick={onBack}
+                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center mt-1"
+                        >
+                            <FaChevronRight className="mr-1 text-xs" />
+                            Back to Modules
+                        </button>
+                    </div>
                     <button
                         onClick={handleAddSubmodule}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
                     >
+                        <FaEdit className="mr-2" />
                         Add New Submodule
                     </button>
                 </div>
@@ -349,180 +368,247 @@ const EditSubModule = ({ module, onBack }) => {
                         submodules.map((submodule) => (
                             <div
                                 key={submodule.SubModuleID}
-                                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow"
+                                className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-300 w-full border border-gray-200 dark:border-gray-700"
                             >
-                                {isEditing && editingSubmodule?.SubModuleID === submodule.SubModuleID ? (
-                                    <div className="p-6">
-                                        <form onSubmit={handleSubmit} className="space-y-4">
-                                            {/* Image Editing */}
-                                            <div className="h-40 bg-gray-100 rounded-lg overflow-hidden mb-4">
-                                                {isImageEditing ? (
-                                                    <div className="h-full flex flex-col items-center justify-center p-4">
-                                                        {imagePreview ? (
-                                                            <img
-                                                                src={imagePreview}
-                                                                alt="Preview"
-                                                                className="max-h-full object-contain"
-                                                            />
-                                                        ) : submodule.SubModuleImage ? (
-                                                            <ByteArrayImage
-                                                                byteArray={submodule.SubModuleImage.data}
-                                                                className="max-h-full object-contain"
-                                                            />
-                                                        ) : (
-                                                            <div className="text-gray-400">No Image</div>
-                                                        )}
-                                                        <input
-                                                            type="file"
-                                                            ref={fileInputRef}
-                                                            onChange={handleImageChange}
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            disabled={isCompressing}
-                                                        />
-                                                        <div className="flex gap-2 mt-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => fileInputRef.current.click()}
-                                                                className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
-                                                                disabled={isCompressing}
-                                                            >
-                                                                {imagePreview ? "Change" : "Upload"}
-                                                            </button>
-                                                            {(submodule.SubModuleImage || imagePreview) && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={handleDeleteImage}
-                                                                    className="px-3 py-1 bg-red-500 text-white rounded text-sm"
-                                                                >
-                                                                    Remove
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="relative h-full">
-                                                        {submodule.SubModuleImage ? (
-                                                            <ByteArrayImage
-                                                                byteArray={submodule.SubModuleImage.data}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <div className="h-full flex items-center justify-center text-gray-400">
-                                                                No Image
-                                                            </div>
-                                                        )}
+                                {/* Image Section */}
+                                <div className="h-40 sm:h-48 bg-gradient-to-r from-red-500 to-red-700 overflow-hidden relative group">
+                                    {isEditing && editingSubmodule?.SubModuleID === submodule.SubModuleID && isImageEditing ? (
+                                        <div className="h-full flex flex-col items-center justify-center p-4 bg-black bg-opacity-70">
+                                            {imagePreview ? (
+                                                <img
+                                                    src={imagePreview}
+                                                    alt="Preview"
+                                                    className="max-h-24 sm:max-h-32 object-contain mb-4 transition-opacity duration-300"
+                                                />
+                                            ) : submodule.SubModuleImage ? (
+                                                <ByteArrayImage
+                                                    byteArray={submodule.SubModuleImage.data}
+                                                    className="max-h-24 sm:max-h-32 object-contain mb-4 transition-opacity duration-300"
+                                                />
+                                            ) : (
+                                                <div className="text-gray-300 mb-4">No Image</div>
+                                            )}
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                onChange={handleImageChange}
+                                                accept="image/*"
+                                                className="hidden"
+                                                disabled={isCompressing || isSaving}
+                                            />
+                                            <div className="flex gap-2 flex-wrap justify-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current.click()}
+                                                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs transition-colors duration-200 disabled:opacity-50 flex items-center"
+                                                    disabled={isCompressing || isSaving}
+                                                >
+                                                    <FaUpload className="mr-1" />
+                                                    {isCompressing ? "Processing..." : (imagePreview ? "Change" : "Upload")}
+                                                </button>
+                                                {(submodule.SubModuleImage || imagePreview) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleDeleteImage}
+                                                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs transition-colors duration-200 disabled:opacity-50 flex items-center"
+                                                        disabled={isCompressing || isSaving}
+                                                    >
+                                                        <FaTrash className="mr-1" />
+                                                        Remove
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCancelImageEdit}
+                                                    className="px-3 py-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-400 dark:hover:bg-gray-500 text-xs transition-colors duration-200 flex items-center"
+                                                    disabled={isCompressing || isSaving}
+                                                >
+                                                    <FaTimes className="mr-1" />
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                            {isCompressing && (
+                                                <p className="text-xs text-gray-300 mt-2 animate-pulse">Compressing image...</p>
+                                            )}
+                                        </div>
+                                    ) : isEditing && editingSubmodule?.SubModuleID === submodule.SubModuleID ? (
+                                        <>
+                                            {submodule.SubModuleImage ? (
+                                                <ByteArrayImage
+                                                    byteArray={submodule.SubModuleImage.data}
+                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                                />
+                                            ) : (
+                                                <div className="h-full flex items-center justify-center bg-gradient-to-br from-red-600 to-red-800">
+                                                    <div className="text-center p-4">
+                                                        <p className="text-gray-200 mb-3 text-sm">No Image Available</p>
                                                         <button
                                                             onClick={() => setIsImageEditing(true)}
-                                                            className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1 rounded shadow"
+                                                            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs transition-colors duration-200 shadow-md hover:shadow-lg flex items-center mx-auto"
                                                         >
-                                                            ✏️
+                                                            <FaImage className="mr-1" />
+                                                            Add Image
                                                         </button>
                                                     </div>
-                                                )}
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => setIsImageEditing(true)}
+                                                className="absolute top-2 right-2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow transition-all duration-200 hover:scale-110"
+                                                data-tooltip-id="edit-image-tooltip"
+                                                data-tooltip-content="Edit Image"
+                                            >
+                                                <FaEdit size={14} />
+                                            </button>
+                                        </>
+                                    ) : submodule.SubModuleImage ? (
+                                        <>
+                                            <ByteArrayImage
+                                                byteArray={submodule.SubModuleImage.data}
+                                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                            />
+                                        </>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center bg-gradient-to-br from-red-600 to-red-800">
+                                            <p className="text-gray-200">No Image Available</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Content Section */}
+                                <div className="p-4 sm:p-6">
+                                    {isEditing && editingSubmodule?.SubModuleID === submodule.SubModuleID ? (
+                                        <form onSubmit={handleSubmit} className="space-y-4">
+                                            <div>
+                                                <label htmlFor="SubModuleName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                    Submodule Name
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    id="SubModuleName"
+                                                    name="SubModuleName"
+                                                    value={editedData.SubModuleName}
+                                                    onChange={handleChange}
+                                                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                                                    placeholder="Submodule Name"
+                                                    required
+                                                />
                                             </div>
-
-                                            <input
-                                                type="text"
-                                                name="SubModuleName"
-                                                value={editedData.SubModuleName || ''}
-                                                onChange={handleChange}
-                                                className="w-full border p-2 rounded"
-                                                placeholder="Submodule Name"
-                                                required
-                                            />
-                                            <textarea
-                                                name="SubModuleDescription"
-                                                value={editedData.SubModuleDescription || ''}
-                                                onChange={handleChange}
-                                                rows={3}
-                                                className="w-full border p-2 rounded"
-                                                placeholder="Description"
-                                            />
-
-
-                                            {error && <p className="text-red-500 text-sm">{error}</p>}
-
-                                            <div className="flex space-x-2">
+                                            <div>
+                                                <label htmlFor="SubModuleDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                    Description
+                                                </label>
+                                                <textarea
+                                                    ref={textareaRef}
+                                                    id="SubModuleDescription"
+                                                    name="SubModuleDescription"
+                                                    value={editedData.SubModuleDescription}
+                                                    onChange={handleChange}
+                                                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                                                    placeholder="Submodule Description"
+                                                    style={{ minHeight: '100px' }}
+                                                />
+                                            </div>
+                                            {error && (
+                                                <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-md text-sm animate-fade-in">
+                                                    {error}
+                                                </div>
+                                            )}
+                                            <div className="flex gap-2 flex-wrap">
                                                 <button
                                                     type="submit"
                                                     disabled={isSaving || isCompressing}
-                                                    className="flex-1 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                                                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 flex items-center justify-center min-w-32 disabled:opacity-50"
                                                 >
-                                                    {isSaving ? "Saving..." : "Save"}
+                                                    {isSaving ? (
+                                                        <>
+                                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            </svg>
+                                                            Saving...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <FaSave className="mr-2" />
+                                                            Save Changes
+                                                        </>
+                                                    )}
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={handleCancelEdit}
-                                                    className="flex-1 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                                                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200 flex items-center"
                                                 >
+                                                    <FaTimes className="mr-2" />
                                                     Cancel
                                                 </button>
                                             </div>
                                         </form>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="h-40 bg-gray-100 overflow-hidden">
-                                            {submodule.SubModuleImage ? (
-                                                <ByteArrayImage
-                                                    byteArray={submodule.SubModuleImage.data}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="flex items-center justify-center text-gray-400 h-full">
-                                                    No Image
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="p-6">
-                                            <h3 className="text-lg font-bold text-gray-800 mb-2">
+                                    ) : (
+                                        <>
+                                            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white mb-2">
                                                 {submodule.SubModuleName}
                                             </h3>
-                                            <p className="text-gray-600 text-sm mb-3">
-                                                {submodule.SubModuleDescription || "No description"}
-                                            </p>
+                                            <div className="prose dark:prose-invert max-w-none">
+                                                <p className="text-gray-600 dark:text-gray-300 whitespace-pre-line text-sm sm:text-base">
+                                                    {submodule.SubModuleDescription || "No description provided"}
+                                                </p>
+                                            </div>
 
-                                            <div className="flex space-x-2">
+                                            {/* Action Buttons */}
+                                            <div className="flex justify-end gap-2 mt-4 sm:mt-6">
                                                 <button
                                                     onClick={() => handleEditSubmoduleInit(submodule)}
-                                                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                    className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors duration-200"
+                                                    data-tooltip-id="edit-tooltip"
+                                                    data-tooltip-content="Edit Submodule"
                                                 >
-                                                    Edit
+                                                    <FaEdit size={14} className="sm:size-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteSubmodule(submodule.SubModuleID)}
+                                                    className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors duration-200"
+                                                    data-tooltip-id="delete-tooltip"
+                                                    data-tooltip-content="Delete Submodule"
+                                                >
+                                                    <FaTrash size={14} className="sm:size-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleViewContent(submodule)}
-                                                    className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600"
+                                                    className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors duration-200"
+                                                    data-tooltip-id="view-content-tooltip"
+                                                    data-tooltip-content="View Content"
                                                 >
-                                                    View Content
+                                                    <FaFolder size={14} className="sm:size-4" />
                                                 </button>
                                             </div>
-                                            <div className="mt-2">
-                                                <button
-                                                    onClick={() => handleDeleteSubmodule(submodule.SubModuleID)}
-                                                    className="w-full py-1.5 bg-red-500 text-white rounded hover:bg-red-600"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         ))
                     ) : (
-                        <div className="col-span-full bg-white rounded-xl shadow-lg p-6 text-center">
-                            <p className="text-gray-600">No submodules found for this module</p>
+                        <div className="col-span-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center border border-gray-200 dark:border-gray-700">
+                            <p className="text-gray-600 dark:text-gray-300">No submodules found for this module</p>
                             <button
                                 onClick={handleAddSubmodule}
-                                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center mx-auto"
                             >
+                                <FaEdit className="mr-2" />
                                 Add New Submodule
                             </button>
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Tooltips */}
+            <ReactTooltip id="edit-tooltip" place="top" effect="solid" />
+            <ReactTooltip id="delete-tooltip" place="top" effect="solid" />
+            <ReactTooltip id="view-content-tooltip" place="top" effect="solid" />
+            <ReactTooltip id="edit-image-tooltip" place="top" effect="solid" />
+
             {showAddSubmodulePopup && (
                 <AddSubmodulePopup
                     moduleId={module.ModuleID}

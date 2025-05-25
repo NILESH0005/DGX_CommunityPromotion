@@ -198,7 +198,7 @@ export class LMS {
                 unitId,
                 user.Name,
                 currentDateTime,
-                file.Percentage || 0  
+                file.Percentage || 0
 
               ]);
               console.log("Success in unit Query ");
@@ -232,4 +232,131 @@ export class LMS {
       });
     }
   }
+
+  static async saveFileOrLink(req, res) {
+    const { unitId, link, percentage = 0, fileName, fileType } = req.body;
+    const userEmail = req.user?.id; // From authentication middleware
+
+    if (!unitId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unit ID is required'
+      });
+    }
+
+    let conn;
+    try {
+      conn = await new Promise((resolve, reject) => {
+        connectToDatabase((err, connection) => {
+          if (err) reject(err);
+          else resolve(connection);
+        });
+      });
+
+      await queryAsync(conn, 'BEGIN TRANSACTION');
+
+      // Get user details
+      const userRows = await queryAsync(
+        conn,
+        `SELECT UserID, Name FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0`,
+        [userEmail]
+      );
+
+      if (userRows.length === 0) {
+        throw new Error("User not found, please login first.");
+      }
+      const user = userRows[0];
+
+      const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+      // Handle file upload
+      if (req.file) {
+        const fileData = {
+          FilesName: req.file.originalname,
+          FilePath: `/uploads/${req.file.filename}`,
+          FileType: req.file.mimetype,
+          UnitID: unitId,
+          AuthAdd: user.Name,
+          AddOnDt: currentDateTime,
+          delStatus: 0,
+          Percentage: percentage
+        };
+
+        await queryAsync(
+          conn,
+          `INSERT INTO FilesDetails 
+                (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          Object.values(fileData)
+        );
+
+        await queryAsync(conn, 'COMMIT TRANSACTION');
+
+        return res.status(201).json({
+          success: true,
+          message: 'File uploaded and metadata saved',
+          data: fileData
+        });
+      }
+      // Handle link (with nullable fields)
+      else if (link) {
+        const linkData = {
+          FilesName: fileName || null,  // Can be null
+          FilePath: link,              // Required for links
+          FileType: fileType || 'link' || null, // Can be null or defaults to 'link'
+          UnitID: unitId,
+          AuthAdd: user.Name,
+          AddOnDt: currentDateTime,
+          delStatus: 0,
+          Percentage: percentage
+        };
+
+        await queryAsync(
+          conn,
+          `INSERT INTO FilesDetails 
+                (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            linkData.FilesName,
+            linkData.FilePath,
+            linkData.FileType,
+            linkData.UnitID,
+            linkData.AuthAdd,
+            linkData.AddOnDt,
+            linkData.delStatus,
+            linkData.Percentage
+          ]
+        );
+
+        await queryAsync(conn, 'COMMIT TRANSACTION');
+
+        return res.status(201).json({
+          success: true,
+          message: 'Link saved successfully',
+          data: linkData
+        });
+      }
+      else {
+        return res.status(400).json({
+          success: false,
+          message: 'Either a file or link must be provided'
+        });
+      }
+    } catch (error) {
+      if (conn) {
+        await queryAsync(conn, 'ROLLBACK TRANSACTION').catch(rbErr =>
+          console.error('Rollback failed:', rbErr)
+        );
+      }
+      console.error('Error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to save data'
+      });
+    } finally {
+      if (conn) conn.release?.();
+    }
+  }
+
+
 }

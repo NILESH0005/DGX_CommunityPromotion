@@ -25,5 +25,10 @@ router.get('/units',
   fetchUser,
   LMS.getUnits
 );
+router.post('/files',
+  fetchUser,
+  LMS.upload.single('file'), // Keep this for file upload capability
+  LMS.saveFileOrLink         // Renamed from saveFileLink to match controller method
+);
 
 export default router;

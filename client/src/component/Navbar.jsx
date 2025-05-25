@@ -61,7 +61,7 @@ const Navbar = () => {
         { label: 'Contact Us', to: '/ContactUs', icon: faEnvelope },
         { label: 'Community Guidelines', to: '/CommunityGuidelines', icon: faBook },
         { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher },
-        { label: 'LMS', to: '/modules', icon: faChalkboardTeacher }
+        { label: 'LMS', to: '/LearningPath', icon: faChalkboardTeacher }
     ];
 
     const mobileMenuLinks = [

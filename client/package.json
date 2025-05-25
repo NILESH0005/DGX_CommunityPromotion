@@ -39,6 +39,7 @@
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.475.0",
     "mammoth": "^1.9.0",
+    "multer": "^2.0.0",
     "notebookjs": "^0.8.3",
     "pdfjs-dist": "^3.4.120",
     "postcss-loader": "^8.1.1",

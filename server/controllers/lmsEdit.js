@@ -13,180 +13,168 @@ import { Console } from "console";
 
 dotenv.config();
 
-
-
 export const updateModule = async (req, res) => {
-  let success = false;
+    let success = false;
 
-  // 1. Authentication check
-  const userId = req.user?.UserID || req.user?.id;
-  if (!userId) {
-    return res.status(401).json({ success, message: "User not authenticated" });
-  }
-
-  // 2. Handle file upload using multer
-  upload(req, res, async (uploadErr) => {
-    if (uploadErr) {
-      logWarning("File upload failed", uploadErr.message);
-      return res.status(400).json({
-        success,
-        message: uploadErr.message || "File upload failed"
-      });
+    // 1. Authentication and validation - handle both numeric ID and email
+    const userId = req.user?.UserID || req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ success, message: "User not authenticated" });
     }
 
-    // 3. Data validation
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      logWarning("Data validation failed", errors.array());
-      return res.status(400).json({
-        success,
-        data: errors.array(),
-        message: "Data is not in the right format",
-      });
+        logWarning("Data validation failed", errors.array());
+        return res.status(400).json({
+            success,
+            data: errors.array(),
+            message: "Data is not in the right format",
+        });
     }
 
-    // 4. Parameter extraction
+    // 2. Parameter extraction
     const moduleId = parseInt(req.params.id, 10);
     if (isNaN(moduleId)) {
-      return res.status(400).json({ success, message: "Invalid module ID" });
+        return res.status(400).json({ success, message: "Invalid module ID" });
     }
 
-    // 5. Extract fields from both body and file
-    const { ModuleName, ModuleDescription, removeImage } = req.body;
-    const imageFile = req.file;
+    // 3. Extract/update body fields with proper image handling
+    let { ModuleName, ModuleDescription, ModuleImage } = req.body;
+    let imageBuffer = null;
+
+    if (req.is("multipart/form-data")) {
+        // Handle file upload from form-data
+        imageBuffer = req.file ? req.file.buffer : null;
+    } else if (req.body.ModuleImage?.data) {
+        // Handle base64 image string
+        try {
+            imageBuffer = Buffer.from(req.body.ModuleImage.data, 'base64');
+        } catch (e) {
+            logError("Image conversion error", e);
+            return res.status(400).json({
+                success: false,
+                message: "Invalid image format"
+            });
+        }
+    }
 
     try {
-      connectToDatabase(async (err, conn) => {
-        if (err) {
-          logError("Database connection failed", err);
-          return res.status(500).json({
-            success,
-            message: "Failed to connect to database",
-          });
-        }
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError("Database connection failed", err);
+                return res.status(500).json({
+                    success,
+                    message: "Failed to connect to database",
+                });
+            }
 
-        try {
-          // 6. Fetch user details
-          let userQuery = `
-            SELECT UserID, Name, isAdmin FROM Community_User 
-            WHERE ISNULL(delStatus, 0) = 0 AND (UserID = ? OR EmailId = ?)
-          `;
-          const userRows = await queryAsync(conn, userQuery, [userId, userId]);
+            try {
+                // 4. Fetch user details - handle both numeric ID and email
+                let userQuery, userRows;
 
-          if (!userRows || userRows.length === 0) {
-            closeConnection(conn);
-            return res.status(404).json({ success, message: "User not found" });
-          }
+                // First try to get user by numeric ID
+                if (!isNaN(Number(userId))) {
+                    userQuery = `
+                        SELECT UserID, Name, isAdmin FROM Community_User 
+                        WHERE ISNULL(delStatus, 0) = 0 AND UserID = ?
+                    `;
+                    userRows = await queryAsync(conn, userQuery, [Number(userId)]);
+                }
 
-          const user = userRows[0];
+                // If not found and userId looks like an email, try by email
+                if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
+                    userQuery = `
+                        SELECT UserID, Name, isAdmin FROM Community_User 
+                        WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?
+                    `;
+                    userRows = await queryAsync(conn, userQuery, [userId]);
+                }
 
-          // 7. Build dynamic update query
-          const updateParams = [
-            ModuleName || null,
-            ModuleDescription || null,
-            user.Name,
-            new Date(),
-          ];
+                if (!userRows || userRows.length === 0) {
+                    closeConnection(conn);
+                    return res.status(404).json({ success, message: "User not found" });
+                }
 
-          let updateQuery = `
-            UPDATE ModulesDetails
-            SET 
-              ModuleName = ?,
-              ModuleDescription = ?,
-              AuthLstEdit = ?,
-              editOnDt = ?
-          `;
+                const user = userRows[0];
 
-          // Handle image cases
-          if (removeImage === 'true') {
-            updateQuery += `, ModuleImage = NULL`;
-          } else if (imageFile) {
-            updateQuery += `, ModuleImage = ?`;
-            updateParams.push(imageFile.buffer);
-          }
+                // 5. Build dynamic update query with proper image handling
+                const updateParams = [
+                    ModuleName || null,
+                    ModuleDescription || null,
+                    user.Name,
+                    new Date(),
+                ];
 
-          updateQuery += ` WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0`;
-          updateParams.push(moduleId);
+                let updateQuery = `
+                    UPDATE ModulesDetails
+                    SET 
+                        ModuleName = ?,
+                        ModuleDescription = ?,
+                        AuthLstEdit = ?,
+                        editOnDt = ?
+                `;
 
-          // 8. Execute update
-          const result = await queryAsync(conn, updateQuery, updateParams);
+                // Add image parameter only if we have an image
+                if (imageBuffer !== null && imageBuffer !== undefined) {
+                    updateQuery += `, ModuleImage = ?`;
+                    updateParams.push(imageBuffer);
+                }
 
-          if (result.affectedRows === 0) {
-            closeConnection(conn);
-            return res.status(404).json({
-              success,
-              message: "Module not found or already deleted",
-            });
-          }
+                updateQuery += ` WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0`;
+                updateParams.push(moduleId);
 
-          // 9. Fetch updated module with image
-          const fetchQuery = `
-            SELECT 
-              ModuleID, 
-              ModuleName, 
-              ModuleDescription, 
-              AuthLstEdit, 
-              editOnDt,
-              ModuleImage
-            FROM ModulesDetails
-            WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0
-          `;
+                // 6. Execute update
+                const result = await queryAsync(conn, updateQuery, updateParams);
 
-          const updatedModule = await queryAsync(conn, fetchQuery, [moduleId]);
+                if (result.affectedRows === 0) {
+                    closeConnection(conn);
+                    return res.status(404).json({
+                        success,
+                        message: "Module not found or already deleted",
+                    });
+                }
 
-          if (!updatedModule || updatedModule.length === 0) {
-            closeConnection(conn);
-            return res.status(404).json({
-              success,
-              message: "Module not found after update",
-            });
-          }
+                // 7. Fetch updated module
+                const fetchQuery = `
+                    SELECT ModuleID, ModuleName, ModuleDescription, 
+                           AuthLstEdit, editOnDt
+                    FROM ModulesDetails
+                    WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0
+                `;
 
-          // 10. Prepare response with image data
-          const moduleData = {
-            ModuleID: updatedModule[0].ModuleID,
-            ModuleName: updatedModule[0].ModuleName,
-            ModuleDescription: updatedModule[0].ModuleDescription,
-            AuthLstEdit: updatedModule[0].AuthLstEdit,
-            editOnDt: updatedModule[0].editOnDt,
-            ModuleImage: updatedModule[0].ModuleImage 
-              ? { 
-                  data: updatedModule[0].ModuleImage.toString('base64'),
-                  contentType: 'image/jpeg' 
-                } 
-              : null
-          };
+                const updatedModule = await queryAsync(conn, fetchQuery, [moduleId]);
 
-          success = true;
-          closeConnection(conn);
-          logInfo("Module updated successfully", { moduleId });
+                success = true;
+                closeConnection(conn);
+                logInfo("Module updated successfully");
 
-          return res.status(200).json({
-            success,
-            data: moduleData,
-            message: "Module updated successfully",
-          });
-
-        } catch (queryErr) {
-          closeConnection(conn);
-          logError("Database query failed", queryErr);
-          return res.status(500).json({
-            success,
-            message: "Database operation failed",
-            details: queryErr.message,
-          });
-        }
-      });
+                return res.status(200).json({
+                    success,
+                    data: updatedModule[0],
+                    message: "Module updated successfully",
+                });
+            } catch (queryErr) {
+                closeConnection(conn);
+                logError("Database query failed", queryErr);
+                return res.status(500).json({
+                    success,
+                    message: "Database operation failed",
+                    details: queryErr.message.includes('Conversion failed')
+                        ? "Invalid data type in database operation"
+                        : queryErr.message,
+                });
+            }
+        });
     } catch (error) {
-      logError("Unexpected error", error);
-      return res.status(500).json({
-        success,
-        message: "Unexpected server error",
-        details: error.message,
-      });
+        logError("Unexpected error", error);
+        return res.status(500).json({
+            success,
+            message: "Unexpected server error",
+            details: error.message,
+        });
     }
-  });
 };
+
 
 export const deleteModule = (req, res) => {
     const { moduleId } = req.body;
@@ -517,6 +505,7 @@ export const addSubmodule = async (req, res) => {
     const userId = req.user.id;
     console.log("User ID:", userId);
 
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         const warningMessage = "Data is not in the right format";
@@ -654,6 +643,454 @@ export const addSubmodule = async (req, res) => {
     }
 };
 
+export const deleteUnit = (req, res) => {
+    const { unitId } = req.body;
+
+    // Input validation
+    if (!unitId || isNaN(unitId)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid unit ID provided",
+        });
+    }
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError(err);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database connection error",
+                });
+            }
+
+            try {
+                // Check if unit exists and isn't deleted
+                const checkQuery = `
+                    SELECT * FROM UnitsDetails 
+                    WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)
+                `;
+                const [existingUnit] = await queryAsync(conn, checkQuery, [unitId]);
+
+                if (!existingUnit) {
+                    closeConnection(conn);
+                    return res.status(404).json({
+                        success: false,
+                        message: "Unit not found or already deleted",
+                    });
+                }
+
+                // Perform the soft delete
+                const deleteQuery = `
+                    UPDATE UnitsDetails
+                    SET 
+                        delStatus = 1,
+                        delOnDt = GETDATE(),
+                        AddDel = ?
+                    WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)
+                `;
+
+                const adminId = req.user?.id; // Get current user ID
+                await queryAsync(conn, deleteQuery, [adminId, unitId]);
+                closeConnection(conn);
+
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        unitId: unitId,
+                        deletedAt: new Date().toISOString(),
+                        deletedBy: adminId
+                    },
+                    message: "Unit deleted successfully",
+                });
+
+            } catch (error) {
+                closeConnection(conn);
+                logError(`Error deleting unit: ${error.message}`);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database error during deletion",
+                });
+            }
+        });
+    } catch (outerError) {
+        logError(`Unexpected error: ${outerError.message}`);
+        return res.status(500).json({
+            success: false,
+            message: "Unexpected server error",
+        });
+    }
+};
+
+
+export const updateUnit = async (req, res) => {
+    let success = false;
+
+    // 1. Authentication and validation
+    const userId = req.user?.UserID || req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ success, message: "User not authenticated" });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        logWarning("Data validation failed", errors.array());
+        return res.status(400).json({
+            success,
+            data: errors.array(),
+            message: "Data is not in the right format",
+        });
+    }
+
+    // 2. Parameter extraction
+    const unitId = parseInt(req.params.id, 10);
+    if (isNaN(unitId)) {
+        return res.status(400).json({ success, message: "Invalid unit ID" });
+    }
+
+    // 3. Extract body fields
+    const { UnitName, UnitDescription } = req.body;
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError("Database connection failed", err);
+                return res.status(500).json({
+                    success,
+                    message: "Failed to connect to database",
+                });
+            }
+
+            try {
+                let userQuery, userRows;
+
+                if (!isNaN(Number(userId))) {
+                    userQuery = `
+                        SELECT UserID, Name, isAdmin FROM Community_User 
+                        WHERE ISNULL(delStatus, 0) = 0 AND UserID = ?
+                    `;
+                    userRows = await queryAsync(conn, userQuery, [Number(userId)]);
+                }
+                
+                // If not found and userId looks like an email, try by email
+                if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
+                    userQuery = `
+                        SELECT UserID, Name, isAdmin FROM Community_User 
+                        WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?
+                    `;
+                    userRows = await queryAsync(conn, userQuery, [userId]);
+                }
+
+                if (!userRows || userRows.length === 0) {
+                    closeConnection(conn);
+                    return res.status(404).json({ success, message: "User not found" });
+                }
+
+                const user = userRows[0];
+
+                // 5. Build update query
+                const updateQuery = `
+                    UPDATE UnitsDetails
+                    SET 
+                        UnitName = ?,
+                        UnitDescription = ?,
+                        AuthLstEdit = ?,
+                        editOnDt = ?
+                    WHERE UnitID = ? AND ISNULL(delStatus, 0) = 0
+                `;
+
+                const updateParams = [
+                    UnitName || null,
+                    UnitDescription || null,
+                    user.Name,  // AuthLstEdit
+                    new Date(),  // editOnDt
+                    unitId
+                ];
+
+                // 6. Execute update
+                const result = await queryAsync(conn, updateQuery, updateParams);
+
+                if (result.affectedRows === 0) {
+                    closeConnection(conn);
+                    return res.status(404).json({
+                        success,
+                        message: "Unit not found or already deleted",
+                    });
+                }
+
+                // 7. Fetch updated unit
+                const fetchQuery = `
+                    SELECT 
+                        UnitID, 
+                        UnitName, 
+                        UnitDescription,
+                        AuthLstEdit, 
+                        editOnDt
+                    FROM UnitsDetails
+                    WHERE UnitID = ? AND ISNULL(delStatus, 0) = 0
+                `;
+
+                const updatedUnit = await queryAsync(conn, fetchQuery, [unitId]);
+
+                success = true;
+                closeConnection(conn);
+                logInfo("Unit updated successfully");
+
+                return res.status(200).json({
+                    success,
+                    data: updatedUnit[0],
+                    message: "Unit updated successfully",
+                });
+            } catch (queryErr) {
+                closeConnection(conn);
+                logError("Database query failed", queryErr);
+                return res.status(500).json({
+                    success,
+                    message: "Database operation failed",
+                    details: queryErr.message.includes('Conversion failed') 
+                        ? "Invalid data type in database operation" 
+                        : queryErr.message,
+                });
+            }
+        });
+    } catch (error) {
+        logError("Unexpected error", error);
+        return res.status(500).json({
+            success,
+            message: "Unexpected server error",
+            details: error.message,
+        });
+    }
+};
+
+export const deleteFile = (req, res) => {
+    const { fileId } = req.body;
+
+    // Input validation
+    if (!fileId || isNaN(fileId)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid file ID provided",
+        });
+    }
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError(err);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database connection error",
+                });
+            }
+
+            try {
+                // Check if file exists and isn't deleted
+                const checkQuery = `
+                    SELECT * FROM FilesDetails 
+                    WHERE FileID = ? AND (delStatus IS NULL OR delStatus = 0)
+                `;
+                const [existingFile] = await queryAsync(conn, checkQuery, [fileId]);
+
+                if (!existingFile) {
+                    closeConnection(conn);
+                    return res.status(404).json({
+                        success: false,
+                        message: "File not found or already deleted",
+                    });
+                }
+
+                // Perform the soft delete
+                const deleteQuery = `
+                    UPDATE FilesDetails
+                    SET 
+                        delStatus = 1,
+                        delOnDt = GETDATE(),
+                        AddDel = ?
+                    WHERE FileID = ? AND (delStatus IS NULL OR delStatus = 0)
+                `;
+
+                const adminId = req.user?.id; // Get current user ID
+                await queryAsync(conn, deleteQuery, [adminId, fileId]);
+                closeConnection(conn);
+
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        fileId: fileId,
+                        deletedAt: new Date().toISOString(),
+                        deletedBy: adminId,
+                        fileName: existingFile.FilesName // Include filename in response
+                    },
+                    message: "File deleted successfully",
+                });
+
+            } catch (error) {
+                closeConnection(conn);
+                logError(`Error deleting file: ${error.message}`);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database error during deletion",
+                    details: error.message
+                });
+            }
+        });
+    } catch (outerError) {
+        logError(`Unexpected error: ${outerError.message}`);
+        return res.status(500).json({
+            success: false,
+            message: "Unexpected server error",
+            details: outerError.message
+        });
+    }
+};
+
+export const addUnit = async (req, res) => {
+    console.log("Incoming request body", req.body);
+    let success = false;
+    const userId = req.user?.id || req.user?.UserID;
+    console.log("User ID:", userId);
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        const warningMessage = "Data is not in the right format";
+        logWarning(warningMessage);
+        return res.status(400).json({ 
+            success, 
+            data: errors.array(), 
+            message: warningMessage 
+        });
+    }
+
+    try {
+        const { 
+            UnitName, 
+            UnitDescription,
+            SubModuleID // Required parent reference
+        } = req.body;
+
+        // Validate required fields
+        if (!SubModuleID) {
+            const warningMessage = "SubModuleID is required";
+            logWarning(warningMessage);
+            return res.status(400).json({ 
+                success: false, 
+                data: {}, 
+                message: warningMessage 
+            });
+        }
+
+        // Connect to database
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                const errorMessage = "Failed to connect to database";
+                logError(errorMessage);
+                return res.status(500).json({ 
+                    success: false, 
+                    data: err, 
+                    message: errorMessage 
+                });
+            }
+
+            try {
+                // Get user details
+                let userQuery, userRows;
+                
+                // Try by numeric ID first
+                if (!isNaN(Number(userId))) {
+                    userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND UserID = ?`;
+                    userRows = await queryAsync(conn, userQuery, [Number(userId)]);
+                }
+                
+                // If not found and looks like email, try by email
+                if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
+                    userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
+                    userRows = await queryAsync(conn, userQuery, [userId]);
+                }
+
+                if (!userRows || userRows.length === 0) {
+                    closeConnection(conn);
+                    const warningMessage = "User not found";
+                    logWarning(warningMessage);
+                    return res.status(404).json({ 
+                        success: false, 
+                        data: {}, 
+                        message: warningMessage 
+                    });
+                }
+
+                // Insert new unit
+                const insertQuery = `
+                    INSERT INTO UnitsDetails 
+                    (
+                        UnitName, 
+                        UnitDescription,
+                        SubModuleID,
+                        AuthAdd,
+                        AddOnDt,
+                        delStatus
+                    ) 
+                    VALUES (?, ?, ?, ?, GETDATE(), 0);
+                `;
+
+                const insertResult = await queryAsync(
+                    conn, 
+                    insertQuery, 
+                    [
+                        UnitName,
+                        UnitDescription || null,
+                        SubModuleID,
+                        userRows[0].Name
+                    ]
+                );
+
+                // Get the newly created unit
+                const newUnitQuery = `
+                    SELECT 
+                        UnitID,
+                        UnitName,
+                        UnitDescription,
+                        SubModuleID,
+                        AuthAdd,
+                        AddOnDt
+                    FROM UnitsDetails
+                    WHERE UnitID = SCOPE_IDENTITY() 
+                    AND ISNULL(delStatus,0) = 0;
+                `;
+                const newUnit = await queryAsync(conn, newUnitQuery);
+
+                success = true;
+                closeConnection(conn);
+                
+                const infoMessage = "Unit added successfully";
+                logInfo(infoMessage);
+                
+                return res.status(200).json({ 
+                    success, 
+                    data: newUnit[0], 
+                    message: infoMessage 
+                });
+
+            } catch (queryErr) {
+                closeConnection(conn);
+                console.error("Database Query Error:", queryErr);
+                logError(queryErr);
+                return res.status(500).json({ 
+                    success: false, 
+                    data: queryErr, 
+                    message: 'Failed to add unit. Please check your input data.' 
+                });
+            }
+        });
+    } catch (error) {
+        logError(error);
+        return res.status(500).json({ 
+            success: false, 
+            data: {}, 
+            message: 'Internal server error' 
+        });
+    }
+};
 
 
 

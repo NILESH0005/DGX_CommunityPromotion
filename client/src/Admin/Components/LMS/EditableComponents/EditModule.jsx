@@ -1,7 +1,10 @@
 import React, { useState, useContext, useRef, useEffect } from "react";
 import ByteArrayImage from "../../../../utils/ByteArrayImage";
+import { compressImage } from "../../../../utils/compressImage";
 import Swal from "sweetalert2";
 import ApiContext from "../../../../context/ApiContext";
+import { FaEdit, FaTrash, FaFolder, FaSave, FaTimes, FaUpload, FaImage } from "react-icons/fa";
+import { Tooltip as ReactTooltip } from "react-tooltip";
 
 const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
     const [editedModule, setEditedModule] = useState(module);
@@ -13,16 +16,23 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
     const [imagePreview, setImagePreview] = useState(
         module.ModuleImage ? `data:image/jpeg;base64,${module.ModuleImage.data}` : null
     );
+    const [isCompressing, setIsCompressing] = useState(false);
     const fileInputRef = useRef(null);
+    const textareaRef = useRef(null);
 
     const { fetchData, userToken } = useContext(ApiContext);
 
-    // Update local state when module prop changes
     useEffect(() => {
         setEditedModule(module);
         setImagePreview(module.ModuleImage ? `data:image/jpeg;base64,${module.ModuleImage.data}` : null);
-        setNewImageFile(null);
     }, [module]);
+
+    useEffect(() => {
+        if (textareaRef.current && isEditing) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${Math.max(textareaRef.current.scrollHeight, 100)}px`;
+        }
+    }, [editedModule.ModuleDescription, isEditing]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -32,30 +42,35 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
         }));
     };
 
-    const handleImageChange = (e) => {
+    const handleImageChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Validate file type
-        if (!file.type.match('image.*')) {
-            setError("Only image files are allowed");
-            return;
-        }
+        try {
+            if (!file.type.match('image.*')) {
+                setError("Only image files are allowed");
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                setError("Image size must be less than 2MB");
+                return;
+            }
 
-        // Validate file size (2MB limit)
-        if (file.size > 2 * 1024 * 1024) {
-            setError("Image size must be less than 2MB");
-            return;
-        }
+            setIsCompressing(true);
+            setError(null);
+            const previewUrl = URL.createObjectURL(file);
+            setImagePreview(previewUrl);
+            const compressedImage = await compressImage(file);
+            setNewImageFile(compressedImage);
 
-        setError(null);
-        
-        // Create preview URL
-        const previewUrl = URL.createObjectURL(file);
-        setImagePreview(previewUrl);
-        
-        // Store the file object
-        setNewImageFile(file);
+        } catch (error) {
+            console.error("Image processing error:", error);
+            setError("Failed to process image");
+            setImagePreview(null);
+            setNewImageFile(null);
+        } finally {
+            setIsCompressing(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -75,53 +90,42 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
         setIsSaving(true);
         setError(null);
 
-        // Create FormData for the request
-        const formData = new FormData();
-        formData.append('ModuleName', editedModule.ModuleName);
-        formData.append('ModuleDescription', editedModule.ModuleDescription || '');
+        const payload = {
+            ModuleName: editedModule.ModuleName,
+            ModuleDescription: editedModule.ModuleDescription,
+            ModuleImage: newImageFile
+        };
 
-        // Handle image cases
-        if (newImageFile) {
-            formData.append('ModuleImage', newImageFile);
-        } else if (imagePreview === null && module.ModuleImage) {
-            // Only send removeImage if there was an image before and now it's removed
-            formData.append('removeImage', 'true');
-        }
+        const headers = {
+            "Content-Type": "application/json",
+            "auth-token": userToken,
+        };
 
         try {
             const response = await fetchData(
                 `lmsEdit/updateModule/${editedModule.ModuleID}`,
                 "POST",
-                formData,
-                {
-                    "auth-token": userToken,
-                    // Don't set Content-Type - let the browser set it with boundary
-                },
-                false // Indicate we're sending FormData
+                payload,
+                headers
             );
 
             if (response?.success) {
-                // Update the local state with the new data
-                const updatedModule = {
-                    ...editedModule,
-                    ModuleName: response.data.ModuleName,
-                    ModuleDescription: response.data.ModuleDescription,
-                    ModuleImage: response.data.ModuleImage || null
-                };
+                setEditedModule(prev => ({
+                    ...prev,
+                    ModuleName: response.data.ModuleName || prev.ModuleName,
+                    ModuleDescription: response.data.ModuleDescription || prev.ModuleDescription,
+                    ModuleImage: response.data.ModuleImage || prev.ModuleImage
+                }));
 
-                setEditedModule(updatedModule);
-                
-                // Update image preview based on response
-                if (response.data.ModuleImage) {
-                    setImagePreview(`data:image/jpeg;base64,${response.data.ModuleImage.data}`);
-                } else {
-                    setImagePreview(null);
-                }
-
-                // Reset editing states
                 setIsEditing(false);
                 setIsImageEditing(false);
                 setNewImageFile(null);
+                
+                if (response.data.ModuleImage) {
+                    setImagePreview(`data:image/jpeg;base64,${response.data.ModuleImage.data}`);
+                } else if (!newImageFile) {
+                    setImagePreview(null);
+                }
 
                 Swal.fire({
                     title: "Success",
@@ -137,8 +141,9 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
             }
         } catch (err) {
             console.error("Error updating module:", err);
-            setError(err.message);
-            Swal.fire("Error", "Failed to update module", "error");
+            const message = err.message || "An error occurred while updating the module";
+            setError(message);
+            Swal.fire("Error", message, "error");
         } finally {
             setIsSaving(false);
         }
@@ -156,24 +161,24 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 max-w-md mx-auto transform hover:-translate-y-1">
-            {/* Image Display */}
-            <div className="h-64 bg-gray-100 overflow-hidden relative group">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-300 w-full border border-gray-200 dark:border-gray-700">
+            {/* Image Section - Responsive height */}
+            <div className="h-40 sm:h-48 bg-gradient-to-r from-red-500 to-red-700 overflow-hidden relative group">
                 {isImageEditing ? (
-                    <div className="h-full flex flex-col items-center justify-center p-4">
+                    <div className="h-full flex flex-col items-center justify-center p-4 bg-black bg-opacity-70">
                         {imagePreview ? (
                             <img
                                 src={imagePreview}
                                 alt="Preview"
-                                className="max-h-48 object-contain mb-4 transition-opacity duration-300"
+                                className="max-h-24 sm:max-h-32 object-contain mb-4 transition-opacity duration-300"
                             />
                         ) : editedModule.ModuleImage ? (
                             <ByteArrayImage
                                 byteArray={editedModule.ModuleImage.data}
-                                className="max-h-48 object-contain mb-4 transition-opacity duration-300"
+                                className="max-h-24 sm:max-h-32 object-contain mb-4 transition-opacity duration-300"
                             />
                         ) : (
-                            <div className="text-gray-400 mb-4">Current Image</div>
+                            <div className="text-gray-300 mb-4">No Image</div>
                         )}
                         <input
                             type="file"
@@ -181,186 +186,212 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                             onChange={handleImageChange}
                             accept="image/*"
                             className="hidden"
-                            disabled={isSaving}
+                            disabled={isCompressing || isSaving}
                         />
                         <div className="flex gap-2 flex-wrap justify-center">
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current.click()}
-                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm transition-colors duration-200 disabled:opacity-50"
-                                disabled={isSaving}
+                                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs transition-colors duration-200 disabled:opacity-50 flex items-center"
+                                disabled={isCompressing || isSaving}
                             >
-                                {imagePreview ? "Change Image" : "Upload Image"}
+                                <FaUpload className="mr-1" />
+                                {isCompressing ? "Processing..." : (imagePreview ? "Change" : "Upload")}
                             </button>
                             {(editedModule.ModuleImage || imagePreview) && (
                                 <button
                                     type="button"
                                     onClick={handleDeleteImage}
-                                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm transition-colors duration-200 disabled:opacity-50"
-                                    disabled={isSaving}
+                                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs transition-colors duration-200 disabled:opacity-50 flex items-center"
+                                    disabled={isCompressing || isSaving}
                                 >
-                                    Remove Image
+                                    <FaTrash className="mr-1" />
+                                    Remove
                                 </button>
                             )}
                             <button
                                 type="button"
                                 onClick={handleCancelImageEdit}
-                                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm transition-colors duration-200"
-                                disabled={isSaving}
+                                className="px-3 py-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-400 dark:hover:bg-gray-500 text-xs transition-colors duration-200 flex items-center"
+                                disabled={isCompressing || isSaving}
                             >
+                                <FaTimes className="mr-1" />
                                 Cancel
                             </button>
                         </div>
+                        {isCompressing && (
+                            <p className="text-xs text-gray-300 mt-2 animate-pulse">Compressing image...</p>
+                        )}
                     </div>
-                ) : editedModule.ModuleImage || imagePreview ? (
+                ) : editedModule.ModuleImage ? (
                     <>
-                        <img
-                            src={imagePreview || `data:image/jpeg;base64,${editedModule.ModuleImage.data}`}
-                            alt="Module"
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        <ByteArrayImage
+                            byteArray={editedModule.ModuleImage.data}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         />
                         {isEditing && (
                             <button
                                 onClick={() => setIsImageEditing(true)}
                                 className="absolute top-2 right-2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow transition-all duration-200 hover:scale-110"
-                                title="Edit Image"
+                                data-tooltip-id="edit-image-tooltip"
+                                data-tooltip-content="Edit Image"
                             >
-                                ✏️
+                                <FaEdit size={14} />
                             </button>
                         )}
                     </>
                 ) : (
-                    <div className="h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                    <div className="h-full flex items-center justify-center bg-gradient-to-br from-red-600 to-red-800">
                         {isEditing ? (
                             <div className="text-center p-4">
-                                <p className="text-gray-500 mb-3">No Image Available</p>
+                                <p className="text-gray-200 mb-3 text-sm">No Image Available</p>
                                 <button
                                     onClick={() => setIsImageEditing(true)}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm transition-colors duration-200 shadow-md hover:shadow-lg"
+                                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs transition-colors duration-200 shadow-md hover:shadow-lg flex items-center mx-auto"
                                 >
+                                    <FaImage className="mr-1" />
                                     Add Image
                                 </button>
                             </div>
                         ) : (
-                            <p className="text-gray-500">No Image Available</p>
+                            <p className="text-gray-200">No Image Available</p>
                         )}
                     </div>
                 )}
             </div>
 
-            <div className="p-6">
-                {isEditing ? (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label htmlFor="ModuleName" className="block text-sm font-medium text-gray-700 mb-1">
-                                Module Name
-                            </label>
-                            <input
-                                type="text"
-                                id="ModuleName"
-                                name="ModuleName"
-                                value={editedModule.ModuleName}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 p-2 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                placeholder="Module Name"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="ModuleDescription" className="block text-sm font-medium text-gray-700 mb-1">
-                                Description
-                            </label>
-                            <textarea
-                                id="ModuleDescription"
-                                name="ModuleDescription"
-                                value={editedModule.ModuleDescription}
-                                onChange={handleChange}
-                                rows={5}
-                                className="w-full border border-gray-300 p-2 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                placeholder="Module Description"
-                            />
-                        </div>
-                        {error && (
-                            <div className="p-3 bg-red-50 text-red-600 rounded-md text-sm animate-fade-in">
-                                {error}
-                            </div>
+            {/* Content Section */}
+            <div className="p-4 sm:p-6">
+                <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1">
+                        {isEditing ? (
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div>
+                                    <label htmlFor="ModuleName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Module Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="ModuleName"
+                                        name="ModuleName"
+                                        value={editedModule.ModuleName}
+                                        onChange={handleChange}
+                                        className="w-full border border-DGXgreen dark:border-DGXgreen dark:bg-DGXblue dark:text-DGXwhite p-2 rounded-md focus:ring-2 focus:ring-DGXgreen focus:border-DGXgreen transition-all duration-200"
+                                        placeholder="Module Name"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="ModuleDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Description
+                                    </label>
+                                    <textarea
+                                        ref={textareaRef}
+                                        id="ModuleDescription"
+                                        name="ModuleDescription"
+                                        value={editedModule.ModuleDescription}
+                                        onChange={handleChange}
+                                        className="w-full border border-DGXgreen dark:border-DGXgreen dark:bg-DGXblue dark:text-DGXwhite p-2 rounded-md focus:ring-2 focus:ring-DGXgreen focus:border-DGXgreen transition-all duration-200"
+                                        placeholder="Module Description"
+                                        style={{ minHeight: '100px' }}
+                                    />
+                                </div>
+                                {error && (
+                                    <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-md text-sm animate-fade-in">
+                                        {error}
+                                    </div>
+                                )}
+                                <div className="flex gap-2 flex-wrap">
+                                    <button
+                                        type="submit"
+                                        disabled={isSaving || isCompressing}
+                                        className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center justify-center min-w-32 disabled:opacity-50"
+                                    >
+                                        {isSaving ? (
+                                            <>
+                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FaSave className="mr-2" />
+                                                Save Changes
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsEditing(false);
+                                            setIsImageEditing(false);
+                                            setNewImageFile(null);
+                                            setImagePreview(
+                                                editedModule.ModuleImage ? `data:image/jpeg;base64,${editedModule.ModuleImage.data}` : null
+                                            );
+                                        }}
+                                        className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200 flex items-center"
+                                    >
+                                        <FaTimes className="mr-2" />
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        ) : (
+                            <>
+                                <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white mb-2">
+                                    {editedModule.ModuleName}
+                                </h3>
+                                <div className="prose dark:prose-invert max-w-none">
+                                    <p className="text-gray-600 dark:text-gray-300 whitespace-pre-line text-sm sm:text-base">
+                                        {editedModule.ModuleDescription || "No description provided"}
+                                    </p>
+                                </div>
+                            </>
                         )}
-
-                        <div className="flex gap-2 flex-wrap">
-                            <button
-                                type="submit"
-                                disabled={isSaving}
-                                className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center justify-center min-w-32 disabled:opacity-50"
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Saving...
-                                    </>
-                                ) : "Save Changes"}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setIsEditing(false);
-                                    setIsImageEditing(false);
-                                    setNewImageFile(null);
-                                    setImagePreview(
-                                        module.ModuleImage ? `data:image/jpeg;base64,${module.ModuleImage.data}` : null
-                                    );
-                                }}
-                                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors duration-200"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-                ) : (
-                    <div>
-                        <h3 className="text-xl font-semibold mb-2 text-gray-800">{editedModule.ModuleName}</h3>
-                        <p className="text-gray-600 mb-4 whitespace-pre-line">
-                            {editedModule.ModuleDescription || "No description provided"}
-                        </p>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 text-sm flex items-center"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Edit
-                            </button>
-                        </div>
                     </div>
-                )}
-                {/* Action Buttons */}
-                <div className="flex justify-end mt-4 space-x-2 flex-wrap">
-                    <button
-                        onClick={() => onDelete(editedModule.ModuleID)}
-                        className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 text-sm flex items-center"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Delete Module
-                    </button>
-                    {onViewSubmodules && (
-                        <button
-                            onClick={() => onViewSubmodules(editedModule)}
-                            className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors duration-200 text-sm flex items-center"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                            View Submodules
-                        </button>
-                    )}
                 </div>
+
+                {/* Action Buttons */}
+                {!isEditing && (
+                    <div className="flex justify-end gap-2 mt-4 sm:mt-6">
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors duration-200"
+                            data-tooltip-id="edit-tooltip"
+                            data-tooltip-content="Edit Module"
+                        >
+                            <FaEdit size={14} className="sm:size-4" />
+                        </button>
+                        <button
+                            onClick={() => onDelete(editedModule.ModuleID)}
+                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors duration-200"
+                            data-tooltip-id="delete-tooltip"
+                            data-tooltip-content="Delete Module"
+                        >
+                            <FaTrash size={14} className="sm:size-4" />
+                        </button>
+                        {onViewSubmodules && (
+                            <button
+                                onClick={() => onViewSubmodules(editedModule)}
+                                className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors duration-200 group relative"
+                                data-tooltip-id="submodules-tooltip"
+                                data-tooltip-content="View Submodules"
+                            >
+                                <FaFolder size={14} className="sm:size-4" />
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
+
+            {/* Tooltips */}
+            <ReactTooltip id="edit-tooltip" place="top" effect="solid" />
+            <ReactTooltip id="delete-tooltip" place="top" effect="solid" />
+            <ReactTooltip id="submodules-tooltip" place="top" effect="solid" />
+            <ReactTooltip id="edit-image-tooltip" place="top" effect="solid" />
         </div>
     );
 };

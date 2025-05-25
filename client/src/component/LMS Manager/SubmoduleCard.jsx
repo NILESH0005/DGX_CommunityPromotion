@@ -6,6 +6,7 @@ import ByteArrayImage from '../../utils/ByteArrayImage';
 const SubModuleCard = () => {
   const { moduleId } = useParams();
   const [filteredSubModules, setFilteredSubModules] = useState([]);
+  const [moduleName, setModuleName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { fetchData } = useContext(ApiContext);
@@ -16,20 +17,28 @@ const SubModuleCard = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetchData("dropdown/getSubModules", "GET");
+        const [subModulesResponse, modulesResponse] = await Promise.all([
+          fetchData("dropdown/getSubModules", "GET"),
+          fetchData("dropdown/getModules", "GET")
+        ]);
 
-        if (response?.success) {
-          const filtered = response.data.filter(
+        if (subModulesResponse?.success && modulesResponse?.success) {
+          const filtered = subModulesResponse.data.filter(
             subModule => subModule.ModuleID?.toString() === moduleId
           );
           setFilteredSubModules(filtered);
-          // console.log('Filtered submodules:', filtered);
+          
+          // Find the module name
+          const currentModule = modulesResponse.data.find(
+            module => module.ModuleID?.toString() === moduleId
+          );
+          setModuleName(currentModule?.ModuleName || '');
         } else {
-          setError(response?.message || "Failed to fetch submodules");
+          setError(subModulesResponse?.message || modulesResponse?.message || "Failed to fetch data");
         }
       } catch (error) {
-        console.error("Error fetching submodules:", error);
-        setError("An error occurred while fetching submodules");
+        console.error("Error fetching data:", error);
+        setError("An error occurred while fetching data");
       } finally {
         setLoading(false);
       }
@@ -82,6 +91,13 @@ const SubModuleCard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Added module heading */}
+        {moduleName && (
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            {moduleName}
+          </h2>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSubModules.length > 0 ? (
             filteredSubModules.map((subModule) => (
