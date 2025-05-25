@@ -1,25 +1,37 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import ApiContext from "../../../../context/ApiContext";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 import AddUnitModal from "./AddUnitModal";
+import {
+  FaEdit,
+  FaTrash,
+  FaFolder,
+  FaSave,
+  FaTimes,
+  FaUpload,
+  FaFile,
+  FaLink,
+  FaChevronRight,
+} from "react-icons/fa";
+import { Tooltip as ReactTooltip } from "react-tooltip";
+import { Link } from "react-router-dom";
+import EditModule from "./EditModule";
 
 const ViewContent = ({ submodule, onBack }) => {
-    const [units, setUnits] = useState([]);
-    const [filteredUnits, setFilteredUnits] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [editingUnit, setEditingUnit] = useState(null);
-    const [editedUnitData, setEditedUnitData] = useState({});
-    const [isSaving, setIsSaving] = useState(false);
-    const [selectedUnit, setSelectedUnit] = useState(null);
-    const [files, setFiles] = useState([]);
-    const [newFile, setNewFile] = useState(null);
-    const fileInputRef = useRef(null);
-    const [showAddUnitModal, setShowAddUnitModal] = useState(false);
-    const [fileLink, setFileLink] = useState('');
-    const [isUploading, setIsUploading] = useState(false);
-
-
+  const [units, setUnits] = useState([]);
+  const [filteredUnits, setFilteredUnits] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [editingUnit, setEditingUnit] = useState(null);
+  const [editedUnitData, setEditedUnitData] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [newFile, setNewFile] = useState(null);
+  const fileInputRef = useRef(null);
+  const [showAddUnitModal, setShowAddUnitModal] = useState(false);
+  const [fileLink, setFileLink] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
     const { fetchData, userToken } = useContext(ApiContext);
 
@@ -62,72 +74,74 @@ const ViewContent = ({ submodule, onBack }) => {
         setShowAddUnitModal(false);
 
 
-        fetchUnits();
-    }, [submodule.SubModuleID, fetchData, userToken]);
+    fetchUnits();
+  }, [submodule.SubModuleID, fetchData, userToken]);
 
-    useEffect(() => {
-        if (selectedUnit) {
-            const fetchFiles = async () => {
-                try {
-                    const unitWithFiles = units.find(unit => unit.UnitID === selectedUnit.UnitID);
-                    if (unitWithFiles && unitWithFiles.files) {
-                        setFiles(unitWithFiles.files);
-                    } else {
-                        const response = await fetchData(
-                            `lms/getFiles?unitId=${selectedUnit.UnitID}`,
-                            "GET",
-                            null,
-                            { 'auth-token': userToken }
-                        );
-                        if (response?.success) {
-                            setFiles(response.data);
-                        }
-                    }
-                } catch (err) {
-                    console.error("Error fetching files:", err);
-                    setFiles([]);
-                }
-            };
-            fetchFiles();
-        }
-    }, [selectedUnit, units, fetchData, userToken]);
-
-    const handleEditUnit = (unit) => {
-        setEditingUnit(unit);
-        setEditedUnitData({
-            UnitName: unit.UnitName,
-            UnitDescription: unit.UnitDescription
-        });
-    };
-
-    const handleCancelEditUnit = () => {
-        setEditingUnit(null);
-        setEditedUnitData({});
-    };
-
-    const handleUpdateUnit = async (e) => {
-        e.preventDefault();
-        setIsSaving(true);
-        setError(null);
-
+  useEffect(() => {
+    if (selectedUnit) {
+      const fetchFiles = async () => {
         try {
-            const payload = {
-                UnitName: editedUnitData.UnitName,
-                UnitDescription: editedUnitData.UnitDescription,
-                SubModuleID: submodule.SubModuleID
-            };
-
-            const headers = {
-                'Content-Type': 'application/json',
-                'auth-token': userToken
-            };
-
+          const unitWithFiles = units.find(
+            (unit) => unit.UnitID === selectedUnit.UnitID
+          );
+          if (unitWithFiles && unitWithFiles.files) {
+            setFiles(unitWithFiles.files);
+          } else {
             const response = await fetchData(
-                `lmsEdit/updateUnit/${editingUnit.UnitID}`,
-                "POST",
-                payload,
-                headers
+              `lms/getFiles?unitId=${selectedUnit.UnitID}`,
+              "GET",
+              null,
+              { "auth-token": userToken }
             );
+            if (response?.success) {
+              setFiles(response.data);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching files:", err);
+          setFiles([]);
+        }
+      };
+      fetchFiles();
+    }
+  }, [selectedUnit, units, fetchData, userToken]);
+
+  const handleEditUnit = (unit) => {
+    setEditingUnit(unit);
+    setEditedUnitData({
+      UnitName: unit.UnitName,
+      UnitDescription: unit.UnitDescription,
+    });
+  };
+
+  const handleCancelEditUnit = () => {
+    setEditingUnit(null);
+    setEditedUnitData({});
+  };
+
+  const handleUpdateUnit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const payload = {
+        UnitName: editedUnitData.UnitName,
+        UnitDescription: editedUnitData.UnitDescription,
+        SubModuleID: submodule.SubModuleID,
+      };
+
+      const headers = {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      };
+
+      const response = await fetchData(
+        `lmsEdit/updateUnit/${editingUnit.UnitID}`,
+        "POST",
+        payload,
+        headers
+      );
 
             if (response?.success) {
                 // Update both states using functional updates to ensure we have the latest state
@@ -165,75 +179,80 @@ const ViewContent = ({ submodule, onBack }) => {
         }
     };
 
-    const handleDeleteUnit = async (unitId) => {
-        const result = await Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        });
+  const handleDeleteUnit = async (unitId) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "OK",
+    });
 
-        if (!result.isConfirmed) return;
+    if (!result.isConfirmed) return;
 
-        try {
-            // Optimistic update - immediately update the UI
-            setUnits(prev => prev.map(unit =>
-                unit.UnitID === unitId ? { ...unit, delStatus: 1 } : unit
-            ));
-            setFilteredUnits(prev => prev.map(unit =>
-                unit.UnitID === unitId ? { ...unit, delStatus: 1 } : unit
-            ));
+    try {
+      setUnits((prev) =>
+        prev.map((unit) =>
+          unit.UnitID === unitId ? { ...unit, delStatus: 1 } : unit
+        )
+      );
+      setFilteredUnits((prev) =>
+        prev.map((unit) =>
+          unit.UnitID === unitId ? { ...unit, delStatus: 1 } : unit
+        )
+      );
 
-            if (selectedUnit?.UnitID === unitId) {
-                setSelectedUnit(null);
-                setFiles([]);
-            }
+      if (selectedUnit?.UnitID === unitId) {
+        setSelectedUnit(null);
+        setFiles([]);
+      }
 
-            // Then make the API call
-            const response = await fetchData(
-                "lmsEdit/deleteUnit",
-                "POST",
-                { unitId },
-                {
-                    "Content-Type": "application/json",
-                    "auth-token": userToken
-                }
-            );
-
-            if (!response?.success) {
-                // If API fails, revert the optimistic update
-                setUnits(prev => prev.map(unit =>
-                    unit.UnitID === unitId ? { ...unit, delStatus: 0 } : unit
-                ));
-                setFilteredUnits(prev => prev.map(unit =>
-                    unit.UnitID === unitId ? { ...unit, delStatus: 0 } : unit
-                ));
-                throw new Error(response?.message || "Failed to delete unit");
-            }
-
-            // If successful, remove the unit from the lists
-            setUnits(prev => prev.filter(unit => unit.UnitID !== unitId));
-            setFilteredUnits(prev => prev.filter(unit => unit.UnitID !== unitId));
-
-            Swal.fire('Deleted!', 'Unit has been deleted.', 'success');
-        } catch (err) {
-            console.error("Delete error:", err);
-            Swal.fire('Error!', `Failed to delete unit: ${err.message}`, 'error');
+      const response = await fetchData(
+        "lmsEdit/deleteUnit",
+        "POST",
+        { unitId },
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
         }
-    };
+      );
 
-    const handleAddUnitClick = () => {
-        setShowAddUnitModal(true);
-    };
-    const handleFileChange = (e) => {
-        setNewFile(e.target.files[0]);
-    };
+      if (!response?.success) {
+        setUnits((prev) =>
+          prev.map((unit) =>
+            unit.UnitID === unitId ? { ...unit, delStatus: 0 } : unit
+          )
+        );
+        setFilteredUnits((prev) =>
+          prev.map((unit) =>
+            unit.UnitID === unitId ? { ...unit, delStatus: 0 } : unit
+          )
+        );
+        throw new Error(response?.message || "Failed to delete unit");
+      }
 
-    const handleUploadFile = async () => {
-        if ((!newFile && !fileLink.trim()) || !selectedUnit) return;
+      setUnits((prev) => prev.filter((unit) => unit.UnitID !== unitId));
+      setFilteredUnits((prev) => prev.filter((unit) => unit.UnitID !== unitId));
+
+      Swal.fire("Deleted!", "Unit has been deleted.", "success");
+    } catch (err) {
+      console.error("Delete error:", err);
+      Swal.fire("Error!", `Failed to delete unit: ${err.message}`, "error");
+    }
+  };
+
+  const handleAddUnitClick = () => {
+    setShowAddUnitModal(true);
+  };
+
+  const handleFileChange = (e) => {
+    setNewFile(e.target.files[0]);
+  };
+
+  const handleUploadFile = async () => {
+    if ((!newFile && !fileLink.trim()) || !selectedUnit) return;
 
         setIsUploading(true);
         try {
@@ -336,18 +355,18 @@ const ViewContent = ({ submodule, onBack }) => {
         }
     };
 
-    const handleDeleteFile = async (fileId) => {
-        const result = await Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        });
+  const handleDeleteFile = async (fileId) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    });
 
-        if (!result.isConfirmed) return;
+    if (!result.isConfirmed) return;
 
         try {
             setFiles(prev => prev.filter(file => file.FileID !== fileId));
@@ -373,281 +392,447 @@ const ViewContent = ({ submodule, onBack }) => {
         }
     };
 
-    const handleAddUnitSuccess = (newUnit) => {
-        // Verify the newUnit has required properties
-        if (!newUnit || !newUnit.UnitID) {
-            console.error("Invalid unit data received:", newUnit);
-            return;
-        }
-
-        // Update both units and filteredUnits states with the new unit
-        setUnits(prev => [...prev, newUnit]);
-
-        // Only add to filteredUnits if it belongs to current submodule
-        if (newUnit.SubModuleID === submodule.SubModuleID) {
-            setFilteredUnits(prev => [...prev, newUnit]);
-        }
-
-        // Select the newly added unit
-        setSelectedUnit(newUnit);
-        // Close the modal
-        setShowAddUnitModal(false);
-    };
-
-    if (loading) {
-        return <div>Loading...</div>;
+  const handleAddUnitSuccess = (newUnit) => {
+    if (!newUnit || !newUnit.UnitID) {
+      console.error("Invalid unit data received:", newUnit);
+      return;
     }
 
-    if (error) {
-        return (
-            <div>
-                <p className="text-red-500">{error}</p>
-                <button onClick={onBack}>Back</button>
-            </div>
-        );
+    setUnits((prev) => [...prev, newUnit]);
+    if (newUnit.SubModuleID === submodule.SubModuleID) {
+      setFilteredUnits((prev) => [...prev, newUnit]);
     }
+    setSelectedUnit(newUnit);
+    setShowAddUnitModal(false);
+  };
 
+  if (loading) {
+    return <div className="text-center py-10">Loading units...</div>;
+  }
+
+  if (error) {
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <AddUnitModal
-                isOpen={showAddUnitModal}
-                onClose={() => setShowAddUnitModal(false)}
-                onAddUnit={handleAddUnitSuccess}
-                submodule={submodule}
-                fetchData={fetchData}
-                userToken={userToken}
-            />
-
-            <div className="max-w-7xl mx-auto">
-                <div className="flex items-center justify-between mb-6">
-                    <button
-                        onClick={onBack}
-                        className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-                    >
-                        ← Back to Submodules
-                    </button>
-                    <h1 className="text-2xl font-bold">
-                        Content for: {submodule.SubModuleName}
-                    </h1>
-                    <button
-                        onClick={handleAddUnitClick}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                    >
-                        Add New Unit
-                    </button>
-                </div>
-
-                <div className="max-w-7xl mx-auto">
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Units List */}
-                        <div className="md:col-span-1 space-y-4">
-                            <h2 className="text-xl font-semibold">Units</h2>
-                            {filteredUnits.length > 0 ? (
-                                <div className="space-y-4">
-                                    {filteredUnits.filter(unit => unit).map(unit => (
-                                        <div
-                                            key={unit.UnitID}
-                                            className={`p-4 rounded-lg cursor-pointer ${selectedUnit?.UnitID === unit.UnitID ? 'bg-blue-100' : 'bg-white hover:bg-gray-100'}`}
-                                            onClick={() => setSelectedUnit(unit)}
-                                        >
-                                            <div className="flex justify-between items-start">
-                                                <h3 className="font-medium">{unit.UnitName}</h3>
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleEditUnit(unit);
-                                                        }}
-                                                        className="text-blue-500 hover:text-blue-700"
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteUnit(unit.UnitID);
-                                                        }}
-                                                        className="text-red-500 hover:text-red-700"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-gray-500">No units found</p>
-                            )}
-                        </div>
-
-                        {/* Unit Details and Files */}
-                        <div className="md:col-span-2">
-                            {selectedUnit ? (
-                                <div className="bg-white rounded-xl shadow-lg p-6">
-                                    {editingUnit?.UnitID === selectedUnit.UnitID ? (
-                                        <form onSubmit={handleUpdateUnit} className="space-y-4">
-                                            {/* Unit Form Fields */}
-                                            <input
-                                                type="text"
-                                                name="UnitName"
-                                                value={editedUnitData.UnitName || ''}
-                                                onChange={(e) => setEditedUnitData({
-                                                    ...editedUnitData,
-                                                    UnitName: e.target.value
-                                                })}
-                                                className="w-full border p-2 rounded"
-                                                placeholder="Unit Name"
-                                                required
-                                            />
-                                            <textarea
-                                                name="UnitDescription"
-                                                value={editedUnitData.UnitDescription || ''}
-                                                onChange={(e) => setEditedUnitData({
-                                                    ...editedUnitData,
-                                                    UnitDescription: e.target.value
-                                                })}
-                                                rows={3}
-                                                className="w-full border p-2 rounded"
-                                                placeholder="Description"
-                                            />
-
-                                            {error && <p className="text-red-500 text-sm">{error}</p>}
-
-                                            <div className="flex space-x-2">
-                                                <button
-                                                    type="submit"
-                                                    disabled={isSaving}
-                                                    className="flex-1 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                                                >
-                                                    {isSaving ? "Saving..." : "Save"}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleCancelEditUnit}
-                                                    className="flex-1 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </form>
-                                    ) : (
-                                        <>
-                                            <h2 className="text-xl font-semibold mb-4">{selectedUnit.UnitName}</h2>
-                                            <p className="text-gray-600 mb-6">{selectedUnit.UnitDescription}</p>
-
-                                            {/* Files Section */}
-                                            <div className="mt-6">
-                                                <h3 className="text-lg font-semibold mb-4">Files</h3>
-
-                                                {/* File Upload Section */}
-                                                <div className="mb-6 p-4 border border-dashed border-gray-300 rounded-lg">
-                                                    <input
-                                                        type="file"
-                                                        ref={fileInputRef}
-                                                        onChange={handleFileChange}
-                                                        className="hidden"
-                                                    />
-                                                    <div className="space-y-3">
-                                                        <button
-                                                            onClick={() => fileInputRef.current.click()}
-                                                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                                        >
-                                                            Select File
-                                                        </button>
-
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="flex-1">
-                                                                <input
-                                                                    type="text"
-                                                                    value={fileLink}
-                                                                    onChange={(e) => setFileLink(e.target.value)}
-                                                                    placeholder="Or enter a file URL/link"
-                                                                    className="w-full border p-2 rounded"
-                                                                />
-                                                            </div>
-                                                            <span className="text-gray-500">OR</span>
-                                                        </div>
-
-                                                        {newFile && (
-                                                            <div className="mt-2 flex items-center justify-between">
-                                                                <span className="text-sm">{newFile.name}</span>
-                                                                <button
-                                                                    onClick={() => setNewFile(null)}
-                                                                    className="text-red-500 hover:text-red-700"
-                                                                >
-                                                                    Remove
-                                                                </button>
-                                                            </div>
-                                                        )}
-
-                                                        <button
-                                                            onClick={handleUploadFile}
-                                                            disabled={!newFile && !fileLink.trim()}
-                                                            className="px-3 py-1 bg-green-500 text-white rounded text-sm disabled:bg-gray-300"
-                                                        >
-                                                            {isUploading ? 'Uploading...' : 'Save'}
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {files.length > 0 ? (
-                                                    <div className="overflow-x-auto">
-                                                        <table className="min-w-full bg-white border border-gray-200">
-                                                            <thead className="bg-gray-50">
-                                                                <tr>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File Name</th>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded By</th>
-                                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="divide-y divide-gray-200">
-                                                                {files.map(file => (
-                                                                    <tr key={file.FileID} className="hover:bg-gray-50">
-                                                                        <td className="px-6 py-4 whitespace-nowrap">
-                                                                            <div className="text-sm font-medium text-gray-900">{file.FilesName}</div>
-                                                                        </td>
-                                                                        <td className="px-6 py-4 whitespace-nowrap">
-                                                                            <div className="text-sm text-gray-500">{file.FileType}</div>
-                                                                        </td>
-                                                                        <td className="px-6 py-4 whitespace-nowrap">
-                                                                            <div className="text-sm text-gray-500">{file.AuthAdd}</div>
-                                                                        </td>
-                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                                            <div className="flex space-x-2">
-                                                                                <button
-                                                                                    onClick={() => handleDeleteFile(file.FileID)}
-                                                                                    className="text-red-600 hover:text-red-900"
-                                                                                >
-                                                                                    Delete
-                                                                                </button>
-                                                                            </div>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-gray-500">No files uploaded yet</p>
-                                                )}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-                                    <p className="text-gray-600">Select a unit to view details</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <div className="text-center py-10">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button
+          onClick={onBack}
+          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+        >
+          Back to Submodules
+        </button>
+      </div>
     );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <AddUnitModal
+        isOpen={showAddUnitModal}
+        onClose={() => setShowAddUnitModal(false)}
+        onAddUnit={handleAddUnitSuccess}
+        submodule={submodule}
+        fetchData={fetchData}
+        userToken={userToken}
+      />
+
+      <div className="max-w-7xl mx-auto">
+        {/* Breadcrumb Navigation */}
+        <div className="text-lg flex items-center text-sm text-black  mb-6">
+          <button
+            onClick={() => onBack(EditModule)} // Pass the module data back
+            className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center"
+          >
+            Modules
+          </button>
+          <FaChevronRight className="text-lg mx-2 text-xs text-black " />
+          <button
+            onClick={onBack} // Default back behavior
+            className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center"
+          >
+            Submodules
+          </button>
+          <FaChevronRight className="mx-2 text-xs text-black " />
+          <span className="text-lg text-black dark:text-black-100 font-medium">
+            {submodule.SubModuleName}
+          </span>
+        </div>
+
+        {/* Header Section */}
+        <div className="flex items-center justify-between mb-6">
+         
+          
+         
+          <button
+            onClick={handleAddUnitClick}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
+          >
+            <FaEdit className="mr-2" />
+            Add New Unit
+          </button>
+            <h1 className="text-2xl font-bold text-Black-800 dark:text-black">
+              Content for:{" "}
+              <span className="text-red-600 dark:text-red-400">
+                {submodule.SubModuleName}
+              </span>
+            </h1>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Units List */}
+          <div className="md:col-span-1">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+                  Units
+                </h2>
+              </div>
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredUnits.length > 0 ? (
+                  filteredUnits
+                    .filter((unit) => unit)
+                    .map((unit) => (
+                      <div
+                        key={unit.UnitID}
+                        className={`p-4 cursor-pointer transition-colors duration-200 ${
+                          selectedUnit?.UnitID === unit.UnitID
+                            ? "bg-blue-50 dark:bg-gray-700"
+                            : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                        }`}
+                        onClick={() => setSelectedUnit(unit)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-medium text-gray-800 dark:text-white">
+                            {unit.UnitName}
+                          </h3>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditUnit(unit);
+                              }}
+                              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1"
+                              data-tooltip-id="edit-unit-tooltip"
+                              data-tooltip-content="Edit Unit"
+                            >
+                              <FaEdit size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteUnit(unit.UnitID);
+                              }}
+                              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1"
+                              data-tooltip-id="delete-unit-tooltip"
+                              data-tooltip-content="Delete Unit"
+                            >
+                              <FaTrash size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                    No units found
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Unit Details and Files */}
+          <div className="md:col-span-2">
+            {selectedUnit ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
+                {editingUnit?.UnitID === selectedUnit.UnitID ? (
+                  <form onSubmit={handleUpdateUnit} className="p-6 space-y-4">
+                    <div>
+                      <label
+                        htmlFor="UnitName"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      >
+                        Unit Name
+                      </label>
+                      <input
+                        type="text"
+                        id="UnitName"
+                        name="UnitName"
+                        value={editedUnitData.UnitName || ""}
+                        onChange={(e) =>
+                          setEditedUnitData({
+                            ...editedUnitData,
+                            UnitName: e.target.value,
+                          })
+                        }
+                        className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                        placeholder="Unit Name"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="UnitDescription"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      >
+                        Description
+                      </label>
+                      <textarea
+                        id="UnitDescription"
+                        name="UnitDescription"
+                        value={editedUnitData.UnitDescription || ""}
+                        onChange={(e) =>
+                          setEditedUnitData({
+                            ...editedUnitData,
+                            UnitDescription: e.target.value,
+                          })
+                        }
+                        rows={3}
+                        className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                        placeholder="Description"
+                      />
+                    </div>
+
+                    {error && (
+                      <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-md text-sm animate-fade-in">
+                        {error}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        type="submit"
+                        disabled={isSaving}
+                        className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 flex items-center justify-center min-w-32 disabled:opacity-50"
+                      >
+                        {isSaving ? (
+                          <>
+                            <svg
+                              className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <FaSave className="mr-2" />
+                            Save Changes
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditUnit}
+                        className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200 flex items-center"
+                      >
+                        <FaTimes className="mr-2" />
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                      <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">
+                        {selectedUnit.UnitName}
+                      </h2>
+                      <p className="text-gray-600 dark:text-gray-300">
+                        {selectedUnit.UnitDescription}
+                      </p>
+                    </div>
+
+                    {/* Files Section */}
+                    <div className="p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                          Files
+                        </h3>
+                      </div>
+
+                      {/* File Upload Section */}
+                      <div className="mb-6 p-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                        <div className="space-y-4">
+                          <div className="flex gap-2">
+                            <input
+                              type="file"
+                              ref={fileInputRef}
+                              onChange={handleFileChange}
+                              className="hidden"
+                            />
+                            <button
+                              onClick={() => fileInputRef.current.click()}
+                              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200 flex items-center"
+                            >
+                              <FaUpload className="mr-2" />
+                              Select File
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <FaLink className="text-gray-500 dark:text-gray-400" />
+                            <input
+                              type="text"
+                              value={fileLink}
+                              onChange={(e) => setFileLink(e.target.value)}
+                              placeholder="Enter a file URL/link"
+                              className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                            />
+                          </div>
+
+                          {newFile && (
+                            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                              <span className="text-sm text-gray-800 dark:text-gray-200 flex items-center">
+                                <FaFile className="mr-2" />
+                                {newFile.name}
+                              </span>
+                              <button
+                                onClick={() => setNewFile(null)}
+                                className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                              >
+                                <FaTimes />
+                              </button>
+                            </div>
+                          )}
+
+                          <button
+                            onClick={handleUploadFile}
+                            disabled={
+                              (!newFile && !fileLink.trim()) || isUploading
+                            }
+                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors duration-200 flex items-center justify-center disabled:opacity-50"
+                          >
+                            {isUploading ? (
+                              <>
+                                <svg
+                                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <FaSave className="mr-2" />
+                                Save
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {files.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead className="bg-gray-50 dark:bg-gray-700">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                  File Name
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                  Type
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                  Uploaded By
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                              {files.map((file) => (
+                                <tr
+                                  key={file.FileID}
+                                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                      {file.FilesName}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                      {file.FileType}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                      {file.AuthAdd}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteFile(file.FileID)
+                                      }
+                                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                      data-tooltip-id="delete-file-tooltip"
+                                      data-tooltip-content="Delete File"
+                                    >
+                                      <FaTrash />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                          No files uploaded yet
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700 p-6 text-center">
+                <p className="text-gray-600 dark:text-gray-400">
+                  Select a unit to view details
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tooltips */}
+      <ReactTooltip id="edit-unit-tooltip" place="top" effect="solid" />
+      <ReactTooltip id="delete-unit-tooltip" place="top" effect="solid" />
+      <ReactTooltip id="delete-file-tooltip" place="top" effect="solid" />
+    </div>
+  );
 };
 
 export default ViewContent;

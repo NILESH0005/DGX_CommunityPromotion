@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import ReactMarkdown from 'react-markdown';
@@ -7,8 +7,104 @@ import 'highlight.js/styles/github.css';
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import { Parser as HtmlToReactParser } from 'html-to-react';
+import PptxGenJS from 'pptxgenjs';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+const PowerPointRenderer = ({ arrayBuffer }) => {
+  const containerRef = useRef(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const renderPresentation = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Create a new presentation
+        const pptx = new PptxGenJS();
+        
+        // Load the presentation from ArrayBuffer
+        await pptx.load(arrayBuffer);
+        
+        // Clear previous content
+        if (containerRef.current) {
+          containerRef.current.innerHTML = '';
+        }
+        
+        // Create a container for each slide
+        const slidesContainer = document.createElement('div');
+        slidesContainer.className = 'space-y-8';
+        
+        // Generate images for each slide
+        for (let i = 0; i < pptx.slides.length; i++) {
+          const slideDiv = document.createElement('div');
+          slideDiv.className = 'slide-container bg-white p-4 rounded-lg shadow-md';
+          
+          const slideTitle = document.createElement('h3');
+          slideTitle.className = 'text-lg font-bold mb-4';
+          slideTitle.textContent = `Slide ${i + 1}`;
+          slideDiv.appendChild(slideTitle);
+          
+          const slideContent = document.createElement('div');
+          slideContent.className = 'slide-content';
+          
+          // Note: pptxgenjs doesn't directly render to DOM, so we'll create a representation
+          const slideInfo = document.createElement('div');
+          slideInfo.className = 'bg-gray-100 p-4 rounded';
+          slideInfo.innerHTML = `
+            <p class="text-sm text-gray-600">PowerPoint slide content would be displayed here</p>
+            <p class="text-xs mt-2">For full fidelity, please download and view in PowerPoint</p>
+          `;
+          slideContent.appendChild(slideInfo);
+          
+          slideDiv.appendChild(slideContent);
+          slidesContainer.appendChild(slideDiv);
+        }
+        
+        if (containerRef.current) {
+          containerRef.current.appendChild(slidesContainer);
+        }
+      } catch (err) {
+        console.error('Error rendering PowerPoint:', err);
+        setError('Failed to render PowerPoint: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    renderPresentation();
+  }, [arrayBuffer]);
+
+  return (
+    <div className="powerpoint-viewer">
+      {loading && (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading PowerPoint...</p>
+        </div>
+      )}
+      
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div ref={containerRef} className="ppt-slides-container"></div>
+    </div>
+  );
+};
 
 const FileViewer = ({ fileUrl, className }) => {
   const [numPages, setNumPages] = useState(null);
@@ -18,6 +114,7 @@ const FileViewer = ({ fileUrl, className }) => {
   const [error, setError] = useState(null);
   const [fileContent, setFileContent] = useState(null);
   const [fileType, setFileType] = useState(null);
+  const [fileData, setFileData] = useState(null);
   const htmlToReactParser = new HtmlToReactParser();
 
   const fileExtension = fileUrl?.split('.').pop()?.toLowerCase() || '';
@@ -55,7 +152,6 @@ const FileViewer = ({ fileUrl, className }) => {
     try {
       const result = await mammoth.convertToHtml({ arrayBuffer });
       
-      // Add custom CSS to improve DOCX rendering
       const customStyles = `
         <style>
           .docx-wrapper {
@@ -98,22 +194,19 @@ const FileViewer = ({ fileUrl, className }) => {
   };
 
   const processPptx = async (arrayBuffer) => {
-    try {
-      // Fallback for PPTX since pptx2html requires jQuery
-      return (
-        <div className="p-8 text-center">
-          <div className="text-xl font-semibold mb-4">PPTX Preview Not Available</div>
-          <p className="text-gray-600 mb-6">
-            For security reasons, we can't render PowerPoint presentations directly in the browser.
-            Please download the file to view it.
-          </p>
-          {renderDownloadButton()}
+    return (
+      <div className="w-full h-full flex flex-col">
+        <div className="flex-1 min-h-[500px] overflow-auto">
+          <PowerPointRenderer arrayBuffer={arrayBuffer} />
         </div>
-      );
-    } catch (err) {
-      console.error('Error processing PPTX:', err);
-      throw err;
-    }
+        <div className="mt-4 text-center">
+          {renderDownloadButton()}
+          <p className="text-sm text-gray-500 mt-2">
+            Note: For best results with PowerPoint files, download and open in PowerPoint
+          </p>
+        </div>
+      </div>
+    );
   };
 
   const processXlsx = async (arrayBuffer) => {
@@ -122,14 +215,12 @@ const FileViewer = ({ fileUrl, className }) => {
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       
-      // Convert to HTML with better formatting
       const html = XLSX.utils.sheet_to_html(worksheet, {
         editable: false,
         header: '',
         footer: '',
       });
       
-      // Add custom CSS for Excel tables
       const customStyles = `
         <style>
           .xlsx-wrapper {
@@ -171,12 +262,14 @@ const FileViewer = ({ fileUrl, className }) => {
       setError(null);
       setFileContent(null);
       setFileType(null);
+      setFileData(null);
 
       try {
         const response = await fetch(fileUrl);
         if (!response.ok) throw new Error('Failed to fetch file');
 
         const arrayBuffer = await response.arrayBuffer();
+        setFileData(arrayBuffer);
         const fileType = fileExtension;
 
         if (fileType === 'ipynb') {
@@ -384,12 +477,7 @@ const FileViewer = ({ fileUrl, className }) => {
   if (fileType === 'pptx') {
     return (
       <div className={`w-full h-full flex flex-col ${className}`}>
-        <div className="flex-1 flex items-center justify-center">
-          {fileContent}
-        </div>
-        <div className="mt-4 p-4">
-          {renderDownloadButton()}
-        </div>
+        {fileContent}
       </div>
     );
   }

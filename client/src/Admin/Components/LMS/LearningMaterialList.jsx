@@ -4,7 +4,6 @@ import EditModule from "./EditableComponents/EditModule.jsx";
 import EditSubModule from "./EditableComponents/EditSubModule.jsx";
 import Swal from 'sweetalert2';
 
-
 const LearningMaterialList = () => {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +59,7 @@ const LearningMaterialList = () => {
       const response = await fetchData(
         "lmsEdit/deleteModule",
         "POST",
-        { moduleId}, // Explicitly convert to number
+        { moduleId }, // Explicitly convert to number
         {
           "Content-Type": "application/json",
           "auth-token": userToken
@@ -112,24 +111,30 @@ const LearningMaterialList = () => {
     );
   }
 
-  if (modules.length === 0) {
-    return (
-      <div className="p-6 text-gray-500 text-center">
-        No modules found. Create your first module to get started.
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {modules.map((module) => (
-        <EditModule
-          key={module.ModuleID}
-          module={module}
-          onDelete={handleDeleteModule} // ✅ Pass delete handler
-          onViewSubmodules={handleViewSubmodules}
-        />
-      ))}
+    <div className="space-y-6 p-6">
+      {/* Added Module Details Heading */}
+      <div className="border-b border-gray-200 pb-4">
+        <h1 className="text-2xl font-bold text-gray-800">Module Details</h1>
+        <p className="text-gray-600 mt-1">Manage all learning modules</p>
+      </div>
+
+      {modules.length === 0 ? (
+        <div className="text-gray-500 text-center">
+          No modules found. Create your first module to get started.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {modules.map((module) => (
+            <EditModule
+              key={module.ModuleID}
+              module={module}
+              onDelete={handleDeleteModule}
+              onViewSubmodules={handleViewSubmodules}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
