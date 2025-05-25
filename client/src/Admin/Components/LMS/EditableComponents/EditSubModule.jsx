@@ -343,9 +343,6 @@ const EditSubModule = ({ module, onBack }) => {
                 {/* Header Section */}
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-                            Submodules for: <span className="text-red-600 dark:text-red-400">{module.ModuleName}</span>
-                        </h1>
                         <button 
                             onClick={onBack}
                             className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center mt-1"
@@ -354,6 +351,9 @@ const EditSubModule = ({ module, onBack }) => {
                             Back to Modules
                         </button>
                     </div>
+                        <h1 className="text-2xl font-bold text-gray-800 dark:text-Black">
+                            Submodules for: <span className="text-red-600 dark:text-red-400">{module.ModuleName}</span>
+                        </h1>
                     <button
                         onClick={handleAddSubmodule}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"

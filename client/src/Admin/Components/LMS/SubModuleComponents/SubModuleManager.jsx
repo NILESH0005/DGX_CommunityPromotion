@@ -303,11 +303,22 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                 didOpen: () => Swal.showLoading()
             });
 
+            // Get current files count to calculate percentage
+            const currentUnit = subModules
+                .find(s => s.id === subModuleId)?.units
+                .find(u => u.id === unitId);
+            const currentFilesCount = currentUnit?.files?.length || 0;
+            const totalFilesAfterUpload = currentFilesCount + 1;
+            const equalPercentage = (100 / totalFilesAfterUpload);
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('moduleId', module.id);
             formData.append('subModuleId', subModuleId);
             formData.append('unitId', unitId);
+            formData.append('percentage', equalPercentage); // Include calculated percentage
+
+            console.log("ddaatta", formData )
 
             if (!userToken) {
                 throw new Error('Authentication token missing');
@@ -321,6 +332,9 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                 }
             });
 
+            console.log("reessp", response);
+            
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || 'Upload failed');
@@ -329,6 +343,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             const result = await response.json();
             await uploadToast.close();
 
+            // Update state with new file and recalculated percentages
             setSubModules(prev => prev.map(subModule => {
                 if (subModule.id === subModuleId) {
                     const updatedUnits = subModule.units.map(unit => {
@@ -339,13 +354,18 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                                 filePath: result.file?.path || URL.createObjectURL(file),
                                 fileType: result.file?.type || file.type,
                                 uploadedAt: new Date().toISOString(),
-                                percentage: 0
+                                percentage: equalPercentage // Store as number
                             };
 
-                            const updatedFiles = [...(unit.files || []), newFile];
+                            // Update all files with new equal percentages
+                            const updatedFiles = (unit.files || []).map(f => ({
+                                ...f,
+                                percentage: parseFloat(equalPercentage)
+                            }));
+
                             return {
                                 ...unit,
-                                files: calculateFilePercentages(updatedFiles)
+                                files: [...updatedFiles, newFile]
                             };
                         }
                         return unit;

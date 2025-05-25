@@ -33,32 +33,46 @@ const ViewContent = ({ submodule, onBack }) => {
   const [fileLink, setFileLink] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
-  const { fetchData, userToken } = useContext(ApiContext);
+    const { fetchData, userToken } = useContext(ApiContext);
 
-  useEffect(() => {
-    const fetchUnits = async () => {
-      try {
-        setLoading(true);
-        const response = await fetchData(`dropdown/getUnitsWithFiles`, "GET", {
-          "auth-token": userToken,
-        });
 
-        if (response?.success) {
-          const validUnits = response.data.filter((unit) => unit);
-          setUnits(validUnits);
-          const filtered = validUnits.filter(
-            (unit) => unit.SubModuleID === submodule.SubModuleID
-          );
-          setFilteredUnits(filtered);
-        } else {
-          setError(response?.message || "Failed to fetch units");
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+
+    useEffect(() => {
+
+        // Trigger a refetch of units to ensure we have the latest data
+        const fetchUnits = async () => {
+            try {
+                setLoading(true);
+                const response = await fetchData(
+                    `dropdown/getUnitsWithFiles`,
+                    "GET",
+                    { 'auth-token': userToken }
+                );
+
+                if (response?.success) {
+                    const validUnits = response.data.filter(unit => unit);
+                    setUnits(validUnits);
+                    const filtered = validUnits.filter(unit =>
+                        unit.SubModuleID === submodule.SubModuleID
+                    );
+                    setFilteredUnits(filtered);
+
+                    // Select the newly added unit if it exists in the response
+                    const addedUnit = validUnits.find(unit => unit.UnitID === newUnit.UnitID);
+                    if (addedUnit) {
+                        setSelectedUnit(addedUnit);
+                    }
+                }
+            } catch (err) {
+                console.error("Error refetching units:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUnits();
+        setShowAddUnitModal(false);
+
 
     fetchUnits();
   }, [submodule.SubModuleID, fetchData, userToken]);
@@ -129,32 +143,41 @@ const ViewContent = ({ submodule, onBack }) => {
         headers
       );
 
-      if (response?.success) {
-        setUnits((prev) =>
-          prev.map((unit) =>
-            unit.UnitID === editingUnit.UnitID ? response.data : unit
-          )
-        );
-        setFilteredUnits((prev) =>
-          prev.map((unit) =>
-            unit.UnitID === editingUnit.UnitID ? response.data : unit
-          )
-        );
-        if (selectedUnit?.UnitID === editingUnit.UnitID) {
-          setSelectedUnit(response.data);
+            if (response?.success) {
+                // Update both states using functional updates to ensure we have the latest state
+                setUnits(prevUnits =>
+                    prevUnits.map(unit =>
+                        unit.UnitID === editingUnit.UnitID ?
+                            { ...unit, ...response.data } :
+                            unit
+                    )
+                );
+
+                setFilteredUnits(prevFilteredUnits =>
+                    prevFilteredUnits.map(unit =>
+                        unit.UnitID === editingUnit.UnitID ?
+                            { ...unit, ...response.data } :
+                            unit
+                    )
+                );
+
+                // Update selectedUnit if it's the one being edited
+                if (selectedUnit?.UnitID === editingUnit.UnitID) {
+                    setSelectedUnit(prev => ({ ...prev, ...response.data }));
+                }
+
+                handleCancelEditUnit();
+                Swal.fire('Success!', 'Unit updated successfully', 'success');
+            } else {
+                throw new Error(response?.message || "Failed to update unit");
+            }
+        } catch (err) {
+            console.error("Error:", err);
+            setError(err.message);
+        } finally {
+            setIsSaving(false);
         }
-        handleCancelEditUnit();
-        Swal.fire("Success!", "Unit updated successfully", "success");
-      } else {
-        throw new Error(response?.message || "Failed to update unit");
-      }
-    } catch (err) {
-      console.error("Error:", err);
-      setError(err.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    };
 
   const handleDeleteUnit = async (unitId) => {
     const result = await Swal.fire({
@@ -231,94 +254,106 @@ const ViewContent = ({ submodule, onBack }) => {
   const handleUploadFile = async () => {
     if ((!newFile && !fileLink.trim()) || !selectedUnit) return;
 
-    setIsUploading(true);
-    try {
-      let response;
-      const uploadToast = Swal.fire({
-        title: "Uploading...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
+        setIsUploading(true);
+        try {
+            const uploadToast = Swal.fire({
+                title: 'Uploading...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
-      if (newFile) {
-        const allowedExtensions = [
-          ".jpg",
-          ".jpeg",
-          ".png",
-          ".gif",
-          ".pdf",
-          ".doc",
-          ".docx",
-          ".ppt",
-          ".pptx",
-          ".mp4",
-          ".mov",
-          ".ipynb",
-        ];
-        const fileExt = newFile.name.split(".").pop().toLowerCase();
+            // Calculate equal percentage for all files (existing + new)
+            const totalFilesAfterUpload = files.length + 1;
+            const equalPercentage = (100 / totalFilesAfterUpload).toFixed(2);
 
-        if (!allowedExtensions.includes(`.${fileExt}`)) {
-          throw new Error(
-            "File type not allowed. Please upload a valid file type."
-          );
+            if (newFile) {
+                const formData = new FormData();
+                formData.append('file', newFile);
+                formData.append('unitId', selectedUnit.UnitID);
+                formData.append('percentage', equalPercentage);
+
+                const response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'auth-token': userToken
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || 'Upload failed');
+                }
+
+                const result = await response.json();
+                await uploadToast.close();
+
+                if (result.success) {
+                    // Update all files' percentages in the frontend state
+                    const updatedFiles = files.map(file => ({
+                        ...file,
+                        Percentage: equalPercentage
+                    }));
+
+                    // Add the new file with the same percentage
+                    setFiles([...updatedFiles, {
+                        ...result.data,
+                        Percentage: equalPercentage
+                    }]);
+
+                    setNewFile(null);
+                    setFileLink('');
+                    Swal.fire('Success!', 'File uploaded successfully', 'success');
+                } else {
+                    throw new Error(result.message || "Failed to save");
+                }
+            } else if (fileLink.trim()) {
+                // Handle link upload
+                const response = await fetchData(
+                    "lms/files",
+                    "POST",
+                    {
+                        unitId: selectedUnit.UnitID,
+                        link: fileLink,
+                        percentage: equalPercentage,
+                        fileName: fileLink.split('/').pop() || 'Link',
+                        fileType: 'link'
+                    },
+                    {
+                        'Content-Type': 'application/json',
+                        'auth-token': userToken
+                    }
+                );
+
+                await uploadToast.close();
+
+                if (response?.success) {
+                    // Update all files' percentages in the frontend state
+                    const updatedFiles = files.map(file => ({
+                        ...file,
+                        Percentage: equalPercentage
+                    }));
+
+                    // Add the new link with the same percentage
+                    setFiles([...updatedFiles, {
+                        ...response.data,
+                        Percentage: equalPercentage
+                    }]);
+
+                    setNewFile(null);
+                    setFileLink('');
+                    Swal.fire('Success!', 'Link saved successfully', 'success');
+                } else {
+                    throw new Error(response?.message || "Failed to save link");
+                }
+            }
+        } catch (err) {
+            console.error("Upload error:", err);
+            Swal.fire('Error!', err.message || 'Failed to save', 'error');
+        } finally {
+            setIsUploading(false);
         }
-
-        const formData = new FormData();
-        formData.append("file", newFile);
-        formData.append("unitId", selectedUnit.UnitID);
-        formData.append("percentage", 0);
-
-        response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
-          method: "POST",
-          body: formData,
-          headers: {
-            "auth-token": userToken,
-          },
-        });
-      } else {
-        response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "auth-token": userToken,
-          },
-          body: JSON.stringify({
-            unitId: selectedUnit.UnitID,
-            link: fileLink.trim(),
-            fileName: fileLink.trim().split("/").pop() || "External Link",
-            fileType: "link",
-            percentage: 0,
-          }),
-        });
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Upload failed");
-      }
-
-      const result = await response.json();
-      await uploadToast.close();
-
-      if (result.success) {
-        setFiles((prev) => [...prev, result.data]);
-        setNewFile(null);
-        setFileLink("");
-        Swal.fire(
-          "Success!",
-          newFile ? "File uploaded successfully" : "Link saved successfully",
-          "success"
-        );
-      } else {
-        throw new Error(result.message || "Failed to save");
-      }
-    } catch (err) {
-      console.error("Upload error:", err);
-      Swal.fire("Error!", err.message || "Failed to save", "error");
-    } finally {
-      setIsUploading(false);
-    }
-  };
+    };
 
   const handleDeleteFile = async (fileId) => {
     const result = await Swal.fire({
@@ -333,26 +368,29 @@ const ViewContent = ({ submodule, onBack }) => {
 
     if (!result.isConfirmed) return;
 
-    try {
-      const response = await fetchData(
-        "lmsEdit/deleteFile",
-        "POST",
-        { fileId },
-        {
-          "Content-Type": "application/json",
-          "auth-token": userToken,
-        }
-      );
+        try {
+            setFiles(prev => prev.filter(file => file.FileID !== fileId));
+            const response = await fetchData(
+                "lmsEdit/deleteFile",
+                "POST",
+                { fileId },
+                {
+                    "Content-Type": "application/json",
+                    "auth-token": userToken
+                }
+            );
 
-      if (response?.success) {
-        setFiles((prev) => prev.filter((file) => file.FileID !== fileId));
-        Swal.fire("Deleted!", "File has been deleted.", "success");
-      }
-    } catch (err) {
-      console.error("Delete error:", err);
-      Swal.fire("Error!", "Failed to delete file", "error");
-    }
-  };
+            if (response?.success) {
+
+
+                setFiles(prev => prev.filter(file => file.FileID !== fileId));
+                Swal.fire('Deleted!', 'File has been deleted.', 'success');
+            }
+        } catch (err) {
+            console.error("Delete error:", err);
+            Swal.fire('Error!', 'Failed to delete file', 'error');
+        }
+    };
 
   const handleAddUnitSuccess = (newUnit) => {
     if (!newUnit || !newUnit.UnitID) {
@@ -421,14 +459,9 @@ const ViewContent = ({ submodule, onBack }) => {
 
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-Black-800 dark:text-black">
-              Content for:{" "}
-              <span className="text-red-600 dark:text-red-400">
-                {submodule.SubModuleName}
-              </span>
-            </h1>
-          </div>
+         
+          
+         
           <button
             onClick={handleAddUnitClick}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
@@ -436,6 +469,12 @@ const ViewContent = ({ submodule, onBack }) => {
             <FaEdit className="mr-2" />
             Add New Unit
           </button>
+            <h1 className="text-2xl font-bold text-Black-800 dark:text-black">
+              Content for:{" "}
+              <span className="text-red-600 dark:text-red-400">
+                {submodule.SubModuleName}
+              </span>
+            </h1>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

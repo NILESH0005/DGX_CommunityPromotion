@@ -234,8 +234,12 @@ export class LMS {
   }
 
   static async saveFileOrLink(req, res) {
-    const { unitId, link, percentage = 0, fileName, fileType } = req.body;
-    const userEmail = req.user?.id; // From authentication middleware
+    // Parse percentage as decimal number
+    let percentage = parseFloat(req.body.percentage) || 0;
+    percentage = Math.min(100, Math.max(0, percentage)); // Ensure between 0-100
+
+    const { unitId, link, fileName, fileType } = req.body;
+    const userEmail = req.user?.id;
 
     if (!unitId) {
       return res.status(400).json({
@@ -269,6 +273,26 @@ export class LMS {
 
       const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
+      // First, count existing files to calculate new percentage
+      const [countResult] = await queryAsync(
+        conn,
+        `SELECT COUNT(*) as fileCount FROM FilesDetails 
+             WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)`,
+        [unitId]
+      );
+
+      const totalFiles = countResult.fileCount + 1; // +1 for the new file
+      const equalPercentage = (100 / totalFiles).toFixed(2);
+
+      // Update all existing files' percentages
+      await queryAsync(
+        conn,
+        `UPDATE FilesDetails 
+             SET Percentage = ?
+             WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)`,
+        [equalPercentage, unitId]
+      );
+
       // Handle file upload
       if (req.file) {
         const fileData = {
@@ -279,14 +303,14 @@ export class LMS {
           AuthAdd: user.Name,
           AddOnDt: currentDateTime,
           delStatus: 0,
-          Percentage: percentage
+          Percentage: equalPercentage
         };
 
         await queryAsync(
           conn,
           `INSERT INTO FilesDetails 
-                (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                 (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           Object.values(fileData)
         );
 
@@ -301,31 +325,22 @@ export class LMS {
       // Handle link (with nullable fields)
       else if (link) {
         const linkData = {
-          FilesName: fileName || null,  // Can be null
-          FilePath: link,              // Required for links
-          FileType: fileType || 'link' || null, // Can be null or defaults to 'link'
+          FilesName: fileName || null,
+          FilePath: link,
+          FileType: fileType || 'link' || null,
           UnitID: unitId,
           AuthAdd: user.Name,
           AddOnDt: currentDateTime,
           delStatus: 0,
-          Percentage: percentage
+          Percentage: equalPercentage
         };
 
         await queryAsync(
           conn,
           `INSERT INTO FilesDetails 
-                (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            linkData.FilesName,
-            linkData.FilePath,
-            linkData.FileType,
-            linkData.UnitID,
-            linkData.AuthAdd,
-            linkData.AddOnDt,
-            linkData.delStatus,
-            linkData.Percentage
-          ]
+                 (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          Object.values(linkData)
         );
 
         await queryAsync(conn, 'COMMIT TRANSACTION');
@@ -337,6 +352,7 @@ export class LMS {
         });
       }
       else {
+        await queryAsync(conn, 'ROLLBACK TRANSACTION');
         return res.status(400).json({
           success: false,
           message: 'Either a file or link must be provided'
@@ -348,7 +364,7 @@ export class LMS {
           console.error('Rollback failed:', rbErr)
         );
       }
-      console.error('Error:', error);
+      console.error('Database Error:', error);
       return res.status(500).json({
         success: false,
         message: error.message || 'Failed to save data'
