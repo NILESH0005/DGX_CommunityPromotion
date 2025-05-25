@@ -23,7 +23,11 @@ const ViewContent = ({ submodule, onBack }) => {
 
     const { fetchData, userToken } = useContext(ApiContext);
 
+
+
     useEffect(() => {
+
+        // Trigger a refetch of units to ensure we have the latest data
         const fetchUnits = async () => {
             try {
                 setLoading(true);
@@ -34,23 +38,29 @@ const ViewContent = ({ submodule, onBack }) => {
                 );
 
                 if (response?.success) {
-                    // Filter out any null/undefined units first
                     const validUnits = response.data.filter(unit => unit);
                     setUnits(validUnits);
-                    // Then filter for the current submodule
                     const filtered = validUnits.filter(unit =>
                         unit.SubModuleID === submodule.SubModuleID
                     );
                     setFilteredUnits(filtered);
-                } else {
-                    setError(response?.message || "Failed to fetch units");
+
+                    // Select the newly added unit if it exists in the response
+                    const addedUnit = validUnits.find(unit => unit.UnitID === newUnit.UnitID);
+                    if (addedUnit) {
+                        setSelectedUnit(addedUnit);
+                    }
                 }
             } catch (err) {
-                setError(err.message);
+                console.error("Error refetching units:", err);
             } finally {
                 setLoading(false);
             }
         };
+
+        fetchUnits();
+        setShowAddUnitModal(false);
+
 
         fetchUnits();
     }, [submodule.SubModuleID, fetchData, userToken]);
@@ -120,18 +130,26 @@ const ViewContent = ({ submodule, onBack }) => {
             );
 
             if (response?.success) {
-                // Update both units and filteredUnits states
-                setUnits(prev => prev.map(unit =>
-                    unit.UnitID === editingUnit.UnitID ? response.data : unit
-                ));
+                // Update both states using functional updates to ensure we have the latest state
+                setUnits(prevUnits =>
+                    prevUnits.map(unit =>
+                        unit.UnitID === editingUnit.UnitID ?
+                            { ...unit, ...response.data } :
+                            unit
+                    )
+                );
 
-                setFilteredUnits(prev => prev.map(unit =>
-                    unit.UnitID === editingUnit.UnitID ? response.data : unit
-                ));
+                setFilteredUnits(prevFilteredUnits =>
+                    prevFilteredUnits.map(unit =>
+                        unit.UnitID === editingUnit.UnitID ?
+                            { ...unit, ...response.data } :
+                            unit
+                    )
+                );
 
-                // If we're currently viewing the edited unit, update selectedUnit as well
+                // Update selectedUnit if it's the one being edited
                 if (selectedUnit?.UnitID === editingUnit.UnitID) {
-                    setSelectedUnit(response.data);
+                    setSelectedUnit(prev => ({ ...prev, ...response.data }));
                 }
 
                 handleCancelEditUnit();
@@ -219,93 +237,96 @@ const ViewContent = ({ submodule, onBack }) => {
 
         setIsUploading(true);
         try {
-            let response;
             const uploadToast = Swal.fire({
                 title: 'Uploading...',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
             });
 
-            // Calculate percentage with proper decimal handling
+            // Calculate equal percentage for all files (existing + new)
             const totalFilesAfterUpload = files.length + 1;
-            const equalPercentage = (100 / totalFilesAfterUpload).toFixed(2); // Ensures 2 decimal places
+            const equalPercentage = (100 / totalFilesAfterUpload).toFixed(2);
 
             if (newFile) {
-                // Client-side validation
-                const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf',
-                    '.doc', '.docx', '.ppt', '.pptx', '.mp4',
-                    '.mov', '.ipynb'];
-                const fileExt = newFile.name.split('.').pop().toLowerCase();
-
-                if (!allowedExtensions.includes(`.${fileExt}`)) {
-                    throw new Error('File type not allowed. Please upload a valid file type.');
-                }
-
                 const formData = new FormData();
                 formData.append('file', newFile);
                 formData.append('unitId', selectedUnit.UnitID);
                 formData.append('percentage', equalPercentage);
 
-                response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
+                const response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
                     method: 'POST',
                     body: formData,
                     headers: {
                         'auth-token': userToken
                     }
                 });
-            } else {
-                // Handle link save with proper percentage value
-                response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'auth-token': userToken
-                    },
-                    body: JSON.stringify({
-                        unitId: selectedUnit.UnitID,
-                        link: fileLink.trim(),
-                        fileName: fileLink.trim().split('/').pop() || 'External Link',
-                        fileType: 'link',
-                        percentage: equalPercentage // Convert to number
-                    })
-                });
-            }
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Upload failed');
-            }
-
-            const result = await response.json();
-            await uploadToast.close();
-
-            if (result.success) {
-                const filesResponse = await fetchData(
-                    `lms/getFiles?unitId=${selectedUnit.UnitID}`,
-                    "GET",
-                    { 'auth-token': userToken }
-                );
-                if (filesResponse?.success) {
-                    setFiles(filesResponse.data);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || 'Upload failed');
                 }
 
+                const result = await response.json();
+                await uploadToast.close();
 
-                const updatedFiles = files.map(file => ({
-                    ...file,
-                    Percentage: equalPercentage
-                }));
+                if (result.success) {
+                    // Update all files' percentages in the frontend state
+                    const updatedFiles = files.map(file => ({
+                        ...file,
+                        Percentage: equalPercentage
+                    }));
 
-                // Add the new file with the same percentage
-                setFiles([...updatedFiles, {
-                    ...result.data,
-                    Percentage: equalPercentage
-                }]);
+                    // Add the new file with the same percentage
+                    setFiles([...updatedFiles, {
+                        ...result.data,
+                        Percentage: equalPercentage
+                    }]);
 
-                setNewFile(null);
-                setFileLink('');
-                Swal.fire('Success!', newFile ? 'File uploaded successfully' : 'Link saved successfully', 'success');
-            } else {
-                throw new Error(result.message || "Failed to save");
+                    setNewFile(null);
+                    setFileLink('');
+                    Swal.fire('Success!', 'File uploaded successfully', 'success');
+                } else {
+                    throw new Error(result.message || "Failed to save");
+                }
+            } else if (fileLink.trim()) {
+                // Handle link upload
+                const response = await fetchData(
+                    "lms/files",
+                    "POST",
+                    {
+                        unitId: selectedUnit.UnitID,
+                        link: fileLink,
+                        percentage: equalPercentage,
+                        fileName: fileLink.split('/').pop() || 'Link',
+                        fileType: 'link'
+                    },
+                    {
+                        'Content-Type': 'application/json',
+                        'auth-token': userToken
+                    }
+                );
+
+                await uploadToast.close();
+
+                if (response?.success) {
+                    // Update all files' percentages in the frontend state
+                    const updatedFiles = files.map(file => ({
+                        ...file,
+                        Percentage: equalPercentage
+                    }));
+
+                    // Add the new link with the same percentage
+                    setFiles([...updatedFiles, {
+                        ...response.data,
+                        Percentage: equalPercentage
+                    }]);
+
+                    setNewFile(null);
+                    setFileLink('');
+                    Swal.fire('Success!', 'Link saved successfully', 'success');
+                } else {
+                    throw new Error(response?.message || "Failed to save link");
+                }
             }
         } catch (err) {
             console.error("Upload error:", err);
@@ -341,14 +362,8 @@ const ViewContent = ({ submodule, onBack }) => {
             );
 
             if (response?.success) {
-                const filesResponse = await fetchData(
-                    `lms/getFiles?unitId=${selectedUnit.UnitID}`,
-                    "GET",
-                    { 'auth-token': userToken }
-                );
-                if (filesResponse?.success) {
-                    setFiles(filesResponse.data);
-                }
+
+
                 setFiles(prev => prev.filter(file => file.FileID !== fileId));
                 Swal.fire('Deleted!', 'File has been deleted.', 'success');
             }

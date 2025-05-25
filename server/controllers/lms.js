@@ -273,6 +273,26 @@ export class LMS {
 
       const currentDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
+      // First, count existing files to calculate new percentage
+      const [countResult] = await queryAsync(
+        conn,
+        `SELECT COUNT(*) as fileCount FROM FilesDetails 
+             WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)`,
+        [unitId]
+      );
+
+      const totalFiles = countResult.fileCount + 1; // +1 for the new file
+      const equalPercentage = (100 / totalFiles).toFixed(2);
+
+      // Update all existing files' percentages
+      await queryAsync(
+        conn,
+        `UPDATE FilesDetails 
+             SET Percentage = ?
+             WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)`,
+        [equalPercentage, unitId]
+      );
+
       // Handle file upload
       if (req.file) {
         const fileData = {
@@ -283,15 +303,15 @@ export class LMS {
           AuthAdd: user.Name,
           AddOnDt: currentDateTime,
           delStatus: 0,
-          Percentage: percentage // Using the decimal number directly
+          Percentage: equalPercentage
         };
 
         await queryAsync(
           conn,
           `INSERT INTO FilesDetails 
-                (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, // No CAST needed
-          Object.values(fileData) // Simple array of values
+                 (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          Object.values(fileData)
         );
 
         await queryAsync(conn, 'COMMIT TRANSACTION');
@@ -312,15 +332,15 @@ export class LMS {
           AuthAdd: user.Name,
           AddOnDt: currentDateTime,
           delStatus: 0,
-          Percentage: percentage // Using the decimal number directly
+          Percentage: equalPercentage
         };
 
         await queryAsync(
           conn,
           `INSERT INTO FilesDetails 
-                (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, // No CAST needed
-          Object.values(linkData) // Simple array of values
+                 (FilesName, FilePath, FileType, UnitID, AuthAdd, AddOnDt, delStatus, Percentage)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          Object.values(linkData)
         );
 
         await queryAsync(conn, 'COMMIT TRANSACTION');
@@ -332,6 +352,7 @@ export class LMS {
         });
       }
       else {
+        await queryAsync(conn, 'ROLLBACK TRANSACTION');
         return res.status(400).json({
           success: false,
           message: 'Either a file or link must be provided'

@@ -371,9 +371,9 @@ export const updateSubModule = async (req, res) => {
             imageBuffer = Buffer.from(req.body.SubModuleImage.data, 'base64');
         } catch (e) {
             logError("Image conversion error", e);
-            return res.status(400).json({ 
-                success: false, 
-                message: "Invalid image format" 
+            return res.status(400).json({
+                success: false,
+                message: "Invalid image format"
             });
         }
     }
@@ -400,7 +400,7 @@ export const updateSubModule = async (req, res) => {
                     `;
                     userRows = await queryAsync(conn, userQuery, [Number(userId)]);
                 }
-                
+
                 // If not found and userId looks like an email, try by email
                 if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
                     userQuery = `
@@ -483,8 +483,8 @@ export const updateSubModule = async (req, res) => {
                 return res.status(500).json({
                     success,
                     message: "Database operation failed",
-                    details: queryErr.message.includes('Conversion failed') 
-                        ? "Invalid data type in database operation" 
+                    details: queryErr.message.includes('Conversion failed')
+                        ? "Invalid data type in database operation"
                         : queryErr.message,
                 });
             }
@@ -510,17 +510,17 @@ export const addSubmodule = async (req, res) => {
     if (!errors.isEmpty()) {
         const warningMessage = "Data is not in the right format";
         logWarning(warningMessage);
-        return res.status(400).json({ 
-            success, 
-            data: errors.array(), 
-            message: warningMessage 
+        return res.status(400).json({
+            success,
+            data: errors.array(),
+            message: warningMessage
         });
     }
 
     try {
-        const { 
-            SubModuleName, 
-            SubModuleDescription, 
+        const {
+            SubModuleName,
+            SubModuleDescription,
             SubModuleImage,
             ModuleID // Added ModuleID from request body
         } = req.body;
@@ -529,10 +529,10 @@ export const addSubmodule = async (req, res) => {
         if (!ModuleID) {
             const warningMessage = "ModuleID is required";
             logWarning(warningMessage);
-            return res.status(400).json({ 
-                success: false, 
-                data: {}, 
-                message: warningMessage 
+            return res.status(400).json({
+                success: false,
+                data: {},
+                message: warningMessage
             });
         }
 
@@ -541,10 +541,10 @@ export const addSubmodule = async (req, res) => {
             if (err) {
                 const errorMessage = "Failed to connect to database";
                 logError(errorMessage);
-                return res.status(500).json({ 
-                    success: false, 
-                    data: err, 
-                    message: errorMessage 
+                return res.status(500).json({
+                    success: false,
+                    data: err,
+                    message: errorMessage
                 });
             }
 
@@ -557,10 +557,10 @@ export const addSubmodule = async (req, res) => {
                     closeConnection();
                     const warningMessage = "User not found";
                     logWarning(warningMessage);
-                    return res.status(404).json({ 
-                        success: false, 
-                        data: {}, 
-                        message: warningMessage 
+                    return res.status(404).json({
+                        success: false,
+                        data: {},
+                        message: warningMessage
                     });
                 }
 
@@ -591,8 +591,8 @@ export const addSubmodule = async (req, res) => {
                 `;
 
                 const insertResult = await queryAsync(
-                    conn, 
-                    insertQuery, 
+                    conn,
+                    insertQuery,
                     [
                         SubModuleName,
                         imageBuffer,
@@ -612,33 +612,33 @@ export const addSubmodule = async (req, res) => {
 
                 success = true;
                 closeConnection();
-                
+
                 const infoMessage = "Submodule added successfully";
                 logInfo(infoMessage);
-                
-                return res.status(200).json({ 
-                    success, 
-                    data: newSubmodule[0], 
-                    message: infoMessage 
+
+                return res.status(200).json({
+                    success,
+                    data: newSubmodule[0],
+                    message: infoMessage
                 });
 
             } catch (queryErr) {
                 closeConnection();
                 console.error("Database Query Error:", queryErr);
                 logError(queryErr);
-                return res.status(500).json({ 
-                    success: false, 
-                    data: queryErr, 
-                    message: 'Failed to add submodule. Please check your input data.' 
+                return res.status(500).json({
+                    success: false,
+                    data: queryErr,
+                    message: 'Failed to add submodule. Please check your input data.'
                 });
             }
         });
     } catch (error) {
         logError(error);
-        return res.status(500).json({ 
-            success: false, 
-            data: {}, 
-            message: 'Internal server error' 
+        return res.status(500).json({
+            success: false,
+            data: {},
+            message: 'Internal server error'
         });
     }
 };
@@ -771,7 +771,7 @@ export const updateUnit = async (req, res) => {
                     `;
                     userRows = await queryAsync(conn, userQuery, [Number(userId)]);
                 }
-                
+
                 // If not found and userId looks like an email, try by email
                 if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
                     userQuery = `
@@ -847,8 +847,8 @@ export const updateUnit = async (req, res) => {
                 return res.status(500).json({
                     success,
                     message: "Database operation failed",
-                    details: queryErr.message.includes('Conversion failed') 
-                        ? "Invalid data type in database operation" 
+                    details: queryErr.message.includes('Conversion failed')
+                        ? "Invalid data type in database operation"
                         : queryErr.message,
                 });
             }
@@ -885,6 +885,8 @@ export const deleteFile = (req, res) => {
             }
 
             try {
+                await queryAsync(conn, 'BEGIN TRANSACTION');
+
                 // Check if file exists and isn't deleted
                 const checkQuery = `
                     SELECT * FROM FilesDetails 
@@ -893,12 +895,16 @@ export const deleteFile = (req, res) => {
                 const [existingFile] = await queryAsync(conn, checkQuery, [fileId]);
 
                 if (!existingFile) {
+                    await queryAsync(conn, 'ROLLBACK TRANSACTION');
                     closeConnection(conn);
                     return res.status(404).json({
                         success: false,
                         message: "File not found or already deleted",
                     });
                 }
+
+                // Get the unit ID before deleting
+                const unitId = existingFile.UnitID;
 
                 // Perform the soft delete
                 const deleteQuery = `
@@ -912,6 +918,29 @@ export const deleteFile = (req, res) => {
 
                 const adminId = req.user?.id; // Get current user ID
                 await queryAsync(conn, deleteQuery, [adminId, fileId]);
+
+                // Count remaining active files in the unit
+                const countQuery = `
+                    SELECT COUNT(*) as remainingCount 
+                    FROM FilesDetails 
+                    WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)
+                `;
+                const [countResult] = await queryAsync(conn, countQuery, [unitId]);
+
+                // Update percentages if files remain
+                if (countResult.remainingCount > 0) {
+                    const newPercentage = (100 / countResult.remainingCount).toFixed(2);
+
+                    await queryAsync(
+                        conn,
+                        `UPDATE FilesDetails 
+                         SET Percentage = ?
+                         WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)`,
+                        [newPercentage, unitId]
+                    );
+                }
+
+                await queryAsync(conn, 'COMMIT TRANSACTION');
                 closeConnection(conn);
 
                 return res.status(200).json({
@@ -920,12 +949,17 @@ export const deleteFile = (req, res) => {
                         fileId: fileId,
                         deletedAt: new Date().toISOString(),
                         deletedBy: adminId,
-                        fileName: existingFile.FilesName // Include filename in response
+                        fileName: existingFile.FilesName,
+                        unitId: unitId,
+                        remainingFiles: countResult.remainingCount,
+                        newPercentage: countResult.remainingCount > 0 ?
+                            (100 / countResult.remainingCount).toFixed(2) : 0
                     },
                     message: "File deleted successfully",
                 });
 
             } catch (error) {
+                await queryAsync(conn, 'ROLLBACK TRANSACTION');
                 closeConnection(conn);
                 logError(`Error deleting file: ${error.message}`);
                 return res.status(500).json({
@@ -955,16 +989,16 @@ export const addUnit = async (req, res) => {
     if (!errors.isEmpty()) {
         const warningMessage = "Data is not in the right format";
         logWarning(warningMessage);
-        return res.status(400).json({ 
-            success, 
-            data: errors.array(), 
-            message: warningMessage 
+        return res.status(400).json({
+            success,
+            data: errors.array(),
+            message: warningMessage
         });
     }
 
     try {
-        const { 
-            UnitName, 
+        const {
+            UnitName,
             UnitDescription,
             SubModuleID // Required parent reference
         } = req.body;
@@ -973,10 +1007,10 @@ export const addUnit = async (req, res) => {
         if (!SubModuleID) {
             const warningMessage = "SubModuleID is required";
             logWarning(warningMessage);
-            return res.status(400).json({ 
-                success: false, 
-                data: {}, 
-                message: warningMessage 
+            return res.status(400).json({
+                success: false,
+                data: {},
+                message: warningMessage
             });
         }
 
@@ -985,23 +1019,23 @@ export const addUnit = async (req, res) => {
             if (err) {
                 const errorMessage = "Failed to connect to database";
                 logError(errorMessage);
-                return res.status(500).json({ 
-                    success: false, 
-                    data: err, 
-                    message: errorMessage 
+                return res.status(500).json({
+                    success: false,
+                    data: err,
+                    message: errorMessage
                 });
             }
 
             try {
                 // Get user details
                 let userQuery, userRows;
-                
+
                 // Try by numeric ID first
                 if (!isNaN(Number(userId))) {
                     userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND UserID = ?`;
                     userRows = await queryAsync(conn, userQuery, [Number(userId)]);
                 }
-                
+
                 // If not found and looks like email, try by email
                 if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
                     userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
@@ -1012,10 +1046,10 @@ export const addUnit = async (req, res) => {
                     closeConnection(conn);
                     const warningMessage = "User not found";
                     logWarning(warningMessage);
-                    return res.status(404).json({ 
-                        success: false, 
-                        data: {}, 
-                        message: warningMessage 
+                    return res.status(404).json({
+                        success: false,
+                        data: {},
+                        message: warningMessage
                     });
                 }
 
@@ -1034,8 +1068,8 @@ export const addUnit = async (req, res) => {
                 `;
 
                 const insertResult = await queryAsync(
-                    conn, 
-                    insertQuery, 
+                    conn,
+                    insertQuery,
                     [
                         UnitName,
                         UnitDescription || null,
@@ -1061,33 +1095,33 @@ export const addUnit = async (req, res) => {
 
                 success = true;
                 closeConnection(conn);
-                
+
                 const infoMessage = "Unit added successfully";
                 logInfo(infoMessage);
-                
-                return res.status(200).json({ 
-                    success, 
-                    data: newUnit[0], 
-                    message: infoMessage 
+
+                return res.status(200).json({
+                    success,
+                    data: newUnit[0],
+                    message: infoMessage
                 });
 
             } catch (queryErr) {
                 closeConnection(conn);
                 console.error("Database Query Error:", queryErr);
                 logError(queryErr);
-                return res.status(500).json({ 
-                    success: false, 
-                    data: queryErr, 
-                    message: 'Failed to add unit. Please check your input data.' 
+                return res.status(500).json({
+                    success: false,
+                    data: queryErr,
+                    message: 'Failed to add unit. Please check your input data.'
                 });
             }
         });
     } catch (error) {
         logError(error);
-        return res.status(500).json({ 
-            success: false, 
-            data: {}, 
-            message: 'Internal server error' 
+        return res.status(500).json({
+            success: false,
+            data: {},
+            message: 'Internal server error'
         });
     }
 };
