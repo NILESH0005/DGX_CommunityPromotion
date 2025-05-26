@@ -510,7 +510,7 @@ const FileViewer = ({ fileUrl, className = "" }) => {
                     <Page
                       pageNumber={currentPage}
                       scale={pdfScale}
-                      renderTextLayer={true}
+                      renderTextLayer={false}
                       renderAnnotationLayer={true}
                       loading={
                         <div className="flex justify-center items-center h-96 w-full">

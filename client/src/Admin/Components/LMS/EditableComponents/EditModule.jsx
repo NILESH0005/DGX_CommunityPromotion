@@ -187,7 +187,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-300 w-full border border-gray-200 dark:border-gray-700 flex flex-col h-full">
             {/* Image Section - Fixed height */}
-            <div className="h-48 bg-gradient-to-r from-red-500 to-red-700 overflow-hidden relative group">
+            <div className="h-48 bg-gradient-to-r from-white-500 to-white-700 overflow-hidden relative group">
                 {isImageEditing ? (
                     <div className="h-full flex flex-col items-center justify-center p-4 bg-black bg-opacity-70">
                         {imagePreview ? (
@@ -265,10 +265,10 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                         )}
                     </>
                 ) : (
-                    <div className="h-full flex items-center justify-center bg-gradient-to-br from-red-600 to-red-800">
+                    <div className="h-full flex items-center justify-center bg-gradient-to-br from-white-600 to-white-800">
                         {isEditing ? (
                             <div className="text-center p-4">
-                                <p className="text-gray-200 mb-3 text-sm">No Image Available</p>
+                                <p className="text-black-200 mb-3 text-sm">No Image Available</p>
                                 <button
                                     onClick={() => setIsImageEditing(true)}
                                     className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs transition-colors duration-200 shadow-md hover:shadow-lg flex items-center mx-auto"
@@ -278,7 +278,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                                 </button>
                             </div>
                         ) : (
-                            <p className="text-gray-200">No Image Available</p>
+                            <p className="text-Black-200">No Image Available</p>
                         )}
                     </div>
                 )}
