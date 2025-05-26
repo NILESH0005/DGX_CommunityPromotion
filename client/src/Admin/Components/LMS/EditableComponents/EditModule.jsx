@@ -177,7 +177,6 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-300 w-full border border-gray-200 dark:border-gray-700">
-            {/* Image Section - Responsive height */}
             <div className="h-40 sm:h-48 bg-gradient-to-r from-red-500 to-red-700 overflow-hidden relative group">
                 {isImageEditing ? (
                     <div className="h-full flex flex-col items-center justify-center p-4 bg-black bg-opacity-70">
@@ -274,8 +273,6 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                     </div>
                 )}
             </div>
-
-            {/* Content Section */}
             <div className="p-4 sm:p-6">
                 <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">

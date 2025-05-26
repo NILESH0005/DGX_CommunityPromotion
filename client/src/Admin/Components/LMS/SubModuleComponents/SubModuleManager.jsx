@@ -288,7 +288,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
         // Client-side validation
         const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf',
             '.doc', '.docx', '.ppt', '.pptx', '.mp4',
-            '.mov', '.ipynb'];
+            '.mov', '.ipynb', '.py'];
         const fileExt = file.name.split('.').pop().toLowerCase();
 
         if (!allowedExtensions.includes(`.${fileExt}`)) {

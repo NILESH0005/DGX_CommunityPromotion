@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const filetypes = /jpeg|jpg|png|gif|pdf|doc|docx|ppt|pptx|mp4|mov|ipynb/;
+  const filetypes = /jpeg|jpg|png|gif|pdf|doc|docx|ppt|pptx|mp4|mov|ipynb|py/;
   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
   
   // Special handling for IPYNB files
