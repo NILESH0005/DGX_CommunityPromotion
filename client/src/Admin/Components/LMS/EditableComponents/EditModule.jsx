@@ -108,43 +108,36 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                 payload,
                 headers
             );
-            console.log("reessppoonnssee", response);
-
 
             if (response?.success) {
-                if (response?.success) {
-                    const updatedModule = {
-                        ...prev,
-                        ...editedModule,
-                        ...response.data,
-                        ModuleName: response.data.ModuleName || prev.ModuleName,
-                        ModuleDescription: response.data.ModuleDescription || prev.ModuleDescription,
-                        ModuleImage: response.data.ModuleImage || prev.ModuleImage
-                    };
+                const updatedModule = {
+                    ...editedModule,
+                    ...response.data,
+                    ModuleName: response.data.ModuleName || editedModule.ModuleName,
+                    ModuleDescription: response.data.ModuleDescription || editedModule.ModuleDescription,
+                    ModuleImage: response.data.ModuleImage || editedModule.ModuleImage
+                };
 
-                    setIsEditing(false);
-                    setIsImageEditing(false);
-                    setNewImageFile(null);
+                setEditedModule(updatedModule);
 
-                    if (response.data.ModuleImage) {
-                        if (typeof response.data.ModuleImage === 'string') {
-                            setImagePreview(response.data.ModuleImage);
-                        } else if (response.data.ModuleImage.data) {
-                            setImagePreview(`data:image/jpeg;base64,${response.data.ModuleImage.data}`);
-                        }
-                    } else if (!newImageFile) {
-                        setImagePreview(null);
+                if (response.data.ModuleImage) {
+                    if (typeof response.data.ModuleImage === 'string') {
+                        setImagePreview(response.data.ModuleImage);
+                    } else if (response.data.ModuleImage.data) {
+                        setImagePreview(`data:image/jpeg;base64,${response.data.ModuleImage.data}`);
                     }
-
-                    // Reset editing states
-                    setIsEditing(false);
-                    setIsImageEditing(false);
-                    setNewImageFile(null);
+                } else if (!newImageFile) {
+                    setImagePreview(null);
                 }
+
+                // Reset editing states
+                setIsEditing(false);
+                setIsImageEditing(false);
+                setNewImageFile(null);
 
                 Swal.fire({
                     title: "Success",
-                    text: "Moduliiiie updated successfully",
+                    text: "Module updated successfully",
                     icon: "success",
                     timer: 1500,
                     showConfirmButton: false
