@@ -185,14 +185,9 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
     };
 
     return (
-<<<<<<< HEAD
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-300 w-full border border-gray-200 dark:border-gray-700">
-            <div className="h-40 sm:h-48 bg-gradient-to-r from-red-500 to-red-700 overflow-hidden relative group">
-=======
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-300 w-full border border-gray-200 dark:border-gray-700 flex flex-col h-full">
             {/* Image Section - Fixed height */}
             <div className="h-48 bg-gradient-to-r from-red-500 to-red-700 overflow-hidden relative group">
->>>>>>> 0d869bd0bf4d8d5fa2769e5e07e42f388fa20ae7
                 {isImageEditing ? (
                     <div className="h-full flex flex-col items-center justify-center p-4 bg-black bg-opacity-70">
                         {imagePreview ? (
@@ -288,27 +283,6 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                     </div>
                 )}
             </div>
-<<<<<<< HEAD
-            <div className="p-4 sm:p-6">
-                <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1">
-                        {isEditing ? (
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label htmlFor="ModuleName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Module Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="ModuleName"
-                                        name="ModuleName"
-                                        value={editedModule.ModuleName}
-                                        onChange={handleChange}
-                                        className="w-full border border-DGXgreen dark:border-DGXgreen dark:bg-DGXblue dark:text-DGXwhite p-2 rounded-md focus:ring-2 focus:ring-DGXgreen focus:border-DGXgreen transition-all duration-200"
-                                        placeholder="Module Name"
-                                        required
-                                    />
-=======
 
             {/* Content Section - Flex-grow to take remaining space */}
             <div className="p-4 sm:p-6 flex-grow flex flex-col">
@@ -348,7 +322,6 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                             {error && (
                                 <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-md text-sm animate-fade-in">
                                     {error}
->>>>>>> 0d869bd0bf4d8d5fa2769e5e07e42f388fa20ae7
                                 </div>
                             )}
                             <div className="flex gap-2 flex-wrap">
