@@ -1,40 +1,44 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import ApiContext from '../../context/ApiContext';
-import ByteArrayImage from '../../utils/ByteArrayImage';
+import React, { useState, useEffect, useContext } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import ApiContext from "../../context/ApiContext";
+import ByteArrayImage from "../../utils/ByteArrayImage";
+import ProgressBar from "./ProgressBar";
 
 const SubModuleCard = () => {
   const { moduleId } = useParams();
   const [filteredSubModules, setFilteredSubModules] = useState([]);
-  const [moduleName, setModuleName] = useState('');
+  const [moduleName, setModuleName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { fetchData } = useContext(ApiContext);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAllSubModules = async () => { 
+    const fetchAllSubModules = async () => {
       try {
         setLoading(true);
         setError(null);
         const [subModulesResponse, modulesResponse] = await Promise.all([
           fetchData("dropdown/getSubModules", "GET"),
-          fetchData("dropdown/getModules", "GET")
+          fetchData("dropdown/getModules", "GET"),
         ]);
 
         if (subModulesResponse?.success && modulesResponse?.success) {
           const filtered = subModulesResponse.data.filter(
-            subModule => subModule.ModuleID?.toString() === moduleId
+            (subModule) => subModule.ModuleID?.toString() === moduleId
           );
           setFilteredSubModules(filtered);
-          
-          // Find the module name
+
           const currentModule = modulesResponse.data.find(
-            module => module.ModuleID?.toString() === moduleId
+            (module) => module.ModuleID?.toString() === moduleId
           );
-          setModuleName(currentModule?.ModuleName || '');
+          setModuleName(currentModule?.ModuleName || "");
         } else {
-          setError(subModulesResponse?.message || modulesResponse?.message || "Failed to fetch data");
+          setError(
+            subModulesResponse?.message ||
+              modulesResponse?.message ||
+              "Failed to fetch data"
+          );
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -46,7 +50,6 @@ const SubModuleCard = () => {
 
     fetchAllSubModules();
   }, [moduleId, fetchData]);
-  
 
   if (loading) {
     return (
@@ -54,7 +57,10 @@ const SubModuleCard = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div
+                key={index}
+                className="bg-white rounded-lg shadow-md overflow-hidden"
+              >
                 <div className="h-48 bg-gray-200 animate-pulse"></div>
                 <div className="p-6">
                   <div className="h-4 bg-gray-200 rounded w-1/4 mb-4 animate-pulse"></div>
@@ -91,25 +97,30 @@ const SubModuleCard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Added module heading */}
         {moduleName && (
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            {moduleName}
-          </h2>
+          <div className="w-full text-center mb-10">
+            <h2 className="text-4xl font-bold text-gray-800">
+              {moduleName}
+            </h2>
+            <p className="text-gray-500 mt-2 text-lg">
+              Explore the learning modules under this section
+            </p>
+          </div>
         )}
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSubModules.length > 0 ? (
             filteredSubModules.map((subModule) => (
               <div
                 key={subModule.SubModuleID}
-                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-300"
+                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                onClick={() => navigate(`/submodule/${subModule.SubModuleID}`)}
               >
                 <div className="h-40 bg-gray-100 overflow-hidden">
                   {subModule.SubModuleImage ? (
                     <ByteArrayImage
                       byteArray={subModule.SubModuleImage.data}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
                     <div className="flex items-center justify-center text-gray-400 text-sm h-full">
@@ -118,28 +129,24 @@ const SubModuleCard = () => {
                   )}
                 </div>
                 <div className="p-6">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">
+                  <h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-blue-600 transition-colors duration-200">
                     {subModule.SubModuleName}
                   </h3>
-                  <p className="text-gray-600 text-sm">
-                    {subModule.SubModuleDescription || "No description available"}
+                  <p className="text-gray-600 text-base mb-4 line-clamp-2 hover:text-gray-800 transition-colors duration-200">
+                    {subModule.SubModuleDescription ||
+                      "No description available"}
                   </p>
                   <div className="mt-4">
-                    <button
-                      className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-300"
-                      onClick={() => {
-                        navigate(`/submodule/${subModule.SubModuleID}`);
-                      }}
-                    >
-                      View Content
-                    </button>
+                    <ProgressBar progress={subModule.progress || 20} />
                   </div>
                 </div>
               </div>
             ))
           ) : (
             <div className="col-span-full bg-white rounded-xl shadow-lg p-6 text-center">
-              <p className="text-gray-600">No submodules found for this module</p>
+              <p className="text-gray-600">
+                No submodules found for this module
+              </p>
               <button
                 onClick={() => navigate(-1)}
                 className="mt-4 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors duration-300"
