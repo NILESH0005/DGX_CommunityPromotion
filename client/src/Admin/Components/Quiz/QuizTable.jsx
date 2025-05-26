@@ -113,13 +113,17 @@ const QuizTable = () => {
     try {
       console.log("token is ", userToken);
       const endpoint = "quiz/getQuizzes";
-      const method = "GET";
+      const method = "POST";
+      const body = {};
       const headers = {
         'Content-Type': 'application/json',
         'auth-token': userToken
       };
+      console.log("finding token", headers)
 
-      const result = await fetchData(endpoint, method, headers);
+      const result = await fetchData(endpoint, method, body,  headers);
+      console.log("checking result", result);
+
       if (result?.success) {
         setQuizzes(result.data?.quizzes || []);
         return result.data?.quizzes || [];
@@ -284,16 +288,16 @@ const QuizTable = () => {
   const handleCloseModal = (updatedQuiz) => {
     setShowViewModal(false);
     setShowEditModal(false);
-    
+
     if (updatedQuiz) {
       // Update the quizzes state with the updated quiz
-      setQuizzes(prevQuizzes => 
-        prevQuizzes.map(quiz => 
+      setQuizzes(prevQuizzes =>
+        prevQuizzes.map(quiz =>
           quiz.QuizID === updatedQuiz.QuizID ? updatedQuiz : quiz
         )
       );
     }
-    
+
     setSelectedQuiz(null);
   };
 
@@ -412,85 +416,85 @@ const QuizTable = () => {
                       <td className="p-2 border text-center w-12 sticky left-0 bg-white">
                         {index + 1}
                       </td>
-                      
+
                       {visibleColumns.quizCategory && (
                         <td className="p-2 border text-center">
                           {getCategoryName(quiz.QuizCategory)}
                         </td>
                       )}
-                      
+
                       {visibleColumns.quizName && (
                         <td className="p-2 border text-center">
                           {quiz.QuizName}
                         </td>
                       )}
-                      
+
                       {visibleColumns.level && (
                         <td className="p-2 border text-center">
                           {getLevelName(quiz.QuizLevel)}
                         </td>
                       )}
-                      
+
                       {visibleColumns.duration && (
                         <td className="p-2 border text-center">
                           {quiz.QuizDuration} mins
                         </td>
                       )}
-                      
+
                       {visibleColumns.negativeMarking && (
                         <td className="p-2 border text-center">
                           {quiz.NegativeMarking ? "Yes" : "No"}
                         </td>
                       )}
-                      
+
                       {visibleColumns.startDateTime && (
                         <td className="p-2 border text-center">
                           {formatDateTime(quiz.StartDateAndTime)}
                         </td>
                       )}
-                      
+
                       {visibleColumns.endDateTime && (
                         <td className="p-2 border text-center">
                           {formatDateTime(quiz.EndDateTime)}
                         </td>
                       )}
-                      
+
                       {visibleColumns.visibility && (
                         <td className="p-2 border text-center">
                           {quiz.QuizVisibility}
                         </td>
                       )}
-                      
+
                       {visibleColumns.questions && (
                         <td className="p-2 border text-center">
                           {quiz.QuestionMappedCount || 0}
                         </td>
                       )}
-                      
+
                       {visibleColumns.participants && (
                         <td className="p-2 border text-center">
                           {quiz.UniqueParticipants || 0}
                         </td>
                       )}
-                      
+
                       {visibleColumns.attempts && (
                         <td className="p-2 border text-center">
                           {quiz.totalMaxAttempts || 0}
                         </td>
                       )}
-                      
+
                       {visibleColumns.totalMarks && (
                         <td className="p-2 border text-center">
                           {quiz.TotalMarksPerQuiz || 0}
                         </td>
                       )}
-                      
+
                       {visibleColumns.passingPercentage && (
                         <td className="p-2 border text-center">
                           {quiz.PassingPercentage || 0}%
                         </td>
                       )}
-                      
+
                       {visibleColumns.actions && (
                         <td className="p-2 border text-center">
                           <div className="flex justify-center items-center gap-2 whitespace-nowrap">

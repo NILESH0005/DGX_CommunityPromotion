@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post('/createQuiz', fetchUser, createQuiz)
 router.post('/deleteQuiz', fetchUser, deleteQuiz)
-router.get('/getQuizzes', fetchUser, getQuizzes)
+router.post('/getQuizzes', fetchUser, getQuizzes)
 router.get('/getLeaderboardRanking', fetchUser, getLeaderboardRanking)
 router.post('/createQuestion', fetchUser, createQuestion)
 router.get('/getQuestion', fetchUser, getQuestion)

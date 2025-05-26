@@ -37,6 +37,7 @@ export const databaseUserVerification = async (req, res) => {
 
   try {
     const userEmail = req.body.email;
+    console.log("userEmail", userEmail);
     // Connect to the database
     connectToDatabase(async (err, conn) => {
       if (err) {
@@ -86,7 +87,7 @@ export const databaseUserVerification = async (req, res) => {
                 // console.log(checkRows[0].Column0)
 
                 if (checkRows[0].userReferCount === 0) {
-                  const referCount = rows[0].Category === "F" ? 10 : 2;
+                  const referCount = rows[0].Category === "Faculty" ? 10 : 2;
                   // Update user record with new password, date, and referral code
                   const updateQuery = `UPDATE Community_User SET Password = ?, AuthLstEdit = ?, editOnDt = GETDATE(), ReferalNumber = ?, ReferalNumberCount = ? WHERE isnull(delStatus,0)=0 and  EmailId = ?`;
                   await queryAsync(conn, updateQuery, [
