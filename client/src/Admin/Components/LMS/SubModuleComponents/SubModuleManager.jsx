@@ -288,7 +288,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
         // Client-side validation
         const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf',
             '.doc', '.docx', '.ppt', '.pptx', '.mp4',
-            '.mov', '.ipynb'];
+            '.mov', '.ipynb', '.py'];
         const fileExt = file.name.split('.').pop().toLowerCase();
 
         if (!allowedExtensions.includes(`.${fileExt}`)) {
@@ -459,10 +459,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                 errors={errors}
                 setErrors={setErrors}
             />
-
-            {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Submodule List */}
                 <div className="lg:col-span-1">
                     <SubModuleList
                         subModules={subModules}
