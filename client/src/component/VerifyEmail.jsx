@@ -60,7 +60,8 @@ const VerifyEmail = () => {
     const method = "POST";
     const headers = { "Content-Type": "application/json" };
     const body = { email: email };
-    setLoading(true);
+    console.log("bosy is ", body);
+    // setLoading(true);
 
     try {
       const data = await fetchData(endpoint, method, body, headers);

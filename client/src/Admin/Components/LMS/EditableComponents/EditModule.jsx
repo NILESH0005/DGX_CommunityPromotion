@@ -81,7 +81,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
             text: "Are you sure you want to update this module?",
             icon: "question",
             showCancelButton: true,
-            confirmButtonText: "Yes, update it",
+            confirmButtonText: "Yes",
             cancelButtonText: "Cancel",
         });
 
@@ -93,7 +93,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
         const payload = {
             ModuleName: editedModule.ModuleName,
             ModuleDescription: editedModule.ModuleDescription,
-            ModuleImage: newImageFile
+            ...(newImageFile && { ModuleImage: newImageFile })
         };
 
         const headers = {
@@ -108,28 +108,43 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                 payload,
                 headers
             );
+            console.log("reessppoonnssee", response);
+
 
             if (response?.success) {
-                setEditedModule(prev => ({
-                    ...prev,
-                    ModuleName: response.data.ModuleName || prev.ModuleName,
-                    ModuleDescription: response.data.ModuleDescription || prev.ModuleDescription,
-                    ModuleImage: response.data.ModuleImage || prev.ModuleImage
-                }));
+                if (response?.success) {
+                    const updatedModule = {
+                        ...prev,
+                        ...editedModule,
+                        ...response.data,
+                        ModuleName: response.data.ModuleName || prev.ModuleName,
+                        ModuleDescription: response.data.ModuleDescription || prev.ModuleDescription,
+                        ModuleImage: response.data.ModuleImage || prev.ModuleImage
+                    };
 
-                setIsEditing(false);
-                setIsImageEditing(false);
-                setNewImageFile(null);
-                
-                if (response.data.ModuleImage) {
-                    setImagePreview(`data:image/jpeg;base64,${response.data.ModuleImage.data}`);
-                } else if (!newImageFile) {
-                    setImagePreview(null);
+                    setIsEditing(false);
+                    setIsImageEditing(false);
+                    setNewImageFile(null);
+
+                    if (response.data.ModuleImage) {
+                        if (typeof response.data.ModuleImage === 'string') {
+                            setImagePreview(response.data.ModuleImage);
+                        } else if (response.data.ModuleImage.data) {
+                            setImagePreview(`data:image/jpeg;base64,${response.data.ModuleImage.data}`);
+                        }
+                    } else if (!newImageFile) {
+                        setImagePreview(null);
+                    }
+
+                    // Reset editing states
+                    setIsEditing(false);
+                    setIsImageEditing(false);
+                    setNewImageFile(null);
                 }
 
                 Swal.fire({
                     title: "Success",
-                    text: "Module updated successfully",
+                    text: "Moduliiiie updated successfully",
                     icon: "success",
                     timer: 1500,
                     showConfirmButton: false
