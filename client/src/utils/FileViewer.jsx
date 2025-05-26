@@ -83,8 +83,9 @@ const PowerPointRenderer = ({ arrayBuffer }) => {
   );
 };
 
-const FileViewer = ({ fileUrl, className }) => {
+const FileViewer = ({ fileUrl, className = "" }) => {
   const [numPages, setNumPages] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [pdfError, setPdfError] = useState(null);
   const [notebookContent, setNotebookContent] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -92,6 +93,7 @@ const FileViewer = ({ fileUrl, className }) => {
   const [fileContent, setFileContent] = useState(null);
   const [fileType, setFileType] = useState(null);
   const [fileData, setFileData] = useState(null);
+  const [pdfScale, setPdfScale] = useState(1.2);
   const htmlToReactParser = new HtmlToReactParser();
 
   const fileExtension = fileUrl?.split(".").pop()?.toLowerCase() || "";
@@ -109,10 +111,10 @@ const FileViewer = ({ fileUrl, className }) => {
   const renderDownloadButton = () => (
     <button
       onClick={handleDownload}
-      className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+      className="absolute top-4 right-4 z-10 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
     >
       <svg
-        className="w-5 h-5 mr-2"
+        className="w-4 h-4 mr-2"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -129,9 +131,51 @@ const FileViewer = ({ fileUrl, className }) => {
     </button>
   );
 
+  const renderPdfControls = () => (
+    <div className="sticky top-0 z-20 bg-white border-b border-gray-200 p-4 flex items-center justify-between shadow-sm">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage <= 1}
+          className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Previous
+        </button>
+        <span className="text-sm text-gray-600">
+          Page {currentPage} of {numPages}
+        </span>
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, numPages))}
+          disabled={currentPage >= numPages}
+          className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+      </div>
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={() => setPdfScale(prev => Math.max(prev - 0.2, 0.5))}
+          className="px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+        >
+          -
+        </button>
+        <span className="text-sm text-gray-600 min-w-12 text-center">
+          {Math.round(pdfScale * 100)}%
+        </span>
+        <button
+          onClick={() => setPdfScale(prev => Math.min(prev + 0.2, 3))}
+          className="px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
     setPdfError(null);
+    setCurrentPage(1);
   };
 
   const onDocumentLoadError = (error) => {
@@ -149,6 +193,9 @@ const FileViewer = ({ fileUrl, className }) => {
             font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
           }
           .docx-wrapper table {
             border-collapse: collapse;
@@ -186,10 +233,8 @@ const FileViewer = ({ fileUrl, className }) => {
 
   const processPptx = async (arrayBuffer) => {
     return (
-      <div className="w-full h-full flex flex-col">
-        <div className="flex-1 min-h-[500px] overflow-auto">
-          <PowerPointRenderer arrayBuffer={arrayBuffer} />
-        </div>
+      <div className="w-full h-full flex flex-col items-center justify-center">
+        <PowerPointRenderer arrayBuffer={arrayBuffer} />
       </div>
     );
   };
@@ -211,19 +256,27 @@ const FileViewer = ({ fileUrl, className }) => {
           .xlsx-wrapper {
             overflow-x: auto;
             font-family: Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
           }
           .xlsx-wrapper table {
             border-collapse: collapse;
             width: 100%;
+            min-width: 600px;
           }
           .xlsx-wrapper th, .xlsx-wrapper td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
+            white-space: nowrap;
           }
           .xlsx-wrapper th {
             background-color: #f2f2f2;
             font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 1;
           }
           .xlsx-wrapper tr:nth-child(even) {
             background-color: #f9f9f9;
@@ -235,6 +288,20 @@ const FileViewer = ({ fileUrl, className }) => {
       return htmlToReactParser.parse(htmlWithStyles);
     } catch (err) {
       console.error("Error processing XLSX:", err);
+      throw err;
+    }
+  };
+
+  const processTextFile = async (arrayBuffer) => {
+    try {
+      const text = new TextDecoder().decode(arrayBuffer);
+      return (
+        <div className="w-full max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
+          <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto">{text}</pre>
+        </div>
+      );
+    } catch (err) {
+      console.error("Error processing text file:", err);
       throw err;
     }
   };
@@ -273,6 +340,10 @@ const FileViewer = ({ fileUrl, className }) => {
           const content = await processXlsx(arrayBuffer);
           setFileContent(content);
           setFileType("xlsx");
+        } else if (["txt", "csv", "json", "js", "ts", "html", "css", "py", "java", "cpp", "c", "md"].includes(fileType)) {
+          const content = await processTextFile(arrayBuffer);
+          setFileContent(content);
+          setFileType("text");
         } else {
           setFileType("other");
         }
@@ -289,10 +360,7 @@ const FileViewer = ({ fileUrl, className }) => {
 
   const renderNotebook = (notebook) => {
     return (
-      <div
-        className="notebook-container bg-white rounded-lg shadow"
-        style={{ minWidth: "800px" }}
-      >
+      <div className="notebook-container bg-white rounded-lg shadow" style={{ minWidth: "800px" }}>
         <div className="p-4 border-b border-gray-200">
           <h2 className="text-xl font-bold">
             {notebook.metadata?.name || "Jupyter Notebook"}
@@ -382,22 +450,21 @@ const FileViewer = ({ fileUrl, className }) => {
 
   if (error) {
     return (
-      <div
-        className={`flex flex-col items-center justify-center p-8 ${className}`}
-      >
-        <div className="text-red-500 mb-4">{error}</div>
+      <div className={`relative w-full h-full ${className}`}>
         {renderDownloadButton()}
+        <div className="flex flex-col items-center justify-center p-8 h-full">
+          <div className="text-red-500 mb-4">{error}</div>
+        </div>
       </div>
     );
   }
 
+  // Image files
   if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(fileExtension)) {
     return (
-      <div className={`flex flex-col items-center p-4 ${className}`}>
-        <div className="w-full flex justify-between items-center mb-4">
-          <div className="ml-4">{renderDownloadButton()}</div>
-        </div>
-        <div className="w-full max-w-full max-h-[80vh] overflow-auto bg-gray-100 rounded-lg flex items-center justify-center p-4">
+      <div className={`relative w-full h-full ${className}`}>
+        {renderDownloadButton()}
+        <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg p-4 overflow-auto">
           <img
             src={fileUrl}
             alt={fileName}
@@ -409,17 +476,16 @@ const FileViewer = ({ fileUrl, className }) => {
     );
   }
 
+  // PDF files - Enhanced with scrollable view and controls
   if (fileExtension === "pdf") {
     return (
-      <div className={`w-full flex flex-col ${className}`}>
-        <div className="w-full flex justify-between items-center mb-4">
-          <div className="ml-4">{renderDownloadButton()}</div>
-        </div>
-        <div className="w-full max-w-full bg-white rounded-lg shadow-md overflow-hidden">
+      <div className={`relative w-full h-full ${className}`}>
+        {renderDownloadButton()}
+        <div className="w-full h-full bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
           {pdfError ? (
-            <div className="p-8 text-center">
+            <div className="p-8 text-center h-full flex flex-col items-center justify-center">
               <div className="text-red-500 mb-4">Error loading PDF</div>
-              {renderDownloadButton()}
+              <div className="text-gray-500">{pdfError}</div>
             </div>
           ) : (
             <Document
@@ -437,24 +503,23 @@ const FileViewer = ({ fileUrl, className }) => {
                 </div>
               }
             >
-              <div className="overflow-y-auto p-4">
-                {Array.from(new Array(numPages), (el, index) => (
-                  <div
-                    key={`page_${index + 1}`}
-                    className="mb-4 border-b border-gray-200 last:border-b-0"
-                  >
+              {numPages && renderPdfControls()}
+              <div className="flex-1 overflow-y-auto bg-gray-100 p-4">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="bg-white shadow-lg">
                     <Page
-                      pageNumber={index + 1}
-                      width={800}
-                      renderTextLayer={false}
+                      pageNumber={currentPage}
+                      scale={pdfScale}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
                       loading={
-                        <div className="flex justify-center items-center h-64">
-                          Loading page {index + 1}...
+                        <div className="flex justify-center items-center h-96 w-full">
+                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                         </div>
                       }
                     />
                   </div>
-                ))}
+                </div>
               </div>
             </Document>
           )}
@@ -463,67 +528,132 @@ const FileViewer = ({ fileUrl, className }) => {
     );
   }
 
+  // DOCX files
   if (fileType === "docx") {
     return (
-      <div className={`w-full h-full flex flex-col ${className}`}>
-        <div className="w-full flex justify-between items-center mb-4">
-          <div className="ml-4">{renderDownloadButton()}</div>
-        </div>
-        <div className="flex-1 overflow-auto p-6 bg-white rounded-lg shadow">
-          {fileContent}
-        </div>
-      </div>
-    );
-  }
-
-  if (fileType === "pptx") {
-    return (
-      <div className={`w-full h-full flex flex-col ${className}`}>
-        <div className="w-full flex justify-between items-center mb-4">
-          <div className="ml-4">{renderDownloadButton()}</div>
-        </div>
-        {fileContent}
-      </div>
-    );
-  }
-
-  if (fileType === "xlsx") {
-    return (
-      <div className={`w-full h-full flex flex-col ${className}`}>
-        <div className="w-full flex justify-between items-center mb-4">
-          <div className="ml-4">{renderDownloadButton()}</div>
-        </div>
-        <div className="flex-1 overflow-auto p-4 bg-white rounded-lg shadow">
-          {fileContent}
-        </div>
-      </div>
-    );
-  }
-
-  if (fileType === "ipynb") {
-    return (
-      <div className={`w-full h-full flex flex-col ${className}`}>
-        <div className="w-full flex justify-between items-center mb-4">
-          <div className="flex-1" />
-          <div className="ml-4">{renderDownloadButton()}</div>
-        </div>
-        <div className="flex-1 overflow-auto p-4">
-          <div className="flex justify-center">
-            <div className="w-full max-w-4xl">{notebookContent}</div>
+      <div className={`relative w-full h-full ${className}`}>
+        {renderDownloadButton()}
+        <div className="w-full h-full overflow-auto bg-white rounded-lg shadow-md">
+          <div className="p-4">
+            {fileContent}
           </div>
         </div>
       </div>
     );
   }
 
+  // XLSX files
+  if (fileType === "xlsx") {
+    return (
+      <div className={`relative w-full h-full ${className}`}>
+        {renderDownloadButton()}
+        <div className="w-full h-full overflow-auto bg-white rounded-lg shadow-md">
+          <div className="p-4">
+            {fileContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Text files
+  if (fileType === "text") {
+    return (
+      <div className={`relative w-full h-full ${className}`}>
+        {renderDownloadButton()}
+        <div className="w-full h-full overflow-auto bg-white rounded-lg shadow-md">
+          <div className="p-4">
+            {fileContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PowerPoint files
+  if (fileType === "pptx") {
+    return (
+      <div className={`relative w-full h-full ${className}`}>
+        {renderDownloadButton()}
+        <div className="w-full h-full overflow-auto bg-white rounded-lg shadow-md">
+          <div className="p-4">
+            {fileContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Jupyter Notebook files
+  if (fileType === "ipynb") {
+    return (
+      <div className={`relative w-full h-full ${className}`}>
+        {renderDownloadButton()}
+        <div className="w-full h-full overflow-auto bg-gray-50 rounded-lg shadow-md">
+          <div className="p-4 flex justify-center">
+            <div className="w-full max-w-4xl">
+              {notebookContent}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Other file types
   return (
-    <div
-      className={`flex flex-col items-center justify-center p-8 ${className}`}
-    >
-      <div className="text-6xl mb-4">📁</div>
-      <h3 className="text-xl font-semibold mb-2">{fileName}</h3>
-      <p className="text-gray-500 mb-6">This file type cannot be previewed</p>
+    <div className={`relative w-full h-full ${className}`}>
       {renderDownloadButton()}
+      <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-gray-100 rounded-lg">
+        <div className="text-6xl mb-4">📁</div>
+        <h3 className="text-xl font-semibold mb-2">{fileName}</h3>
+        <p className="text-gray-500 mb-6">This file type cannot be previewed</p>
+      </div>
+    </div>
+  );
+};
+
+// Demo component to show the FileViewer in action
+const FileViewerDemo = () => {
+  const [selectedFile, setSelectedFile] = useState("");
+  
+  const sampleFiles = [
+    { name: "Sample PDF", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+    { name: "Sample Image", url: "https://via.placeholder.com/800x600/4F46E5/white?text=Sample+Image" }
+  ];
+
+  return (
+    <div className="w-full h-screen flex flex-col bg-gray-50">
+      <div className="p-4 bg-white border-b border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-800 mb-4">Enhanced File Viewer</h1>
+        <div className="flex flex-wrap gap-2">
+          {sampleFiles.map((file, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedFile(file.url)}
+              className={`px-4 py-2 rounded-lg border transition-colors ${
+                selectedFile === file.url
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {file.name}
+            </button>
+          ))}
+          <button
+            onClick={() => setSelectedFile("")}
+            className="px-4 py-2 rounded-lg border bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 p-4">
+        <FileViewer 
+          fileUrl={selectedFile} 
+          className="w-full h-full"
+        />
+      </div>
     </div>
   );
 };
