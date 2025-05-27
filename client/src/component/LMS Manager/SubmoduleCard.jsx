@@ -19,15 +19,12 @@ const SubModuleCard = () => {
         setLoading(true);
         setError(null);
         const [subModulesResponse, modulesResponse] = await Promise.all([
-          fetchData("dropdown/getSubModules", "GET"),
-          fetchData("dropdown/getModules", "GET"),
+          fetchData(`dropdown/getSubModules?moduleId=${moduleId}`, "GET"),
+          fetchData(`dropdown/getSubModules?moduleId=${moduleId}`, "GET"),
         ]);
 
         if (subModulesResponse?.success && modulesResponse?.success) {
-          const filtered = subModulesResponse.data.filter(
-            (subModule) => subModule.ModuleID?.toString() === moduleId
-          );
-          setFilteredSubModules(filtered);
+          setFilteredSubModules(subModulesResponse.data);
 
           const currentModule = modulesResponse.data.find(
             (module) => module.ModuleID?.toString() === moduleId
@@ -36,8 +33,8 @@ const SubModuleCard = () => {
         } else {
           setError(
             subModulesResponse?.message ||
-              modulesResponse?.message ||
-              "Failed to fetch data"
+            modulesResponse?.message ||
+            "Failed to fetch data"
           );
         }
       } catch (error) {
@@ -47,6 +44,7 @@ const SubModuleCard = () => {
         setLoading(false);
       }
     };
+
 
     fetchAllSubModules();
   }, [moduleId, fetchData]);

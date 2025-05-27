@@ -71,8 +71,14 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
             setError(null);
             const previewUrl = URL.createObjectURL(file);
             setImagePreview(previewUrl);
-            const compressedImage = await compressImage(file);
-            setNewImageFile(compressedImage);
+
+            // Convert to base64 string
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result.split(',')[1]; // Remove data URL prefix
+                setNewImageFile(base64String);
+            };
+            reader.readAsDataURL(file);
 
         } catch (error) {
             console.error("Image processing error:", error);
@@ -100,12 +106,19 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
 
         setIsSaving(true);
         setError(null);
-
         const payload = {
+            ModuleID: editedModule.ModuleID,
             ModuleName: editedModule.ModuleName,
             ModuleDescription: editedModule.ModuleDescription,
-            ...(newImageFile && { ModuleImage: newImageFile })
         };
+        if (newImageFile) {
+            payload.ModuleImage = {
+                data: newImageFile,
+                contentType: 'image/jpeg'
+            };
+        } else if (!imagePreview && editedModule.ModuleImage) {
+            payload.ModuleImage = null;
+        }
 
         const headers = {
             "Content-Type": "application/json",
@@ -124,28 +137,25 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                 const updatedModule = {
                     ...editedModule,
                     ...response.data,
-                    ModuleName: response.data.ModuleName || editedModule.ModuleName,
-                    ModuleDescription: response.data.ModuleDescription || editedModule.ModuleDescription,
-                    ModuleImage: response.data.ModuleImage || editedModule.ModuleImage
+                    ModuleName: response.data.ModuleName,
+                    ModuleDescription: response.data.ModuleDescription,
+                    ModuleImage: response.data.ModuleImage || null
                 };
 
                 setEditedModule(updatedModule);
 
                 if (response.data.ModuleImage) {
-                    if (typeof response.data.ModuleImage === 'string') {
-                        setImagePreview(response.data.ModuleImage);
-                    } else if (response.data.ModuleImage.data) {
-                        setImagePreview(`data:image/jpeg;base64,${response.data.ModuleImage.data}`);
-                    }
-                } else if (!newImageFile) {
+                    setImagePreview(`data:image/jpeg;base64,${response.data.ModuleImage.data}`);
+                } else {
                     setImagePreview(null);
                 }
 
-                // Reset editing states
                 setIsEditing(false);
                 setIsImageEditing(false);
                 setNewImageFile(null);
                 setShowFullDescription(false);
+
+
 
                 Swal.fire({
                     title: "Success",
@@ -155,15 +165,12 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                     showConfirmButton: false
                 });
             } else {
-                const errorMessage = response?.message || "Failed to update module";
-                setError(errorMessage);
-                Swal.fire("Error", errorMessage, "error");
+                throw new Error(response?.message || "Failed to update module");
             }
         } catch (err) {
             console.error("Error updating module:", err);
-            const message = err.message || "An error occurred while updating the module";
-            setError(message);
-            Swal.fire("Error", message, "error");
+            setError(err.message);
+            Swal.fire("Error", err.message, "error");
         } finally {
             setIsSaving(false);
         }
@@ -184,6 +191,21 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
         setShowFullDescription(!showFullDescription);
     };
 
+    const resetForm = () => {
+        setEditedModule(module);
+        setIsEditing(false);
+        setIsImageEditing(false);
+        setNewImageFile(null);
+        setImagePreview(module.ModuleImage ?
+            (typeof module.ModuleImage === 'string' ?
+                `data:image/jpeg;base64,${module.ModuleImage}` :
+                `data:image/jpeg;base64,${module.ModuleImage.data}`
+            ) : null
+        );
+        setError(null);
+        setShowFullDescription(false);
+    };
+
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-300 w-full border border-gray-200 dark:border-gray-700 flex flex-col h-full">
             {/* Image Section - Fixed height */}
@@ -197,10 +219,18 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                                 className="max-h-32 object-contain mb-4 transition-opacity duration-300"
                             />
                         ) : editedModule.ModuleImage ? (
-                            <ByteArrayImage
-                                byteArray={editedModule.ModuleImage.data}
-                                className="max-h-32 object-contain mb-4 transition-opacity duration-300"
-                            />
+                            typeof editedModule.ModuleImage === 'string' ? (
+                                <img
+                                    src={`data:image/jpeg;base64,${editedModule.ModuleImage.data}`}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                    alt="Module"
+                                />
+                            ) : editedModule.ModuleImage.data ? (
+                                <ByteArrayImage
+                                    byteArray={editedModule.ModuleImage.data}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                />
+                            ) : null
                         ) : (
                             <div className="text-gray-300 mb-4">No Image</div>
                         )}
@@ -348,6 +378,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                                 <button
                                     type="button"
                                     onClick={() => {
+                                        { resetForm }
                                         setIsEditing(false);
                                         setIsImageEditing(false);
                                         setNewImageFile(null);
@@ -368,11 +399,10 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                                 {editedModule.ModuleName}
                             </h3>
                             <div className="prose dark:prose-invert max-w-none mb-2">
-                                <div 
+                                <div
                                     ref={descriptionRef}
-                                    className={`text-gray-600 dark:text-gray-300 whitespace-pre-line text-sm sm:text-base ${
-                                        !showFullDescription ? 'line-clamp-3' : ''
-                                    }`}
+                                    className={`text-gray-600 dark:text-gray-300 whitespace-pre-line text-sm sm:text-base ${!showFullDescription ? 'line-clamp-3' : ''
+                                        }`}
                                 >
                                     {editedModule.ModuleDescription || "No description provided"}
                                 </div>

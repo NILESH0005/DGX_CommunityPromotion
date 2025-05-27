@@ -185,28 +185,28 @@ export const getQuestionGroupDropdown = async (req, res) => {
 
 // controllers/dropdown.js
 export const getModuleById = async (req, res) => {
-  let success = false;
-  const { moduleId } = req.query;
+    let success = false;
+    const { moduleId } = req.query;
 
-  if (!moduleId) {
-    return res.status(400).json({
-      success,
-      message: "Module ID is required"
-    });
-  }
-
-  try {
-    connectToDatabase(async (err, conn) => {
-      if (err) {
-        logError(err);
-        return res.status(500).json({
-          success,
-          message: "Database connection error"
+    if (!moduleId) {
+        return res.status(400).json({
+            success,
+            message: "Module ID is required"
         });
-      }
+    }
 
-      try {
-        const query = `
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError(err);
+                return res.status(500).json({
+                    success,
+                    message: "Database connection error"
+                });
+            }
+
+            try {
+                const query = `
           SELECT 
             ModuleID,
             ModuleName,
@@ -217,45 +217,45 @@ export const getModuleById = async (req, res) => {
           AND ISNULL(delStatus, 0) = 0
         `;
 
-        const results = await queryAsync(conn, query, [moduleId]);
+                const results = await queryAsync(conn, query, [moduleId]);
 
-        if (results.length === 0) {
-          return res.status(404).json({
-            success,
-            message: "Module not found"
-          });
-        }
+                if (results.length === 0) {
+                    return res.status(404).json({
+                        success,
+                        message: "Module not found"
+                    });
+                }
 
-        const moduleData = {
-          ...results[0],
-          ModuleImage: results[0].ModuleImage 
-            ? { data: results[0].ModuleImage.toString('base64') }
-            : null
-        };
+                const moduleData = {
+                    ...results[0],
+                    ModuleImage: results[0].ModuleImage
+                        ? { data: results[0].ModuleImage.toString('base64') }
+                        : null
+                };
 
-        success = true;
-        res.status(200).json({
-          success,
-          data: moduleData,
-          message: "Module fetched successfully"
+                success = true;
+                res.status(200).json({
+                    success,
+                    data: moduleData,
+                    message: "Module fetched successfully"
+                });
+            } catch (queryErr) {
+                logError(queryErr);
+                res.status(500).json({
+                    success,
+                    message: "Error fetching module"
+                });
+            } finally {
+                closeConnection();
+            }
         });
-      } catch (queryErr) {
-        logError(queryErr);
+    } catch (error) {
+        logError(error);
         res.status(500).json({
-          success,
-          message: "Error fetching module"
+            success,
+            message: "Server error"
         });
-      } finally {
-        closeConnection();
-      }
-    });
-  } catch (error) {
-    logError(error);
-    res.status(500).json({
-      success,
-      message: "Server error"
-    });
-  }
+    }
 };
 
 export const getModules = async (req, res) => {
@@ -312,15 +312,17 @@ export const getModules = async (req, res) => {
 
 export const getSubModules = async (req, res) => {
     let success = false;
+    const { moduleId } = req.query;
+
+    if (!moduleId) {
+        return res.status(400).json({ success, message: "moduleId is required" });
+    }
 
     try {
         connectToDatabase(async (err, conn) => {
             if (err) {
                 logError(err);
-                return res.status(500).json({
-                    success,
-                    message: "Database connection error"
-                });
+                return res.status(500).json({ success, message: "Database connection error" });
             }
 
             try {
@@ -332,11 +334,11 @@ export const getSubModules = async (req, res) => {
                         SubModuleDescription,
                         ModuleID
                     FROM SubModulesDetails 
-                    WHERE ISNULL(delStatus, 0) = 0
+                    WHERE ISNULL(delStatus, 0) = 0 AND ModuleID = ?
                     ORDER BY SubModuleID
                 `;
 
-                const results = await queryAsync(conn, query);
+                const results = await queryAsync(conn, query, [moduleId]);
 
                 success = true;
                 res.status(200).json({
@@ -346,22 +348,17 @@ export const getSubModules = async (req, res) => {
                 });
             } catch (queryErr) {
                 logError(queryErr);
-                res.status(500).json({
-                    success,
-                    message: "Error fetching submodules"
-                });
+                res.status(500).json({ success, message: "Error fetching submodules" });
             } finally {
                 closeConnection();
             }
         });
     } catch (error) {
         logError(error);
-        res.status(500).json({
-            success,
-            message: "Server error"
-        });
+        res.status(500).json({ success, message: "Server error" });
     }
 };
+
 
 export const getUnitsWithFiles = async (req, res) => {
     let success = false;

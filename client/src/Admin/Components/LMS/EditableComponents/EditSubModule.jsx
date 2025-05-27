@@ -192,29 +192,35 @@ const EditSubModule = ({ module, onBack }) => {
         if (!file) return;
 
         try {
+            // Validate file type
             if (!file.type.match('image.*')) {
-                setError("Only image files are allowed");
-                return;
+                throw new Error("Only image files are allowed");
             }
+
+            // Validate file size (2MB limit)
             if (file.size > 2 * 1024 * 1024) {
-                setError("Image size must be less than 2MB");
-                return;
+                throw new Error("Image size must be less than 2MB");
             }
 
             setIsCompressing(true);
             setError(null);
 
+            // Create preview
             const previewUrl = URL.createObjectURL(file);
             setImagePreview(previewUrl);
 
+            // Compress image
             const compressedImage = await compressImage(file);
             setNewImageFile(compressedImage);
 
         } catch (error) {
             console.error("Image processing error:", error);
-            setError("Failed to process image");
+            setError(error.message);
             setImagePreview(null);
             setNewImageFile(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
         } finally {
             setIsCompressing(false);
         }
@@ -241,62 +247,90 @@ const EditSubModule = ({ module, onBack }) => {
         setError(null);
 
         try {
+            // 1. Validate required fields
             if (!editedData.SubModuleName?.trim()) {
                 throw new Error("Submodule name is required");
             }
 
-            let payload;
-            let headers = { 'auth-token': userToken };
-            let isMultipart = false;
+            // 2. Ask for confirmation
+            const confirmResult = await Swal.fire({
+                title: "Confirm Update",
+                text: "Are you sure you want to update this submodule?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "Yes",
+                cancelButtonText: "Cancel",
+            });
 
-            if (newImageFile) {
-                const formData = new FormData();
-                formData.append("SubModuleName", editedData.SubModuleName);
-                formData.append("SubModuleDescription", editedData.SubModuleDescription || "");
-                if (editedData.Duration) {
-                    formData.append("Duration", editedData.Duration);
-                }
-                formData.append("SubModuleImage", newImageFile);
-                payload = formData;
-                isMultipart = true;
-            } else {
-                headers['Content-Type'] = 'application/json';
-                payload = {
-                    SubModuleName: editedData.SubModuleName,
-                    SubModuleDescription: editedData.SubModuleDescription || "",
-                    Duration: editedData.Duration || 0
-                };
-
-                if (editedData.SubModuleImage?.data) {
-                    payload.SubModuleImage = {
-                        data: editedData.SubModuleImage.data
-                    };
-                }
+            if (!confirmResult.isConfirmed) {
+                setIsSaving(false);
+                return;
             }
 
+            // 3. Prepare payload
+            const payload = new FormData(); // Use FormData for better handling of images
+            payload.append("SubModuleName", editedData.SubModuleName);
+            payload.append("SubModuleDescription", editedData.SubModuleDescription || "");
+
+            if (newImageFile) {
+                payload.append("SubModuleImage", newImageFile); // Append file directly
+            } else if (!imagePreview && editingSubmodule.SubModuleImage) {
+                payload.append("removeImage", "true"); // Signal to remove image
+            }
+
+            // 4. Set headers (FormData handles Content-Type automatically)
+            const headers = {
+                "auth-token": userToken,
+            };
+
+            // 5. Send request
             const response = await fetchData(
                 `lmsEdit/updateSubModule/${editingSubmodule.SubModuleID}`,
                 "POST",
                 payload,
                 headers,
-                isMultipart
+                true // Indicate multipart/form-data
             );
 
-            if (response?.success) {
-                setSubmodules(prev => prev.map(sub =>
-                    sub.SubModuleID === editingSubmodule.SubModuleID
-                        ? { ...sub, ...response.data }
-                        : sub
-                ));
-                handleCancelEdit();
-                Swal.fire('Success!', 'Submodule updated successfully', 'success');
-            } else {
+            if (!response?.success) {
                 throw new Error(response?.message || "Failed to update submodule");
             }
+
+            // 6. Update UI on success
+            const updatedSubmodule = {
+                ...editingSubmodule,
+                SubModuleName: response.data.SubModuleName,
+                SubModuleDescription: response.data.SubModuleDescription,
+                SubModuleImage: response.data.SubModuleImage || null,
+            };
+
+            setSubmodules(prev => prev.map(sub =>
+                sub.SubModuleID === updatedSubmodule.SubModuleID ? updatedSubmodule : sub
+            ));
+
+            setImagePreview(
+                response.data.SubModuleImage
+                    ? `data:image/jpeg;base64,${response.data.SubModuleImage.data}`
+                    : null
+            );
+
+            setIsEditing(false);
+            setIsImageEditing(false);
+            setNewImageFile(null);
+
+            // 7. Show success message
+            await Swal.fire({
+                title: "Success",
+                text: "Submodule updated successfully",
+                icon: "success",
+                timer: 1500,
+                showConfirmButton: false,
+            });
+
         } catch (err) {
-            console.error("Error:", err);
+            console.error("Error updating submodule:", err);
             setError(err.message);
-            Swal.fire('Error!', err.message, 'error');
+            await Swal.fire("Error", err.message, "error");
         } finally {
             setIsSaving(false);
         }
@@ -343,7 +377,7 @@ const EditSubModule = ({ module, onBack }) => {
                 {/* Header Section */}
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <button 
+                        <button
                             onClick={onBack}
                             className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center mt-1"
                         >
@@ -351,9 +385,9 @@ const EditSubModule = ({ module, onBack }) => {
                             Back to Modules
                         </button>
                     </div>
-                        <h1 className="text-2xl font-bold text-gray-800 dark:text-Black">
-                            Submodules for: <span className="text-red-600 dark:text-red-400">{module.ModuleName}</span>
-                        </h1>
+                    <h1 className="text-2xl font-bold text-gray-800 dark:text-Black">
+                        Submodules for: <span className="text-red-600 dark:text-red-400">{module.ModuleName}</span>
+                    </h1>
                     <button
                         onClick={handleAddSubmodule}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"

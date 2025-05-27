@@ -137,13 +137,19 @@ export const updateModule = async (req, res) => {
                 // 7. Fetch updated module
                 const fetchQuery = `
                     SELECT ModuleID, ModuleName, ModuleDescription, 
-                           AuthLstEdit, editOnDt
+                           AuthLstEdit, editOnDt, ModuleImage
                     FROM ModulesDetails
                     WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0
                 `;
 
                 const updatedModule = await queryAsync(conn, fetchQuery, [moduleId]);
-
+                const moduleData = updatedModule[0];
+                if (moduleData.ModuleImage) {
+                    moduleData.ModuleImage = {
+                        data: moduleData.ModuleImage.toString('base64'),
+                        contentType: 'image/jpeg' // Adjust based on your actual image type
+                    };
+                }
                 success = true;
                 closeConnection(conn);
                 logInfo("Module updated successfully");
@@ -336,7 +342,7 @@ export const deleteSubModule = (req, res) => {
 export const updateSubModule = async (req, res) => {
     let success = false;
 
-    // 1. Authentication and validation - handle both numeric ID and email
+    // 1. Authentication and validation
     const userId = req.user?.UserID || req.user?.id;
     if (!userId) {
         return res.status(401).json({ success, message: "User not authenticated" });
@@ -378,124 +384,136 @@ export const updateSubModule = async (req, res) => {
         }
     }
 
+    let conn; // Declare connection outside try-catch
+
     try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError("Database connection failed", err);
-                return res.status(500).json({
-                    success,
-                    message: "Failed to connect to database",
-                });
-            }
-
-            try {
-                // 4. Fetch user details - handle both numeric ID and email
-                let userQuery, userRows;
-
-                // First try to get user by numeric ID
-                if (!isNaN(Number(userId))) {
-                    userQuery = `
-                        SELECT UserID, Name, isAdmin FROM Community_User 
-                        WHERE ISNULL(delStatus, 0) = 0 AND UserID = ?
-                    `;
-                    userRows = await queryAsync(conn, userQuery, [Number(userId)]);
-                }
-
-                // If not found and userId looks like an email, try by email
-                if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
-                    userQuery = `
-                        SELECT UserID, Name, isAdmin FROM Community_User 
-                        WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?
-                    `;
-                    userRows = await queryAsync(conn, userQuery, [userId]);
-                }
-
-                if (!userRows || userRows.length === 0) {
-                    closeConnection(conn);
-                    return res.status(404).json({ success, message: "User not found" });
-                }
-
-                const user = userRows[0];
-
-                // 5. Build dynamic update query with proper image handling
-                const updateParams = [
-                    SubModuleName || null,
-                    SubModuleDescription || null,
-                    user.Name,  // AuthLstEdit
-                    new Date(),  // editOnDt
-                ];
-
-                let updateQuery = `
-                    UPDATE SubModulesDetails
-                    SET 
-                        SubModuleName = ?,
-                        SubModuleDescription = ?,
-                        AuthLstEdit = ?,
-                        editOnDt = ?
-                `;
-
-                // Add image parameter only if we have an image
-                if (imageBuffer !== null && imageBuffer !== undefined) {
-                    updateQuery += `, SubModuleImage = ?`;
-                    updateParams.push(imageBuffer);
-                }
-
-                updateQuery += ` WHERE SubModuleID = ? AND ISNULL(delStatus, 0) = 0`;
-                updateParams.push(subModuleId);
-
-                // 6. Execute update
-                const result = await queryAsync(conn, updateQuery, updateParams);
-
-                if (result.affectedRows === 0) {
-                    closeConnection(conn);
-                    return res.status(404).json({
-                        success,
-                        message: "Submodule not found or already deleted",
-                    });
-                }
-
-                // 7. Fetch updated submodule
-                const fetchQuery = `
-                    SELECT 
-                        SubModuleID, 
-                        SubModuleName, 
-                        SubModuleDescription,
-                        AuthLstEdit, 
-                        editOnDt
-                    FROM SubModulesDetails
-                    WHERE SubModuleID = ? AND ISNULL(delStatus, 0) = 0
-                `;
-
-                const updatedSubModule = await queryAsync(conn, fetchQuery, [subModuleId]);
-
-                success = true;
-                closeConnection(conn);
-                logInfo("Submodule updated successfully");
-
-                return res.status(200).json({
-                    success,
-                    data: updatedSubModule[0],
-                    message: "Submodule updated successfully",
-                });
-            } catch (queryErr) {
-                closeConnection(conn);
-                logError("Database query failed", queryErr);
-                return res.status(500).json({
-                    success,
-                    message: "Database operation failed",
-                    details: queryErr.message.includes('Conversion failed')
-                        ? "Invalid data type in database operation"
-                        : queryErr.message,
-                });
-            }
+        // Get database connection
+        conn = await new Promise((resolve, reject) => {
+            connectToDatabase((err, connection) => {
+                if (err) return reject(err);
+                resolve(connection);
+            });
         });
+
+        // Begin transaction
+        await queryAsync(conn, "BEGIN TRANSACTION");
+
+        // 4. Fetch user details - handle both numeric ID and email
+        let userQuery, userRows;
+
+        // First try to get user by numeric ID
+        if (!isNaN(Number(userId))) {
+            userQuery = `
+                SELECT UserID, Name, isAdmin FROM Community_User 
+                WHERE ISNULL(delStatus, 0) = 0 AND UserID = ?
+            `;
+            userRows = await queryAsync(conn, userQuery, [Number(userId)]);
+        }
+
+        // If not found and userId looks like an email, try by email
+        if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
+            userQuery = `
+                SELECT UserID, Name, isAdmin FROM Community_User 
+                WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?
+            `;
+            userRows = await queryAsync(conn, userQuery, [userId]);
+        }
+
+        if (!userRows || userRows.length === 0) {
+            await queryAsync(conn, "ROLLBACK");
+            closeConnection(conn);
+            return res.status(404).json({ success, message: "User not found" });
+        }
+
+        const user = userRows[0];
+
+        // 5. Build dynamic update query with proper image handling
+        const updateParams = [
+            SubModuleName || null,
+            SubModuleDescription || null,
+            user.Name,
+            new Date(),
+        ];
+
+        let updateQuery = `
+            UPDATE SubModulesDetails
+            SET 
+                SubModuleName = ?,
+                SubModuleDescription = ?,
+                AuthLstEdit = ?,
+                editOnDt = ?
+        `;
+
+        // Add image parameter only if we have an image
+        if (imageBuffer !== null && imageBuffer !== undefined) {
+            updateQuery += `, SubModuleImage = ?`;
+            updateParams.push(imageBuffer);
+        }
+
+        updateQuery += ` WHERE SubModuleID = ? AND ISNULL(delStatus, 0) = 0`;
+        updateParams.push(subModuleId);
+
+        // 6. Execute update
+        const result = await queryAsync(conn, updateQuery, updateParams);
+
+        if (result.affectedRows === 0) {
+            await queryAsync(conn, "ROLLBACK");
+            closeConnection(conn);
+            return res.status(404).json({
+                success,
+                message: "Submodule not found or already deleted",
+            });
+        }
+
+        // 7. Fetch updated submodule
+        const fetchQuery = `
+            SELECT SubModuleID, SubModuleName, SubModuleDescription, 
+                   AuthLstEdit, editOnDt, SubModuleImage
+            FROM SubModulesDetails
+            WHERE SubModuleID = ? AND ISNULL(delStatus, 0) = 0
+        `;
+
+        const updatedSubmodule = await queryAsync(conn, fetchQuery, [subModuleId]);
+        const submoduleData = updatedSubmodule[0];
+
+        // Convert image buffer to base64 if it exists
+        if (submoduleData.SubModuleImage) {
+            submoduleData.SubModuleImage = {
+                data: submoduleData.SubModuleImage.toString('base64'),
+                contentType: 'image/jpeg' // Adjust based on your actual image type
+            };
+        }
+
+        // Commit transaction
+        await queryAsync(conn, "COMMIT");
+        success = true;
+        logInfo("Submodule updated successfully");
+
+        return res.status(200).json({
+            success,
+            data: submoduleData,
+            message: "Submodule updated successfully",
+        });
+
     } catch (error) {
+        // Rollback transaction if there was an error
+        if (conn) {
+            await queryAsync(conn, "ROLLBACK").catch(rollbackErr => {
+                logError("Rollback failed", rollbackErr);
+            });
+        }
+
         logError("Unexpected error", error);
         return res.status(500).json({
             success,
             message: "Unexpected server error",
             details: error.message,
         });
+    } finally {
+        // Close connection if it exists
+        if (conn) {
+            closeConnection(conn);
+        }
     }
 };
 

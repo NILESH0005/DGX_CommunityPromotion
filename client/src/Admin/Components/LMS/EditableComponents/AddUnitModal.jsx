@@ -86,7 +86,6 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
                     showConfirmButton: false,
                     timerProgressBar: true,
                     didClose: () => {
-                        // Create a complete unit object with all required fields
                         const completeUnit = {
                             UnitID: response.data?.UnitID || Date.now(),
                             UnitName: unitData.UnitName,
