@@ -1,6 +1,6 @@
 import React from "react";
 import DynamicModuleCard from "./ModuleCard";
-// import LeaderBoard from "./LeaderBoard";
+import LeaderBoard from "./LeaderBoard";
 import { FiHelpCircle } from "react-icons/fi";
 
 const LearningPath = () => {
@@ -25,7 +25,7 @@ const LearningPath = () => {
         </div>
 
         {/* Leaderboard Section - Full width on mobile, 1/4 on desktop */}
-        {/* <div className="w-full lg:w-1/4 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 shadow-sm lg:shadow-none overflow-y-auto">
+        <div className="w-full lg:w-1/4 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 shadow-sm lg:shadow-none overflow-y-auto">
           <div className="p-4 md:p-6 sticky top-0 bg-white z-10">
             <h2 className="text-2xl md:text-3xl font-bold text-DGXblue mb-4 md:mb-6">
               Top Learners
@@ -34,7 +34,7 @@ const LearningPath = () => {
           <div className="pb-4 px-4 md:px-6">
             <LeaderBoard />
           </div>
-        </div> */}
+        </div>
       </div>
     </div>
   );
