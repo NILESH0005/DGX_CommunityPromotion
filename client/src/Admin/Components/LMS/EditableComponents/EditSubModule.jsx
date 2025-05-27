@@ -39,18 +39,19 @@ const EditSubModule = ({ module, onBack }) => {
             try {
                 setLoading(true);
                 setError(null);
+                console.log("Fetching submodules for module ID:", module.ModuleID); // Debug log
+
                 const response = await fetchData(
-                    `dropdown/getSubModules`,
+                    `dropdown/getSubModulesTo?moduleId=${module.ModuleID}`,
                     "GET",
                     { 'auth-token': userToken }
                 );
 
                 if (!response) throw new Error("No response received");
                 if (response?.success) {
-                    const filtered = Array.isArray(response.data)
-                        ? response.data.filter(sub => sub.ModuleID === module.ModuleID)
-                        : [];
-                    setSubmodules(filtered);
+                    console.log("Received submodules:", response.data); // Debug log
+                    // No need to filter if backend already filters by moduleId
+                    setSubmodules(Array.isArray(response.data) ? response.data : []);
                 } else {
                     setError(response?.message || "Failed to fetch submodules");
                 }
@@ -61,7 +62,6 @@ const EditSubModule = ({ module, onBack }) => {
                 setLoading(false);
             }
         };
-
         fetchSubmodules();
     }, [module.ModuleID, fetchData, userToken]);
 

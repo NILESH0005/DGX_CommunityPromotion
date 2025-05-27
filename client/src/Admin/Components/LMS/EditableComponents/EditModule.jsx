@@ -7,6 +7,7 @@ import { FaEdit, FaTrash, FaFolder, FaSave, FaTimes, FaUpload, FaImage, FaEllips
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
 const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
+    // console.log("sun module ", onViewSubmodules);
     const [editedModule, setEditedModule] = useState(module);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -450,7 +451,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                         </button>
                         {onViewSubmodules && (
                             <button
-                                onClick={() => onViewSubmodules(editedModule)}
+                                onClick={() => onViewSubmodules(editedModule.ModuleID)}
                                 className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors duration-200 flex items-center justify-center"
                                 data-tooltip-id="submodules-tooltip"
                                 data-tooltip-content="View Submodules"
