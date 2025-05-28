@@ -97,104 +97,84 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        const confirmResult = await Swal.fire({
+            title: "Confirm Update",
+            text: "Are you sure you want to update this module?",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Yes",
+            cancelButtonText: "Cancel",
+        });
+
+        if (!confirmResult.isConfirmed) return;
+
         setIsSaving(true);
         setError(null);
+        const payload = {
+            ModuleID: editedModule.ModuleID,
+            ModuleName: editedModule.ModuleName,
+            ModuleDescription: editedModule.ModuleDescription,
+        };
+
+        if (newImageFile) {
+            payload.ModuleImage = {
+                data: newImageFile,
+                contentType: 'image/jpeg'
+            };
+        } else if (!imagePreview && editedModule.ModuleImage) {
+            payload.ModuleImage = null;
+        }
+
+        const headers = {
+            "Content-Type": "application/json",
+            "auth-token": userToken,
+        };
 
         try {
-            if (!editedData.SubModuleName?.trim()) {
-                throw new Error("Submodule name is required");
-            }
-
-            const confirmResult = await Swal.fire({
-                title: "Confirm Update",
-                text: "Are you sure you want to update this submodule?",
-                icon: "question",
-                showCancelButton: true,
-                confirmButtonText: "Yes",
-                cancelButtonText: "Cancel",
-            });
-
-            if (!confirmResult.isConfirmed) {
-                setIsSaving(false);
-                return;
-            }
-
-            // Prepare JSON data
-            const jsonData = {
-                SubModuleName: editedData.SubModuleName,
-                SubModuleDescription: editedData.SubModuleDescription || "",
-            };
-
-            // Handle image cases
-            if (newImageFile instanceof File) {
-                // Convert the new image file to base64
-                const base64String = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result.split(',')[1]);
-                    reader.onerror = error => reject(error);
-                    reader.readAsDataURL(newImageFile);
-                });
-                jsonData.SubModuleImage = {
-                    data: base64String,
-                    contentType: newImageFile.type
-                };
-            } else if (!imagePreview && editingSubmodule?.SubModuleImage) {
-                // If we're removing the existing image
-                jsonData.SubModuleImage = null;
-            }
-
-            const headers = {
-                "auth-token": userToken,
-                "Content-Type": "application/json",
-            };
-
             const response = await fetchData(
-                `lmsEdit/updateSubModule/${editingSubmodule.SubModuleID}`,
+                `lmsEdit/updateModule/${editedModule.ModuleID}`,
                 "POST",
-                jsonData,
-                headers,
-                false // isMultipart set to false
+                payload,
+                headers
             );
 
-            if (!response?.success) {
-                throw new Error(response?.message || "Failed to update submodule");
+            if (response?.success) {
+                const updatedModule = {
+                    ...editedModule,
+                    ModuleName: response.data.ModuleName,
+                    ModuleDescription: response.data.ModuleDescription,
+                    ModuleImage: response.data.ModuleImage || null
+                };
+                setEditedModule(updatedModule);
+                setImagePreview(
+                    response.data.ModuleImage
+                        ? `data:image/jpeg;base64,${typeof response.data.ModuleImage === 'string'
+                            ? response.data.ModuleImage
+                            : response.data.ModuleImage.data}`
+                        : null
+                );
+                setNewImageFile(null);
+
+                setIsEditing(false);
+                setIsImageEditing(false);
+                setNewImageFile(null);
+                setShowFullDescription(false);
+
+                Swal.fire({
+                    title: "Success",
+                    text: "Module updated successfully",
+                    icon: "success",
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                throw new Error(response?.message || "Failed to update module");
             }
-
-            // Update the local state with the response data
-            const updatedSubmodule = {
-                ...editingSubmodule,
-                SubModuleName: response.data.SubModuleName,
-                SubModuleDescription: response.data.SubModuleDescription,
-                SubModuleImage: response.data.SubModuleImage || null,
-            };
-
-            setSubmodules(prev =>
-                prev.map(sub =>
-                    sub.SubModuleID === updatedSubmodule.SubModuleID
-                        ? updatedSubmodule
-                        : sub
-                )
-            );
-
-            // Reset editing states
-            setIsEditing(false);
-            setEditingSubmodule(null);
-            setEditedData({});
-            setImagePreview(null);
-            setNewImageFile(null);
-
-            await Swal.fire({
-                title: "Success",
-                text: "Submodule updated successfully",
-                icon: "success",
-                timer: 1500,
-                showConfirmButton: false,
-            });
-
         } catch (err) {
-            console.error("Error updating submodule:", err);
+            console.error("Error updating module:", err);
             setError(err.message);
-            await Swal.fire("Error", err.message, "error");
+            Swal.fire("Error", err.message, "error");
         } finally {
             setIsSaving(false);
         }

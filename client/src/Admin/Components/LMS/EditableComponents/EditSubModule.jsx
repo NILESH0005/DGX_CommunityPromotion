@@ -165,15 +165,15 @@ const EditSubModule = ({ module, onBack }) => {
             SubModuleImage: submodule.SubModuleImage
         });
 
-        // Handle both string and Buffer array formats
+        // Handle image preview initialization
         if (submodule.SubModuleImage?.data) {
             if (Array.isArray(submodule.SubModuleImage.data)) {
                 // Convert Buffer array to base64
                 const base64String = btoa(String.fromCharCode.apply(null, submodule.SubModuleImage.data));
-                setImagePreview(`data:image/png;base64,${base64String}`);
-            } else {
+                setImagePreview(`data:${submodule.SubModuleImage.contentType || 'image/jpeg'};base64,${base64String}`);
+            } else if (typeof submodule.SubModuleImage.data === 'string') {
                 // Assume it's already a base64 string
-                setImagePreview(`data:image/jpeg;base64,${submodule.SubModuleImage.data}`);
+                setImagePreview(`data:${submodule.SubModuleImage.contentType || 'image/jpeg'};base64,${submodule.SubModuleImage.data}`);
             }
         } else {
             setImagePreview(null);
@@ -277,10 +277,11 @@ const EditSubModule = ({ module, onBack }) => {
                 return;
             }
 
-            const jsonData = {
+            const payload = {
                 SubModuleName: editedData.SubModuleName,
                 SubModuleDescription: editedData.SubModuleDescription || "",
             };
+
             if (newImageFile instanceof File) {
                 const base64String = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -288,13 +289,15 @@ const EditSubModule = ({ module, onBack }) => {
                     reader.onerror = error => reject(error);
                     reader.readAsDataURL(newImageFile);
                 });
-                jsonData.SubModuleImage = {
+                payload.SubModuleImage = {
                     data: base64String,
                     contentType: newImageFile.type
                 };
+
             } else if (!imagePreview && editingSubmodule?.SubModuleImage) {
-                // If we're removing the existing image
-                jsonData.SubModuleImage = null;
+                payload.SubModuleImage = null;
+            } else if (editingSubmodule?.SubModuleImage) {
+                payload.SubModuleImage = editingSubmodule.SubModuleImage;
             }
 
             const headers = {
@@ -305,23 +308,26 @@ const EditSubModule = ({ module, onBack }) => {
             const response = await fetchData(
                 `lmsEdit/updateSubModule/${editingSubmodule.SubModuleID}`,
                 "POST",
-                jsonData,
-                headers,
-                false
+                payload,
+                headers
             );
-
-            console.log("reposne after editing", response);
-
+            console.log("Image payload:", payload.SubModuleImage);
 
             if (!response?.success) {
                 throw new Error(response?.message || "Failed to update submodule");
             }
 
+            // Create the updated submodule with proper image handling
             const updatedSubmodule = {
                 ...editingSubmodule,
                 SubModuleName: response.data.SubModuleName,
                 SubModuleDescription: response.data.SubModuleDescription,
-                SubModuleImage: response.data.SubModuleImage || null,
+                SubModuleImage: response.data.SubModuleImage
+                    ? {
+                        data: response.data.SubModuleImage.data,
+                        contentType: response.data.SubModuleImage.contentType || 'image/jpeg'
+                    }
+                    : null
             };
 
             setSubmodules(prev =>
@@ -332,7 +338,6 @@ const EditSubModule = ({ module, onBack }) => {
                 )
             );
 
-            // Reset editing states
             setIsEditing(false);
             setEditingSubmodule(null);
             setEditedData({});
@@ -488,10 +493,18 @@ const EditSubModule = ({ module, onBack }) => {
                                     ) : isEditing && editingSubmodule?.SubModuleID === submodule.SubModuleID ? (
                                         <>
                                             {submodule.SubModuleImage?.data ? (
-                                                <ByteArrayImage
-                                                    byteArray={submodule.SubModuleImage.data}
-                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                                                />
+                                                typeof submodule.SubModuleImage.data === 'string' ? (
+                                                    <img
+                                                        src={`data:${submodule.SubModuleImage.contentType || 'image/jpeg'};base64,${submodule.SubModuleImage.data}`}
+                                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                                        alt="Submodule"
+                                                    />
+                                                ) : (
+                                                    <ByteArrayImage
+                                                        byteArray={submodule.SubModuleImage.data}
+                                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                                    />
+                                                )
                                             ) : (
                                                 <div className="h-full flex items-center justify-center bg-gradient-to-br from-red-600 to-red-800">
                                                     <div className="text-center p-4">
@@ -516,12 +529,18 @@ const EditSubModule = ({ module, onBack }) => {
                                             </button>
                                         </>
                                     ) : submodule.SubModuleImage?.data ? (
-                                        <>
+                                        typeof submodule.SubModuleImage.data === 'string' ? (
+                                            <img
+                                                src={`data:${submodule.SubModuleImage.contentType || 'image/jpeg'};base64,${submodule.SubModuleImage.data}`}
+                                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                                alt="Submodule"
+                                            />
+                                        ) : (
                                             <ByteArrayImage
                                                 byteArray={submodule.SubModuleImage.data}
                                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                                             />
-                                        </>
+                                        )
                                     ) : (
                                         <div className="h-full flex items-center justify-center bg-gradient-to-br from-red-600 to-red-800">
                                             <p className="text-gray-200">No Image Available</p>
