@@ -448,54 +448,7 @@ export const getUnitsWithFiles = async (req, res) => {
 };
 
 
-export const getSubModulesTo = async (req, res) => {
-    let success = false;
-    const { moduleId } = req.query;
 
-    if (!moduleId) {
-        return res.status(400).json({ success, message: "moduleId is required" });
-    }
-
-    try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError(err);
-                return res.status(500).json({ success, message: "Database connection error" });
-            }
-
-            try {
-                const query = `
-                    SELECT 
-                        SubModuleID, 
-                        SubModuleName, 
-                        SubModuleImage, 
-                        SubModuleDescription,
-                        ModuleID
-                    FROM SubModulesDetails 
-                    WHERE ISNULL(delStatus, 0) = 0 
-                    ORDER BY SubModuleID
-                `;
-
-                const results = await queryAsync(conn, query, [moduleId]);
-
-                success = true;
-                res.status(200).json({
-                    success,
-                    data: results,
-                    message: "SubModules fetched successfully"
-                });
-            } catch (queryErr) {
-                logError(queryErr);
-                res.status(500).json({ success, message: "Error fetching submodules" });
-            } finally {
-                closeConnection();
-            }
-        });
-    } catch (error) {
-        logError(error);
-        res.status(500).json({ success, message: "Server error" });
-    }
-};
 
 
 

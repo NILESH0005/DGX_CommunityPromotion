@@ -1146,5 +1146,84 @@ export const addUnit = async (req, res) => {
 
 
 
+/*-----------------------progress api -------------------------*/
+
+export const recordFileView = async (req, res) => {
+    console.log("Incoming file view request");
+    let success = false;
+    const userId = req.user.id; 
+
+    try {
+        const { FileID } = req.body; 
+
+        if (!FileID) {
+            const warningMessage = "FileID is required";
+            logWarning(warningMessage);
+            return res.status(400).json({ success, message: warningMessage });
+        }
+
+        // Connect to the database
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                const errorMessage = "Database connection failed";
+                logError(err);
+                return res.status(500).json({ success: false, message: errorMessage });
+            }
+
+            try {
+                // Get minimal user details
+                const userQuery = `SELECT UserID, Name FROM Community_User 
+                                 WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+                const userRows = await queryAsync(conn, userQuery, [userId]);
+
+                if (userRows.length === 0) {
+                    closeConnection();
+                    const warningMessage = "User not found";
+                    logWarning(warningMessage);
+                    return res.status(404).json({ success: false, message: warningMessage });
+                }
+
+                const user = userRows[0];
+                
+                // Insert file view record (simplest possible)
+                const insertQuery = `
+                    INSERT INTO UserLmsProgress 
+                    (UserID, FileID, AuthAdd, AddOnDt, delStatus) 
+                    VALUES (?, ?, ?, GETDATE(), 0);
+                `;
+                
+                await queryAsync(conn, insertQuery, [
+                    user.UserID,
+                    FileID,
+                    user.Name
+                ]);
+
+                success = true;
+                closeConnection();
+                const infoMessage = "File view recorded successfully";
+                logInfo(infoMessage);
+                return res.status(200).json({ success, message: infoMessage });
+
+            } catch (queryErr) {
+                closeConnection();
+                console.error("Database Query Error:", queryErr);
+                logError(queryErr);
+                return res.status(500).json({ 
+                    success: false, 
+                    message: 'Failed to record file view' 
+                });
+            }
+        });
+    } catch (error) {
+        logError(error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
+        });
+    }
+};
+
+
+
 
 

@@ -161,15 +161,27 @@ const EditSubModule = ({ module, onBack }) => {
         setEditingSubmodule(submodule);
         setEditedData({
             SubModuleName: submodule.SubModuleName,
-            SubModuleDescription: submodule.SubModuleDescription,
-            SubModuleImage: submodule.SubModuleImage,
+            SubModuleDescription: submodule.SubModuleDescription || '',
+            SubModuleImage: submodule.SubModuleImage
         });
-        setImagePreview(
-            submodule.SubModuleImage && submodule.SubModuleImage.data
-                ? `data:image/jpeg;base64,${submodule.SubModuleImage.data}`
-                : null
-        );
+
+        // Handle both string and Buffer array formats
+        if (submodule.SubModuleImage?.data) {
+            if (Array.isArray(submodule.SubModuleImage.data)) {
+                // Convert Buffer array to base64
+                const base64String = btoa(String.fromCharCode.apply(null, submodule.SubModuleImage.data));
+                setImagePreview(`data:image/png;base64,${base64String}`);
+            } else {
+                // Assume it's already a base64 string
+                setImagePreview(`data:image/jpeg;base64,${submodule.SubModuleImage.data}`);
+            }
+        } else {
+            setImagePreview(null);
+        }
+
         setIsEditing(true);
+        setIsImageEditing(false);
+        setNewImageFile(null);
     };
 
     const handleCancelEdit = () => {
@@ -194,12 +206,10 @@ const EditSubModule = ({ module, onBack }) => {
         if (!file) return;
 
         try {
-            // Validate file type
             if (!file.type.match('image.*')) {
                 throw new Error("Only image files are allowed");
             }
 
-            // Validate file size (2MB limit)
             if (file.size > 2 * 1024 * 1024) {
                 throw new Error("Image size must be less than 2MB");
             }
@@ -211,7 +221,7 @@ const EditSubModule = ({ module, onBack }) => {
             const previewUrl = URL.createObjectURL(file);
             setImagePreview(previewUrl);
 
-            // Compress image
+            // Compress image and keep as File object for FormData
             const compressedImage = await compressImage(file);
             setNewImageFile(compressedImage);
 
@@ -249,12 +259,10 @@ const EditSubModule = ({ module, onBack }) => {
         setError(null);
 
         try {
-            // 1. Validate required fields
             if (!editedData.SubModuleName?.trim()) {
                 throw new Error("Submodule name is required");
             }
 
-            // 2. Ask for confirmation
             const confirmResult = await Swal.fire({
                 title: "Confirm Update",
                 text: "Are you sure you want to update this submodule?",
@@ -269,36 +277,46 @@ const EditSubModule = ({ module, onBack }) => {
                 return;
             }
 
-            // 3. Prepare payload
-            const payload = new FormData(); // Use FormData for better handling of images
-            payload.append("SubModuleName", editedData.SubModuleName);
-            payload.append("SubModuleDescription", editedData.SubModuleDescription || "");
-
-            if (newImageFile) {
-                payload.append("SubModuleImage", newImageFile); // Append file directly
-            } else if (!imagePreview && editingSubmodule.SubModuleImage) {
-                payload.append("removeImage", "true"); // Signal to remove image
+            const jsonData = {
+                SubModuleName: editedData.SubModuleName,
+                SubModuleDescription: editedData.SubModuleDescription || "",
+            };
+            if (newImageFile instanceof File) {
+                const base64String = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(newImageFile);
+                });
+                jsonData.SubModuleImage = {
+                    data: base64String,
+                    contentType: newImageFile.type
+                };
+            } else if (!imagePreview && editingSubmodule?.SubModuleImage) {
+                // If we're removing the existing image
+                jsonData.SubModuleImage = null;
             }
 
-            // 4. Set headers (FormData handles Content-Type automatically)
             const headers = {
                 "auth-token": userToken,
+                "Content-Type": "application/json",
             };
 
-            // 5. Send request
             const response = await fetchData(
                 `lmsEdit/updateSubModule/${editingSubmodule.SubModuleID}`,
                 "POST",
-                payload,
+                jsonData,
                 headers,
-                true // Indicate multipart/form-data
+                false
             );
+
+            console.log("reposne after editing", response);
+
 
             if (!response?.success) {
                 throw new Error(response?.message || "Failed to update submodule");
             }
 
-            // 6. Update UI on success
             const updatedSubmodule = {
                 ...editingSubmodule,
                 SubModuleName: response.data.SubModuleName,
@@ -306,21 +324,21 @@ const EditSubModule = ({ module, onBack }) => {
                 SubModuleImage: response.data.SubModuleImage || null,
             };
 
-            setSubmodules(prev => prev.map(sub =>
-                sub.SubModuleID === updatedSubmodule.SubModuleID ? updatedSubmodule : sub
-            ));
-
-            setImagePreview(
-                response.data.SubModuleImage
-                    ? `data:image/jpeg;base64,${response.data.SubModuleImage.data}`
-                    : null
+            setSubmodules(prev =>
+                prev.map(sub =>
+                    sub.SubModuleID === updatedSubmodule.SubModuleID
+                        ? updatedSubmodule
+                        : sub
+                )
             );
 
+            // Reset editing states
             setIsEditing(false);
-            setIsImageEditing(false);
+            setEditingSubmodule(null);
+            setEditedData({});
+            setImagePreview(null);
             setNewImageFile(null);
 
-            // 7. Show success message
             await Swal.fire({
                 title: "Success",
                 text: "Submodule updated successfully",
@@ -416,7 +434,7 @@ const EditSubModule = ({ module, onBack }) => {
                                                     alt="Preview"
                                                     className="max-h-24 sm:max-h-32 object-contain mb-4 transition-opacity duration-300"
                                                 />
-                                            ) : submodule.SubModuleImage ? (
+                                            ) : submodule.SubModuleImage?.data ? (
                                                 <ByteArrayImage
                                                     byteArray={submodule.SubModuleImage.data}
                                                     className="max-h-24 sm:max-h-32 object-contain mb-4 transition-opacity duration-300"
@@ -469,7 +487,7 @@ const EditSubModule = ({ module, onBack }) => {
                                         </div>
                                     ) : isEditing && editingSubmodule?.SubModuleID === submodule.SubModuleID ? (
                                         <>
-                                            {submodule.SubModuleImage ? (
+                                            {submodule.SubModuleImage?.data ? (
                                                 <ByteArrayImage
                                                     byteArray={submodule.SubModuleImage.data}
                                                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
@@ -497,7 +515,7 @@ const EditSubModule = ({ module, onBack }) => {
                                                 <FaEdit size={14} />
                                             </button>
                                         </>
-                                    ) : submodule.SubModuleImage ? (
+                                    ) : submodule.SubModuleImage?.data ? (
                                         <>
                                             <ByteArrayImage
                                                 byteArray={submodule.SubModuleImage.data}
@@ -523,7 +541,7 @@ const EditSubModule = ({ module, onBack }) => {
                                                     type="text"
                                                     id="SubModuleName"
                                                     name="SubModuleName"
-                                                    value={editedData.SubModuleName}
+                                                    value={editedData.SubModuleName || ''}
                                                     onChange={handleChange}
                                                     className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
                                                     placeholder="Submodule Name"
@@ -538,7 +556,7 @@ const EditSubModule = ({ module, onBack }) => {
                                                     ref={textareaRef}
                                                     id="SubModuleDescription"
                                                     name="SubModuleDescription"
-                                                    value={editedData.SubModuleDescription}
+                                                    value={editedData.SubModuleDescription || ''}
                                                     onChange={handleChange}
                                                     className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
                                                     placeholder="Submodule Description"

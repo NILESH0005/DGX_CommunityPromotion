@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import { useParams } from 'react-router-dom';
 import ApiContext from '../../context/ApiContext';
 import FileViewer from '../../utils/FileViewer';
+import Swal from 'sweetalert2';
+
 
 const UnitsWithFiles = () => {
   const { subModuleId } = useParams();
@@ -10,8 +12,10 @@ const UnitsWithFiles = () => {
   const [filteredUnits, setFilteredUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { fetchData } = useContext(ApiContext);
+  const { fetchData, userToken } = useContext(ApiContext);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [viewedFiles, setViewedFiles] = useState(new Set());
+
 
   useEffect(() => {
     console.log('subModuleId changed:', subModuleId, typeof subModuleId);
@@ -62,6 +66,73 @@ const UnitsWithFiles = () => {
       setSelectedFile(null);
     }
   }, [subModuleId, fetchData]);
+
+
+  const recordFileView = async (fileId, unitId) => {
+    try {
+      if (viewedFiles.has(fileId)) return;
+      const result = await Swal.fire({
+        title: 'Confirm File View',
+        text: 'Do you want to record this file view?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'OK',
+        cancelButtonText: 'CANCEL',
+      });
+
+      if (result.isConfirmed) {
+        const response = await fetchData(
+          "lmsEdit/recordFileView",
+          "POST",
+          {
+            FileID: fileId,
+            UnitID: unitId,
+            SubModuleID: subModuleId,
+          },
+          {
+            'Content-Type': 'application/json',
+            'auth-token': userToken
+          }
+        );
+
+        if (!response?.success) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: `Error recording file view: ${response?.message || 'Unknown error'}`,
+            confirmButtonText: 'OK'
+          });
+        } else {
+          setViewedFiles(prev => new Set(prev).add(fileId));
+          Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: 'File view recorded successfully',
+            confirmButtonText: 'OK'
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error recording file view:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'Something went wrong while recording file view',
+        confirmButtonText: 'OK'
+      });
+    }
+  };
+
+  const handleFileSelect = (file, unit) => {
+    setSelectedFile({
+      ...file,
+      unitName: unit.UnitName,
+      unitDescription: unit.UnitDescription
+    });
+
+    // Record the file view
+    recordFileView(file.FileID, unit.UnitID);
+  };
 
   if (!subModuleId) {
     return (
@@ -151,24 +222,23 @@ const UnitsWithFiles = () => {
                   {unit.files.map(file => (
                     <div
                       key={file.FileID}
-                      className={`py-1 px-2 rounded text-sm flex items-center ${
-                        selectedFile?.FileID === file.FileID
-                          ? "bg-gray-600 text-white"
+                      // Add this style to your file list items:
+                      className={`py-1 px-2 rounded text-sm flex items-center ${selectedFile?.FileID === file.FileID
+                        ? "bg-gray-600 text-white"
+                        : viewedFiles.has(file.FileID)
+                          ? "text-green-300 hover:text-green-200"
                           : "text-gray-300 hover:text-white"
-                      }`}
+                        }`}
+                      // In your file list rendering:
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedFile({
-                          ...file,
-                          unitName: unit.UnitName,
-                          unitDescription: unit.UnitDescription
-                        });
+                        handleFileSelect(file, unit);
                       }}
                     >
                       <span className="mr-2">
                         {file.fileType === "pdf" ? "📄" :
-                         file.fileType === "ipynb" ? "📓" :
-                         file.fileType === "docx" ? "📝" : "📁"}
+                          file.fileType === "ipynb" ? "📓" :
+                            file.fileType === "docx" ? "📝" : "📁"}
                       </span>
                       <span className="truncate">{file.FilesName}</span>
                     </div>
@@ -201,11 +271,10 @@ const UnitsWithFiles = () => {
           )}
         </div>
 
-        <div className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${
-          selectedFile?.fileType === "ipynb" ? 
-            "bg-[#f5f5f5] border border-gray-300" : 
-            "bg-white border"
-        }`}>
+        <div className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${selectedFile?.fileType === "ipynb" ?
+          "bg-[#f5f5f5] border border-gray-300" :
+          "bg-white border"
+          }`}>
           {selectedFile?.fileType === "ipynb" && (
             <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
               <div className="flex space-x-2">
@@ -219,7 +288,7 @@ const UnitsWithFiles = () => {
             </div>
           )}
           <div className={selectedFile?.fileType === "ipynb" ? "h-full pt-8" : "h-full"}>
-            <FileViewer 
+            <FileViewer
               fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile?.FilePath}`}
               className="w-full h-full"
             />

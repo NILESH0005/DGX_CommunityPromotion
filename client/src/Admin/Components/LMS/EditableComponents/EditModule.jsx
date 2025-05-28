@@ -70,16 +70,20 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
 
             setIsCompressing(true);
             setError(null);
+
+            // Create preview URL
             const previewUrl = URL.createObjectURL(file);
             setImagePreview(previewUrl);
 
-            // Convert to base64 string
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result.split(',')[1]; // Remove data URL prefix
-                setNewImageFile(base64String);
-            };
-            reader.readAsDataURL(file);
+            // Convert to base64
+            const base64String = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+
+            setNewImageFile(base64String);
 
         } catch (error) {
             console.error("Image processing error:", error);
@@ -93,85 +97,104 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        const confirmResult = await Swal.fire({
-            title: "Confirm Update",
-            text: "Are you sure you want to update this module?",
-            icon: "question",
-            showCancelButton: true,
-            confirmButtonText: "Yes",
-            cancelButtonText: "Cancel",
-        });
-
-        if (!confirmResult.isConfirmed) return;
-
         setIsSaving(true);
         setError(null);
-        const payload = {
-            ModuleID: editedModule.ModuleID,
-            ModuleName: editedModule.ModuleName,
-            ModuleDescription: editedModule.ModuleDescription,
-        };
-        if (newImageFile) {
-            payload.ModuleImage = {
-                data: newImageFile,
-                contentType: 'image/jpeg'
-            };
-        } else if (!imagePreview && editedModule.ModuleImage) {
-            payload.ModuleImage = null;
-        }
-
-        const headers = {
-            "Content-Type": "application/json",
-            "auth-token": userToken,
-        };
 
         try {
+            if (!editedData.SubModuleName?.trim()) {
+                throw new Error("Submodule name is required");
+            }
+
+            const confirmResult = await Swal.fire({
+                title: "Confirm Update",
+                text: "Are you sure you want to update this submodule?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "Yes",
+                cancelButtonText: "Cancel",
+            });
+
+            if (!confirmResult.isConfirmed) {
+                setIsSaving(false);
+                return;
+            }
+
+            // Prepare JSON data
+            const jsonData = {
+                SubModuleName: editedData.SubModuleName,
+                SubModuleDescription: editedData.SubModuleDescription || "",
+            };
+
+            // Handle image cases
+            if (newImageFile instanceof File) {
+                // Convert the new image file to base64
+                const base64String = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(newImageFile);
+                });
+                jsonData.SubModuleImage = {
+                    data: base64String,
+                    contentType: newImageFile.type
+                };
+            } else if (!imagePreview && editingSubmodule?.SubModuleImage) {
+                // If we're removing the existing image
+                jsonData.SubModuleImage = null;
+            }
+
+            const headers = {
+                "auth-token": userToken,
+                "Content-Type": "application/json",
+            };
+
             const response = await fetchData(
-                `lmsEdit/updateModule/${editedModule.ModuleID}`,
+                `lmsEdit/updateSubModule/${editingSubmodule.SubModuleID}`,
                 "POST",
-                payload,
-                headers
+                jsonData,
+                headers,
+                false // isMultipart set to false
             );
 
-            if (response?.success) {
-                const updatedModule = {
-                    ...editedModule,
-                    ...response.data,
-                    ModuleName: response.data.ModuleName,
-                    ModuleDescription: response.data.ModuleDescription,
-                    ModuleImage: response.data.ModuleImage || null
-                };
-
-                setEditedModule(updatedModule);
-
-                if (response.data.ModuleImage) {
-                    setImagePreview(`data:image/jpeg;base64,${response.data.ModuleImage.data}`);
-                } else {
-                    setImagePreview(null);
-                }
-
-                setIsEditing(false);
-                setIsImageEditing(false);
-                setNewImageFile(null);
-                setShowFullDescription(false);
-
-
-
-                Swal.fire({
-                    title: "Success",
-                    text: "Module updated successfully",
-                    icon: "success",
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            } else {
-                throw new Error(response?.message || "Failed to update module");
+            if (!response?.success) {
+                throw new Error(response?.message || "Failed to update submodule");
             }
+
+            // Update the local state with the response data
+            const updatedSubmodule = {
+                ...editingSubmodule,
+                SubModuleName: response.data.SubModuleName,
+                SubModuleDescription: response.data.SubModuleDescription,
+                SubModuleImage: response.data.SubModuleImage || null,
+            };
+
+            setSubmodules(prev =>
+                prev.map(sub =>
+                    sub.SubModuleID === updatedSubmodule.SubModuleID
+                        ? updatedSubmodule
+                        : sub
+                )
+            );
+
+            // Reset editing states
+            setIsEditing(false);
+            setEditingSubmodule(null);
+            setEditedData({});
+            setImagePreview(null);
+            setNewImageFile(null);
+
+            await Swal.fire({
+                title: "Success",
+                text: "Submodule updated successfully",
+                icon: "success",
+                timer: 1500,
+                showConfirmButton: false,
+            });
+
         } catch (err) {
-            console.error("Error updating module:", err);
+            console.error("Error updating submodule:", err);
             setError(err.message);
-            Swal.fire("Error", err.message, "error");
+            await Swal.fire("Error", err.message, "error");
         } finally {
             setIsSaving(false);
         }
@@ -197,11 +220,13 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
         setIsEditing(false);
         setIsImageEditing(false);
         setNewImageFile(null);
-        setImagePreview(module.ModuleImage ?
-            (typeof module.ModuleImage === 'string' ?
-                `data:image/jpeg;base64,${module.ModuleImage}` :
-                `data:image/jpeg;base64,${module.ModuleImage.data}`
-            ) : null
+        setImagePreview(
+            module.ModuleImage
+                ? `data:image/jpeg;base64,${typeof module.ModuleImage === 'string'
+                    ? module.ModuleImage
+                    : module.ModuleImage.data
+                }`
+                : null
         );
         setError(null);
         setShowFullDescription(false);
@@ -218,6 +243,8 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                                 src={imagePreview}
                                 alt="Preview"
                                 className="max-h-32 object-contain mb-4 transition-opacity duration-300"
+                                key={imagePreview} // Add key to force re-render
+
                             />
                         ) : editedModule.ModuleImage ? (
                             typeof editedModule.ModuleImage === 'string' ? (
@@ -233,7 +260,22 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                                 />
                             ) : null
                         ) : (
-                            <div className="text-gray-300 mb-4">No Image</div>
+                            <div className="h-full flex items-center justify-center bg-gradient-to-br from-white-600 to-white-800">
+                                {isEditing ? (
+                                    <div className="text-center p-4">
+                                        <p className="text-black-200 mb-3 text-sm">No Image Available</p>
+                                        <button
+                                            onClick={() => setIsImageEditing(true)}
+                                            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs transition-colors duration-200 shadow-md hover:shadow-lg flex items-center mx-auto"
+                                        >
+                                            <FaImage className="mr-1" />
+                                            Add Image
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <p className="text-Black-200">No Image Available</p>
+                                )}
+                            </div>
                         )}
                         <input
                             type="file"
