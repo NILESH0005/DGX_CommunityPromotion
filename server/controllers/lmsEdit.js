@@ -429,14 +429,14 @@ export const updateSubModule = async (req, res) => {
 
         // 5. Build dynamic update query with proper image handling
         let imageBuffer = null;
-                if (SubModuleImage) {
-                    if (SubModuleImage.startsWith('data:image')) {
-                        const base64Data = SubModuleImage.replace(/^data:image\/\w+;base64,/, '');
-                        imageBuffer = Buffer.from(base64Data, 'base64');
-                    } else {
-                        imageBuffer = Buffer.from(SubModuleImage, 'binary');
-                    }
-                }
+        if (SubModuleImage) {
+            if (SubModuleImage.startsWith('data:image')) {
+                const base64Data = SubModuleImage.replace(/^data:image\/\w+;base64,/, '');
+                imageBuffer = Buffer.from(base64Data, 'base64');
+            } else {
+                imageBuffer = Buffer.from(SubModuleImage, 'binary');
+            }
+        }
 
         const updateParams = [
             SubModuleName || null,
@@ -446,7 +446,7 @@ export const updateSubModule = async (req, res) => {
             new Date(),
             subModuleId
         ];
-console.log("save updateParams test",updateParams);
+        console.log("save updateParams test", updateParams);
         let updateQuery = `
             UPDATE SubModulesDetails
             SET 
@@ -469,7 +469,7 @@ console.log("save updateParams test",updateParams);
 
         // 6. Execute update
         const result = await queryAsync(conn, updateQuery, updateParams);
-console.log("save result test",result);
+        console.log("save result test", result);
         if (result.affectedRows === 0) {
             await queryAsync(conn, "ROLLBACK");
             closeConnection(conn);
@@ -1163,12 +1163,13 @@ export const addUnit = async (req, res) => {
 export const recordFileView = async (req, res) => {
     console.log("Incoming file view request");
     var success = false;
-    var infoMessage ="";
-    const userId = req.user.id; 
+    var infoMessage = "";
+    const userId = req.user.id;
 
     try {
-        const { FileID } = req.body; 
+        const { FileID } = req.body;
         let isFileRead = 0;
+        let alreadyVisitedFiles = [];
         if (!FileID) {
             const warningMessage = "FileID is required";
             logWarning(warningMessage);
@@ -1194,54 +1195,62 @@ export const recordFileView = async (req, res) => {
                 }
 
                 const user = userRows[0];
-                
+
                 const strQuery = `select UserID,FileID from UserLmsProgress where FileID = ? and isnull(delStatus,0)=0`;
                 const isFileAvail = await queryAsync(conn, strQuery, [FileID]);
-                if(isFileAvail.length !== 0){
+                console.log("file already visited", [FileID]);
+
+                if (isFileAvail.length !== 0) {
                     isFileRead = 1;
+                    alreadyVisitedFiles.push(FileID);
+
                 }
 
                 //console.log("read test",isFileAvail);
-                if(isFileRead === 0){
-                   const insertQuery = `
+                if (isFileRead === 0) {
+                    const insertQuery = `
                     INSERT INTO UserLmsProgress 
                     (UserID, FileID, AuthAdd, AddOnDt, delStatus) 
                     VALUES (?, ?, ?, GETDATE(), 0);
                 `;
-                
-                await queryAsync(conn, insertQuery, [
-                    user.UserID,
-                    FileID,
-                    user.Name
-                ]); 
-                success = true;
-                closeConnection();
-                infoMessage="File view recorded added successfully";
+
+                    await queryAsync(conn, insertQuery, [
+                        user.UserID,
+                        FileID,
+                        user.Name
+                    ]);
+                    success = true;
+                    closeConnection();
+                    infoMessage = "File view recorded added successfully";
                 }
-                else{
-                    infoMessage="File view allready recorded";
+                else {
+                    infoMessage = "File view allready recorded";
                 }
 
-                
-                 
+
+
                 logInfo(infoMessage);
-                return res.status(200).json({ success, message: infoMessage });
+                return res.status(200).json({
+                    success,
+                    message: infoMessage,
+                    alreadyVisitedFiles
+                });
 
             } catch (queryErr) {
                 closeConnection();
                 console.error("Database Query Error:", queryErr);
                 logError(queryErr);
-                return res.status(500).json({ 
-                    success: false, 
-                    message: 'Failed to record file view' 
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to record file view'
                 });
             }
         });
     } catch (error) {
         logError(error);
-        return res.status(500).json({ 
-            success: false, 
-            message: 'Internal server error' 
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error'
         });
     }
 };

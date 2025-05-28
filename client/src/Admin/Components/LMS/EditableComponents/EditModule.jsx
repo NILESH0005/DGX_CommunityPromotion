@@ -39,7 +39,6 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
     }, [editedModule.ModuleDescription, isEditing]);
 
     useEffect(() => {
-        // Check if description needs clamping
         if (descriptionRef.current && !isEditing) {
             const element = descriptionRef.current;
             setIsDescriptionClamped(element.scrollHeight > element.clientHeight);
@@ -126,7 +125,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
             payload.ModuleImage = null;
         }
         console.log("sssssss", payload.ModuleImage.data);
-        
+
 
         const headers = {
             "Content-Type": "application/json",
@@ -140,25 +139,26 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                 payload,
                 headers
             );
-            console.log("response is",response)
+            console.log("response is", response)
 
             if (response?.success) {
                 const updatedModule = {
                     ...editedModule,
                     ModuleName: response.data.ModuleName,
                     ModuleDescription: response.data.ModuleDescription,
-                    ModuleImage: response.data.ModuleImage || null
+                    ModuleImage: response.data.ModuleImage.data 
                 };
+                console.log("udate module",updatedModule);
+                
                 setEditedModule(updatedModule);
                 setImagePreview(
-                    response.data.ModuleImage
+                    response.data.ModuleImage.data
                         ? `data:image/jpeg;base64,${typeof response.data.ModuleImage === 'string'
-                            ? response.data.ModuleImage
+                            ? response.data.ModuleImage.data
                             : response.data.ModuleImage.data}`
                         : null
                 );
                 setNewImageFile(null);
-
                 setIsEditing(false);
                 setIsImageEditing(false);
                 setNewImageFile(null);

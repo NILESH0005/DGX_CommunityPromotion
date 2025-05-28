@@ -71,33 +71,34 @@ const UnitsWithFiles = () => {
   const recordFileView = async (fileId, unitId) => {
     try {
       if (viewedFiles.has(fileId)) return;
-      
+
 
       // if (result.isConfirmed) {
-        const response = await fetchData(
-          "lmsEdit/recordFileView",
-          "POST",
-          {
-            FileID: fileId,
-            UnitID: unitId,
-            SubModuleID: subModuleId,
-          },
-          {
-            'Content-Type': 'application/json',
-            'auth-token': userToken
-          }
-        );
-
-        if (!response?.success) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: `Error recording file view: ${response?.message || 'Unknown error'}`,
-            confirmButtonText: 'OK'
-          });
-        } else {
-          setViewedFiles(prev => new Set(prev).add(fileId));
+      const response = await fetchData(
+        "lmsEdit/recordFileView",
+        "POST",
+        {
+          FileID: fileId,
+          UnitID: unitId,
+          SubModuleID: subModuleId,
+        },
+        {
+          'Content-Type': 'application/json',
+          'auth-token': userToken
         }
+      );
+      console.log("recorded files",response)
+
+      if (!response?.success) {
+        // Swal.fire({
+        //   icon: 'error',
+        //   title: 'Error',
+        //   text: `Error recording file view: ${response?.message || 'Unknown error'}`,
+        //   confirmButtonText: 'OK'
+        // });
+      } else {
+        setViewedFiles(prev => new Set(prev).add(fileId));
+      }
       // }
     } catch (error) {
       console.error("Error recording file view:", error);
@@ -117,7 +118,6 @@ const UnitsWithFiles = () => {
       unitDescription: unit.UnitDescription
     });
 
-    // Record the file view
     recordFileView(file.FileID, unit.UnitID);
   };
 
