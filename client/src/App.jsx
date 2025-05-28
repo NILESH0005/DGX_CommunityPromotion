@@ -132,7 +132,6 @@ function App() {
         <div className="flex-grow ">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/" element={<BeforeLogin />} />
             <Route exact path="/VerifyEmail" element={<VerifyEmail />} />
             <Route exact path="/Register" element={<Register />} />
             <Route path="/SignInn" element={<SignInn />} />
