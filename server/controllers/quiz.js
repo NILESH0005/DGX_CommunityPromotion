@@ -29,6 +29,8 @@ export const createQuiz = async (req, res) => {
       type,
       quizVisibility,
       quizImage,
+      refId,
+      refName
     } = req.body;
 
     console.log("Request Body:", req.body);
@@ -80,13 +82,15 @@ export const createQuiz = async (req, res) => {
         const user = userRows[0];
         const authAdd = user.Name;
         const authDel = null;
-        const authLstEdit = null;
-
+        //const AuthLstEdt = "Rohit"//userRows[1];
+        // const refId = 0;
+        // const refName = 'quiz';
         // Insert quiz data with image
         const quizQuery = `
           INSERT INTO QuizDetails 
-          (QuizCategory, QuizName, QuizLevel, QuizDuration, NegativeMarking, StartDateAndTime, EndDateTime, QuizVisibility, QuizImage, AuthAdd, AuthDel, AuthLstEdit, AddOnDt, delStatus) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 0);
+          (QuizCategory, QuizName, QuizLevel, QuizDuration, NegativeMarking, StartDateAndTime, EndDateTime, QuizVisibility, QuizImage, AuthAdd,
+            AddOnDt, delStatus,refId,refName) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 0,?,?);
         `;
         console.log("Executing query: ", quizQuery);
 
@@ -101,8 +105,8 @@ export const createQuiz = async (req, res) => {
           quizVisibility,
           quizImage,
           authAdd,
-          authDel,
-          authLstEdit,
+          refId,
+          refName
         ]);
 
         // Fetch last inserted Quiz ID
@@ -630,7 +634,7 @@ export const deleteQuestion = async (req, res) => {
             delStatus = 1, 
             delOnDt = GETDATE(), 
             AuthDel = ?,
-            AuthLstEdit = ?
+            AuthLstEdt = ?
           WHERE id = ? AND (delStatus IS NULL OR delStatus = 0)`;
 
         const questionDeleteResult = await queryAsync(conn, deleteQuestionQuery, [
@@ -646,7 +650,7 @@ export const deleteQuestion = async (req, res) => {
             delStatus = 1, 
             delOnDt = GETDATE(), 
             AuthDel = ?,
-            AuthLstEdit = ?
+            AuthLstEdt = ?
           WHERE question_id = ? AND (delStatus IS NULL OR delStatus = 0)`;
 
         const optionsDeleteResult = await queryAsync(conn, deleteOptionsQuery, [
@@ -1348,7 +1352,7 @@ export const updateQuiz = async (req, res) => {
       StartDateAndTime,
       EndDateTime,
       QuizVisibility,
-      AuthLstEdit,
+      AuthLstEdt,
     } = req.body;
 
     if (!QuizID) {
@@ -1393,7 +1397,7 @@ export const updateQuiz = async (req, res) => {
             StartDateAndTime = CONVERT(datetime, ?),
             EndDateTime = CONVERT(datetime, ?),
             QuizVisibility = ?,
-            AuthLstEdit = ?,
+            AuthLstEdt = ?,
             editOnDt = GETDATE()
           WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
         `;
@@ -1407,7 +1411,7 @@ export const updateQuiz = async (req, res) => {
           new Date(StartDateAndTime).toISOString(),
           new Date(EndDateTime).toISOString(),
           QuizVisibility,
-          AuthLstEdit || req.user.username || "Unknown", // Fallback to current user if not provided
+          AuthLstEdt || req.user.username || "Unknown", // Fallback to current user if not provided
           QuizID,
         ];
 
@@ -1532,7 +1536,7 @@ export const updateQuestion = async (req, res) => {
       image,
       question_type = 0,
       options = [],
-      AuthLstEdit,
+      AuthLstEdt,
     } = req.body;
 
     if (!id) {
@@ -1647,7 +1651,7 @@ export const updateQuestion = async (req, res) => {
             group_id = ?,
             image = ?,
             question_type = ?,
-            AuthLstEdit = ?,
+            AuthLstEdt = ?,
             editOnDt = GETDATE()
           WHERE id = ?
         `,
@@ -1657,7 +1661,7 @@ export const updateQuestion = async (req, res) => {
             group_id,
             image || null,
             question_type,
-            AuthLstEdit || req.user.email || "Unknown",
+            AuthLstEdt || req.user.email || "Unknown",
             id,
           ]
         );
@@ -1692,7 +1696,7 @@ export const updateQuestion = async (req, res) => {
               option_text = ?,
               is_correct = ?,
               image = ?,
-              AuthLstEdit = ?,
+              AuthLstEdt = ?,
               editOnDt = GETDATE()
             WHERE id = ? AND question_id = ?
           `,
@@ -1700,7 +1704,7 @@ export const updateQuestion = async (req, res) => {
               option.option_text.trim(),
               option.is_correct ? 1 : 0,
               option.image || null,
-              AuthLstEdit || req.user.email || "Unknown",
+              AuthLstEdt || req.user.email || "Unknown",
               option.id,
               id,
             ]
@@ -1714,7 +1718,7 @@ export const updateQuestion = async (req, res) => {
             `
             INSERT INTO QuestionOptions (
               question_id, option_text, is_correct, image,
-              AuthAdd, AuthLstEdit, AddOnDt
+              AuthAdd, AuthLstEdt, AddOnDt
             ) VALUES (?, ?, ?, ?, ?, ?, GETDATE())
           `,
             [
@@ -1722,8 +1726,8 @@ export const updateQuestion = async (req, res) => {
               option.option_text.trim(),
               option.is_correct ? 1 : 0,
               option.image || null,
-              AuthLstEdit || req.user.email || "Unknown",
-              AuthLstEdit || req.user.email || "Unknown",
+              AuthLstEdt || req.user.email || "Unknown",
+              AuthLstEdt || req.user.email || "Unknown",
             ]
           );
         }
@@ -1736,13 +1740,13 @@ export const updateQuestion = async (req, res) => {
             UPDATE QuestionOptions SET
               delStatus = 1,
               AuthDel = ?,
-              AuthLstEdit = ?,
+              AuthLstEdt = ?,
               delOnDt = GETDATE()
             WHERE id = ?
           `,
             [
-              AuthLstEdit || req.user.email || "Unknown",
-              AuthLstEdit || req.user.email || "Unknown",
+              AuthLstEdt || req.user.email || "Unknown",
+              AuthLstEdt || req.user.email || "Unknown",
               optionId,
             ]
           );

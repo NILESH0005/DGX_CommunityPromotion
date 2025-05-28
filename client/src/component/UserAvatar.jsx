@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef, useEffect } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import { images } from '../../public/index.js';
 import { FaCamera, FaCheck, FaTimes, FaSpinner } from 'react-icons/fa';
 import ApiContext from '../context/ApiContext.jsx';
@@ -8,28 +8,28 @@ const UserAvatar = ({ user, onImageUpdate }) => {
   const { userToken, fetchData, setUser } = useContext(ApiContext);
   const [previewImage, setPreviewImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentProfileImage, setCurrentProfileImage] = useState(user?.ProfilePicture || images.defaultProfile);
   const fileInputRef = useRef(null);
 
-  // Update local state when user prop changes
-  useEffect(() => {
-    if (user?.ProfilePicture) {
-      setCurrentProfileImage(user.ProfilePicture);
-    }
-  }, [user?.ProfilePicture]);
-
   const getProfileImageUrl = () => {
-    // First priority: Show the preview image if it exists
+    // First show preview if available
     if (previewImage) return previewImage;
     
-    // Second priority: Show the current user's profile picture
-    return currentProfileImage;
+    // Then show user's profile picture with cache busting
+    if (user?.ProfilePicture) {
+      // Check if URL already has query params
+      const separator = user.ProfilePicture.includes('?') ? '&' : '?';
+      return `${user.ProfilePicture}${separator}ts=${Date.now()}`;
+    }
+    
+    // Fallback to default image
+    return images.defaultProfile;
   };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       Swal.fire({
@@ -40,6 +40,7 @@ const UserAvatar = ({ user, onImageUpdate }) => {
       return;
     }
 
+    // Validate file size
     if (file.size > 5 * 1024 * 1024) {
       Swal.fire({
         icon: 'error',
@@ -52,6 +53,7 @@ const UserAvatar = ({ user, onImageUpdate }) => {
     setIsLoading(true);
 
     try {
+      // Create preview
       const reader = new FileReader();
       reader.onload = (event) => {
         setPreviewImage(event.target.result);
@@ -75,31 +77,44 @@ const UserAvatar = ({ user, onImageUpdate }) => {
     setIsLoading(true);
     
     try {
-      const response = await fetchData('userprofile/uploadUserAvatar', 'POST', {
-        profileImage: previewImage
-      }, {
-        'Content-Type': 'application/json',
+      // Convert base64 to blob if needed
+      let imageToUpload = previewImage;
+      if (previewImage.startsWith('data:')) {
+        const blob = await fetch(previewImage).then(r => r.blob());
+        imageToUpload = blob;
+      }
+
+      const formData = new FormData();
+      formData.append('profileImage', imageToUpload);
+
+      const response = await fetchData('userprofile/updateProfilePicture', 'POST', formData, {
         'auth-token': userToken
       });
-  
-      if (response.success) {
-        // Update the local state first to immediately show the new image
-        setCurrentProfileImage(response.data.imageUrl);
-        
-        // Update the user context - this will automatically update Navbar
+
+      if (response?.success) {
+        // Ensure we have the full URL
+        let imageUrl = response.data.imageUrl;
+        if (!imageUrl.startsWith('http')) {
+          imageUrl = `${process.env.REACT_APP_API_URL}/${imageUrl}`;
+        }
+
+        // Update user context
         if (setUser) {
           setUser(prev => ({
             ...prev,
-            ProfilePicture: response.data.imageUrl
+            ProfilePicture: imageUrl
           }));
         }
         
+        // Clear preview
         setPreviewImage(null);
         
+        // Notify parent if needed
         if (onImageUpdate) {
-          onImageUpdate(response.data.imageUrl);
+          onImageUpdate(imageUrl);
         }
         
+        // Show success message
         Swal.fire({
           icon: 'success',
           title: 'Success!',
@@ -108,7 +123,7 @@ const UserAvatar = ({ user, onImageUpdate }) => {
           showConfirmButton: false
         });
       } else {
-        throw new Error(response.message || 'Failed to update profile image');
+        throw new Error(response?.message || 'Failed to update profile image');
       }
     } catch (error) {
       console.error('Error saving profile image:', error);
@@ -147,6 +162,7 @@ const UserAvatar = ({ user, onImageUpdate }) => {
               onError={(e) => {
                 e.target.src = images.defaultProfile;
               }}
+              key={user?.ProfilePicture ? `img-${Date.now()}` : 'default-img'}
             />
             
             <div 

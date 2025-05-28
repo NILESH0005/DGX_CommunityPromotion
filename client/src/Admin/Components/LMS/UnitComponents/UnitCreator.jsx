@@ -47,7 +47,7 @@ const UnitCreator = ({ subModuleId, onCancel, onCreate }) => {
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Unit Namkkjke <span className="text-red-500">*</span>
+                            Unit Name <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
