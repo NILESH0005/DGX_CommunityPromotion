@@ -428,34 +428,48 @@ export const updateSubModule = async (req, res) => {
         const user = userRows[0];
 
         // 5. Build dynamic update query with proper image handling
+        let imageBuffer = null;
+                if (SubModuleImage) {
+                    if (SubModuleImage.startsWith('data:image')) {
+                        const base64Data = SubModuleImage.replace(/^data:image\/\w+;base64,/, '');
+                        imageBuffer = Buffer.from(base64Data, 'base64');
+                    } else {
+                        imageBuffer = Buffer.from(SubModuleImage, 'binary');
+                    }
+                }
+
         const updateParams = [
             SubModuleName || null,
             SubModuleDescription || null,
+            imageBuffer,
             user.Name,
             new Date(),
+            subModuleId
         ];
-
+console.log("save updateParams test",updateParams);
         let updateQuery = `
             UPDATE SubModulesDetails
             SET 
                 SubModuleName = ?,
                 SubModuleDescription = ?,
+                SubModuleImage=CONVERT(IMAGE, ?),
                 AuthLstEdit = ?,
                 editOnDt = ?
         `;
 
         // Add image parameter only if we have an image
-        if (imageBuffer !== null && imageBuffer !== undefined) {
-            updateQuery += `, SubModuleImage = ?`;
-            updateParams.push(imageBuffer);
-        }
+        // if (imageBuffer !== null && imageBuffer !== undefined) {
+        //     updateQuery += `, SubModuleImage = ?`;
+        //     updateParams.push(imageBuffer);
+        // }
 
         updateQuery += ` WHERE SubModuleID = ? AND ISNULL(delStatus, 0) = 0`;
-        updateParams.push(subModuleId);
+        //console.log("Update test query",updateQuery);
+        //updateParams.push(subModuleId);
 
         // 6. Execute update
         const result = await queryAsync(conn, updateQuery, updateParams);
-
+console.log("save result test",result);
         if (result.affectedRows === 0) {
             await queryAsync(conn, "ROLLBACK");
             closeConnection(conn);
@@ -567,7 +581,6 @@ export const addSubmodule = async (req, res) => {
             }
 
             try {
-                // Get user details using email
                 const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
                 const userRows = await queryAsync(conn, userQuery, [userId]);
 
@@ -582,7 +595,6 @@ export const addSubmodule = async (req, res) => {
                     });
                 }
 
-                // Convert base64 image to buffer if needed
                 let imageBuffer = null;
                 if (SubModuleImage) {
                     if (SubModuleImage.startsWith('data:image')) {
@@ -1150,19 +1162,18 @@ export const addUnit = async (req, res) => {
 
 export const recordFileView = async (req, res) => {
     console.log("Incoming file view request");
-    let success = false;
+    var success = false;
+    var infoMessage ="";
     const userId = req.user.id; 
 
     try {
         const { FileID } = req.body; 
-
+        let isFileRead = 0;
         if (!FileID) {
             const warningMessage = "FileID is required";
             logWarning(warningMessage);
             return res.status(400).json({ success, message: warningMessage });
         }
-
-        // Connect to the database
         connectToDatabase(async (err, conn) => {
             if (err) {
                 const errorMessage = "Database connection failed";
@@ -1171,7 +1182,6 @@ export const recordFileView = async (req, res) => {
             }
 
             try {
-                // Get minimal user details
                 const userQuery = `SELECT UserID, Name FROM Community_User 
                                  WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
                 const userRows = await queryAsync(conn, userQuery, [userId]);
@@ -1185,8 +1195,15 @@ export const recordFileView = async (req, res) => {
 
                 const user = userRows[0];
                 
-                // Insert file view record (simplest possible)
-                const insertQuery = `
+                const strQuery = `select UserID,FileID from UserLmsProgress where FileID = ? and isnull(delStatus,0)=0`;
+                const isFileAvail = await queryAsync(conn, strQuery, [FileID]);
+                if(isFileAvail.length !== 0){
+                    isFileRead = 1;
+                }
+
+                //console.log("read test",isFileAvail);
+                if(isFileRead === 0){
+                   const insertQuery = `
                     INSERT INTO UserLmsProgress 
                     (UserID, FileID, AuthAdd, AddOnDt, delStatus) 
                     VALUES (?, ?, ?, GETDATE(), 0);
@@ -1196,11 +1213,17 @@ export const recordFileView = async (req, res) => {
                     user.UserID,
                     FileID,
                     user.Name
-                ]);
-
+                ]); 
                 success = true;
                 closeConnection();
-                const infoMessage = "File view recorded successfully";
+                infoMessage="File view recorded added successfully";
+                }
+                else{
+                    infoMessage="File view allready recorded";
+                }
+
+                
+                 
                 logInfo(infoMessage);
                 return res.status(200).json({ success, message: infoMessage });
 

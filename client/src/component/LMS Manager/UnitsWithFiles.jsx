@@ -71,16 +71,9 @@ const UnitsWithFiles = () => {
   const recordFileView = async (fileId, unitId) => {
     try {
       if (viewedFiles.has(fileId)) return;
-      const result = await Swal.fire({
-        title: 'Confirm File View',
-        text: 'Do you want to record this file view?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'OK',
-        cancelButtonText: 'CANCEL',
-      });
+      
 
-      if (result.isConfirmed) {
+      // if (result.isConfirmed) {
         const response = await fetchData(
           "lmsEdit/recordFileView",
           "POST",
@@ -104,14 +97,8 @@ const UnitsWithFiles = () => {
           });
         } else {
           setViewedFiles(prev => new Set(prev).add(fileId));
-          Swal.fire({
-            icon: 'success',
-            title: 'Success',
-            text: 'File view recorded successfully',
-            confirmButtonText: 'OK'
-          });
         }
-      }
+      // }
     } catch (error) {
       console.error("Error recording file view:", error);
       Swal.fire({

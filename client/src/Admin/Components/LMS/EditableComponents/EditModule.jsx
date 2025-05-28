@@ -120,11 +120,13 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
         if (newImageFile) {
             payload.ModuleImage = {
                 data: newImageFile,
-                contentType: 'image/jpeg'
+                // contentType: newImageFile.type
             };
         } else if (!imagePreview && editedModule.ModuleImage) {
             payload.ModuleImage = null;
         }
+        console.log("sssssss", payload.ModuleImage.data);
+        
 
         const headers = {
             "Content-Type": "application/json",
@@ -138,6 +140,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                 payload,
                 headers
             );
+            console.log("response is",response)
 
             if (response?.success) {
                 const updatedModule = {

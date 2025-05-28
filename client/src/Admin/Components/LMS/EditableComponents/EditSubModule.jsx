@@ -280,55 +280,52 @@ const EditSubModule = ({ module, onBack }) => {
             const payload = {
                 SubModuleName: editedData.SubModuleName,
                 SubModuleDescription: editedData.SubModuleDescription || "",
+                SubModuleImage: newImageFile ? newImageFile : null,
             };
 
-            if (newImageFile instanceof File) {
-                const base64String = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result.split(',')[1]);
-                    reader.onerror = error => reject(error);
-                    reader.readAsDataURL(newImageFile);
-                });
-                payload.SubModuleImage = {
-                    data: base64String,
-                    contentType: newImageFile.type
-                };
+            // if (newImageFile instanceof File) {
+            //     const base64String = await new Promise((resolve, reject) => {
+            //         const reader = new FileReader();
+            //         reader.onload = () => resolve(reader.result.split(',')[1]);
+            //         reader.onerror = error => reject(error);
+            //         reader.readAsDataURL(newImageFile);
+            //     });
+            //     payload.SubModuleImage = {
+            //         data: base64String,
+            //     };
 
-            } else if (!imagePreview && editingSubmodule?.SubModuleImage) {
-                payload.SubModuleImage = null;
-            } else if (editingSubmodule?.SubModuleImage) {
-                payload.SubModuleImage = editingSubmodule.SubModuleImage;
-            }
+            // } else if (!imagePreview && editingSubmodule?.SubModuleImage) {
+            //     payload.SubModuleImage = null;
+            // } else if (editingSubmodule?.SubModuleImage) {
+            //     payload.SubModuleImage = editingSubmodule.SubModuleImage;
+            // }
 
             const headers = {
                 "auth-token": userToken,
                 "Content-Type": "application/json",
             };
+            //console.log("image", payload.SubModuleImage);
 
+            //console.log("test data", payload);
             const response = await fetchData(
                 `lmsEdit/updateSubModule/${editingSubmodule.SubModuleID}`,
                 "POST",
                 payload,
                 headers
             );
-            console.log("Image payload:", payload.SubModuleImage);
+            console.log("Image payload test:", response);
 
             if (!response?.success) {
                 throw new Error(response?.message || "Failed to update submodule");
             }
-
-            // Create the updated submodule with proper image handling
+console.log("Test 2:",response.data.SubModuleImage.data);
             const updatedSubmodule = {
                 ...editingSubmodule,
                 SubModuleName: response.data.SubModuleName,
                 SubModuleDescription: response.data.SubModuleDescription,
-                SubModuleImage: response.data.SubModuleImage
-                    ? {
-                        data: response.data.SubModuleImage.data,
-                        contentType: response.data.SubModuleImage.contentType || 'image/jpeg'
-                    }
-                    : null
+                SubModuleImage: response.data.SubModuleImage.data
             };
+
 
             setSubmodules(prev =>
                 prev.map(sub =>
