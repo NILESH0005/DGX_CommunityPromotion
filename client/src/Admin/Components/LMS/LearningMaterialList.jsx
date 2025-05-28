@@ -32,9 +32,15 @@ const LearningMaterialList = () => {
     fetchModules();
   }, [fetchData]);
 
-  const handleViewSubmodules = (module) => {
-    setSelectedModule(module);
+  const handleViewSubmodules = (moduleId) => {
+    const module = modules.find((mod) => mod.ModuleID === moduleId);
+    if (module) {
+      setSelectedModule(module);
+    }
+    console.log("id ?", moduleId);
+    
   };
+
 
   const handleBackToList = () => {
     setSelectedModule(null);
