@@ -15,7 +15,7 @@ const UnitsWithFiles = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [viewedFiles, setViewedFiles] = useState(new Set());
   const [userFileIds, setUserFileIds] = useState([]); // New state for user's file IDs
-
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const fetchUserFileIds = async () => {
@@ -45,22 +45,9 @@ const UnitsWithFiles = () => {
           setUserFileIds(response.data.fileIds);
         } else {
           console.error("Failed to fetch user file IDs:", response?.message);
-          // Swal.fire({
-          //   icon: 'error',
-          //   title: 'Error',
-          //   text: response?.message || 'Failed to load progress data',
-          //   timer: 2000
-          // });
         }
       } catch (error) {
         console.error("Error fetching user's file IDs:", error);
-        // Swal.fire({
-        //   icon: 'error',
-        //   title: 'Connection Error',
-        //   text: 'Could not load your progress data',
-        //   timer: 2000,
-        //   showConfirmButton: false
-        // });
       }
     };
 
@@ -68,6 +55,7 @@ const UnitsWithFiles = () => {
       fetchUserFileIds();
     }
   }, [userToken, fetchData]);
+
   useEffect(() => {
     console.log('subModuleId changed:', subModuleId, typeof subModuleId);
 
@@ -146,7 +134,6 @@ const UnitsWithFiles = () => {
     }
   };
 
-
   const handleFileSelect = (file, unit) => {
     setSelectedFile({
       ...file,
@@ -190,6 +177,10 @@ const UnitsWithFiles = () => {
           </svg>
         );
     }
+  };
+
+  const removeFileExtension = (filename) => {
+    return filename.replace(/\.[^/.]+$/, "");
   };
 
   if (!subModuleId) {
@@ -255,79 +246,131 @@ const UnitsWithFiles = () => {
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* Navigation Sidebar */}
-      <div className="w-64 bg-gray-800 text-white p-4 border-r border-gray-700 overflow-y-auto">
-        <h2 className="text-xl font-bold mb-6">Units</h2>
-        <div className="space-y-4">
-          {filteredUnits.map(unit => (
-            <div
-              key={unit.UnitID}
-              className="p-3 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700"
-              onClick={() => {
-                if (unit.files?.length > 0) {
-                  setSelectedFile({
-                    ...unit.files[0],
-                    unitName: unit.UnitName,
-                    unitDescription: unit.UnitDescription
-                  });
-                }
-              }}
-            >
-              <h3 className="font-bold text-lg mb-1">{unit.UnitName}</h3>
-              <p className="text-gray-300 text-sm">{unit.UnitDescription}</p>
+      <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}>
+        {/* Toggle Button - Made Bigger and More Visible */}
+        <button
+          onClick={toggleSidebar}
+          className="absolute -right-6 top-8 bg-[#1f2937] text-white rounded-full p-4 border-2 border-gray-500 hover:bg-gray-600 hover:border-gray-400 transition-all duration-200 z-10 shadow-xl hover:shadow-2xl transform hover:scale-105"
+          title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          <svg
+            className={`w-6 h-6 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth={3}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
 
-              {unit.files?.length > 0 && (
-                <div className="mt-2 ml-2 border-l border-gray-600 pl-2">
-                  {unit.files.map(file => {
-                    const isViewed = viewedFiles.has(file.FileID);
-                    const isSelected = selectedFile?.FileID === file.FileID;
+        <div className="p-4">
+          {/* Header Section */}
+          <div className="mb-6">
+            {!isSidebarCollapsed ? (
+              <>
+            
+              </>
+            ) : (
+              <div className="flex justify-center">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                </svg>
+              </div>
+            )}
+          </div>
 
-                    return (
-                      <div
-                        key={file.FileID}
-                        className={`py-1 px-2 rounded text-sm flex items-center transition-colors ${isSelected
-                            ? "bg-blue-600 text-white"
-                            : isViewed
-                              ? "bg-green-50 text-green-800 border border-green-200 hover:bg-green-100"
-                              : "text-gray-600 hover:bg-gray-100"
+        
+
+          {/* Units List */}
+          <div className="space-y-4">
+            {filteredUnits.map(unit => (
+              <div
+                key={unit.UnitID}
+                className={`${isSidebarCollapsed ? 'p-2' : 'p-3'} rounded-lg hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700`}
+                onClick={() => {
+                  if (unit.files?.length > 0) {
+                    setSelectedFile({
+                      ...unit.files[0],
+                      unitName: unit.UnitName,
+                      unitDescription: unit.UnitDescription
+                    });
+                  }
+                }}
+              >
+                {isSidebarCollapsed ? (
+                  <div className="flex justify-center" title={unit.UnitName}>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                    </svg>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="font-bold text-lg mb-1">{unit.UnitName}</h3>
+                    <p className="text-gray-300 text-sm">{unit.UnitDescription}</p>
+                  </>
+                )}
+
+                {unit.files?.length > 0 && (
+                  <div className={`${isSidebarCollapsed ? 'mt-2' : 'mt-2 ml-2 border-l border-gray-600 pl-2'}`}>
+                    {unit.files.map(file => {
+                      const isViewed = viewedFiles.has(file.FileID);
+                      const isSelected = selectedFile?.FileID === file.FileID;
+
+                      return (
+                        <div
+                          key={file.FileID}
+                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${
+                            isSelected
+                              ? "bg-blue-600 text-white"
+                              : isViewed
+                              ? "bg-green-600 text-white hover:bg-green-500"
+                              : "text-gray-300 hover:text-white hover:bg-gray-600"
                           }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFileSelect(file, unit);
-                        }}
-                      >
-                        <span className="mr-2">
-                          {file.fileType === "pdf" ? "📄" :
-                            file.fileType === "ipynb" ? "📓" :
-                              file.fileType === "docx" ? "📝" : "📁"}
-                        </span>
-                        <span className="truncate flex-grow">
-                          {file.FilesName}
-                          {isViewed && !isSelected && (
-                            <span className="ml-2 text-xs text-green-600">(viewed)</span>
+                          title={isSidebarCollapsed ? removeFileExtension(file.FilesName) : ''}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFileSelect(file, unit);
+                          }}
+                        >
+                          {isSidebarCollapsed ? (
+                            getFileIcon(file.fileType)
+                          ) : (
+                            <>
+                              <span className="mr-2">
+                                {getFileIcon(file.fileType)}
+                              </span>
+                              <span className="truncate flex-grow">
+                                {removeFileExtension(file.FilesName)}
+                                {isViewed && !isSelected && (
+                                  <span className="ml-2 text-xs text-green-300">(viewed)</span>
+                                )}
+                              </span>
+                              {isViewed && (
+                                <svg
+                                  className="ml-2 h-4 w-4 text-green-300"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                              )}
+                            </>
                           )}
-                        </span>
-                        {isViewed && (
-                          <svg
-                            className="ml-2 h-4 w-4 text-green-500"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -342,7 +385,7 @@ const UnitsWithFiles = () => {
           </p>
           {selectedFile && (
             <h2 className="text-xl font-semibold text-gray-700 mt-4">
-              {selectedFile.FilesName}
+              {removeFileExtension(selectedFile.FilesName)}
               {selectedFile.fileType === "ipynb" && (
                 <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
                   Jupyter Notebook
@@ -364,7 +407,7 @@ const UnitsWithFiles = () => {
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
               </div>
               <div className="ml-4 text-sm text-gray-600 font-medium">
-                {selectedFile.FilesName}
+                {removeFileExtension(selectedFile.FilesName)}
               </div>
             </div>
           )}

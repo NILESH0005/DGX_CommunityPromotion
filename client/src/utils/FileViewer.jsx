@@ -5,7 +5,7 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-const FileViewer = ({ fileUrl }) => {
+const FileViewer = ({ fileUrl, submoduleName }) => {
   const [numPages, setNumPages] = useState(null);
   const [pdfError, setPdfError] = useState(null);
   const [iframeKey, setIframeKey] = useState(0);
@@ -33,6 +33,12 @@ const FileViewer = ({ fileUrl }) => {
     >
       Download File
     </button>
+  );
+
+  const renderSubmoduleHeader = () => (
+    <div className="text-center mb-6">
+      <h2 className="text-2xl font-bold text-gray-800">{submoduleName}</h2>
+    </div>
   );
 
   const onDocumentLoadSuccess = ({ numPages }) => {
@@ -119,6 +125,7 @@ const FileViewer = ({ fileUrl }) => {
   if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(fileExtension)) {
     return (
       <div className="flex flex-col items-center">
+        {renderSubmoduleHeader()}
         <div className="max-w-full max-h-[80vh] overflow-auto">
           <img 
             src={fileUrl} 
@@ -136,6 +143,7 @@ const FileViewer = ({ fileUrl }) => {
   if (fileExtension === 'pdf') {
     return (
       <div className="w-full flex flex-col items-center">
+        {renderSubmoduleHeader()}
         <div className="w-full max-w-4xl bg-white rounded-lg shadow-md overflow-hidden">
           {pdfError ? (
             <div className="p-8 text-center">
@@ -188,6 +196,7 @@ const FileViewer = ({ fileUrl }) => {
   if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(fileExtension)) {
     return (
       <div className="w-full h-full flex flex-col">
+        {renderSubmoduleHeader()}
         <div className="flex-1">
           <iframe
             key={iframeKey}
@@ -213,6 +222,7 @@ const FileViewer = ({ fileUrl }) => {
     if (!fileUrl.startsWith('http://localhost') && !fileUrl.startsWith('file://')) {
       return (
         <div className="w-full h-full flex flex-col">
+          {renderSubmoduleHeader()}
           <div className="flex-1">
             <iframe
               key={iframeKey}
@@ -234,6 +244,7 @@ const FileViewer = ({ fileUrl }) => {
     // Fallback for local files
     return (
       <div className="w-full h-full flex flex-col p-4 overflow-auto">
+        {renderSubmoduleHeader()}
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -259,6 +270,7 @@ const FileViewer = ({ fileUrl }) => {
   if (fileExtension === 'csv') {
     return (
       <div className="w-full h-full flex flex-col">
+        {renderSubmoduleHeader()}
         <iframe 
           key={iframeKey}
           src={`https://docs.google.com/spreadsheets/d/e/2PACX-1vR9xX9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ/pubhtml?gid=0&single=true&output=csv&url=${encodeURIComponent(fileUrl)}`}
@@ -276,8 +288,8 @@ const FileViewer = ({ fileUrl }) => {
   // Default for unsupported files
   return (
     <div className="flex flex-col items-center justify-center p-8">
+      {renderSubmoduleHeader()}
       <div className="text-6xl mb-4">📁</div>
-      <h3 className="text-xl font-semibold mb-2">{fileName}</h3>
       <p className="text-gray-500 mb-6">This file type cannot be previewed</p>
       {renderDownloadButton()}
     </div>
