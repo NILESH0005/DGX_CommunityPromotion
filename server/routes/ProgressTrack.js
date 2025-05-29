@@ -6,6 +6,6 @@ import { getUserFileIDs  } from "../controllers/progressTrack.js";
 
 const router = express.Router();
 
-router.post('/getUserFileIDs', getUserFileIDs)
+router.post('/getUserFileIDs', fetchUser ,getUserFileIDs)
 
 export default router;
