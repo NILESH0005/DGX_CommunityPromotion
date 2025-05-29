@@ -105,6 +105,8 @@ export const discussionpost = async (req, res) => {
 
 export const getdiscussion = async (req, res) => {
     let success = false;
+    console.log("user is", req.body);
+    
     const userId = req.body.user;
     console.log("Received request for getdiscussion. User ID:", userId)
     const errors = validationResult(req);

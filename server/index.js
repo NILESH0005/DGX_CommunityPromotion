@@ -15,6 +15,9 @@ import homeRoutes from './routes/Home.js';
 import quizRoutes from './routes/Quiz.js';
 import LMS from './routes/LMS.js'
 import lmsEdit from './routes/LmsEdit.js';
+import progressRoute from './routes/ProgressTrack.js';
+
+
 
 dotenv.config();
 
@@ -45,6 +48,8 @@ app.use('/addUser', userRoutes);
 app.use('/home', homeRoutes);
 app.use('/quiz', quizRoutes);
 app.use('/lmsEdit', lmsEdit);
+app.use('/progressTrack', progressRoute )
+
 
 
 
