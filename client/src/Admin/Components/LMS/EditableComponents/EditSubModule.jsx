@@ -168,14 +168,17 @@ const EditSubModule = ({ module, onBack }) => {
         // Handle image preview initialization
         if (submodule.SubModuleImage?.data) {
             if (Array.isArray(submodule.SubModuleImage.data)) {
-                // Convert Buffer array to base64
-                const base64String = btoa(String.fromCharCode.apply(null, submodule.SubModuleImage.data));
+                const byteArray = new Uint8Array(submodule.SubModuleImage.data);
+                let binary = '';
+                byteArray.forEach(byte => binary += String.fromCharCode(byte));
+                const base64String = btoa(binary);
                 setImagePreview(`data:${submodule.SubModuleImage.contentType || 'image/jpeg'};base64,${base64String}`);
             } else if (typeof submodule.SubModuleImage.data === 'string') {
-                // Assume it's already a base64 string
                 setImagePreview(`data:${submodule.SubModuleImage.contentType || 'image/jpeg'};base64,${submodule.SubModuleImage.data}`);
             }
-        } else {
+        }
+
+        else {
             setImagePreview(null);
         }
 
@@ -283,30 +286,11 @@ const EditSubModule = ({ module, onBack }) => {
                 SubModuleImage: newImageFile ? newImageFile : null,
             };
 
-            // if (newImageFile instanceof File) {
-            //     const base64String = await new Promise((resolve, reject) => {
-            //         const reader = new FileReader();
-            //         reader.onload = () => resolve(reader.result.split(',')[1]);
-            //         reader.onerror = error => reject(error);
-            //         reader.readAsDataURL(newImageFile);
-            //     });
-            //     payload.SubModuleImage = {
-            //         data: base64String,
-            //     };
-
-            // } else if (!imagePreview && editingSubmodule?.SubModuleImage) {
-            //     payload.SubModuleImage = null;
-            // } else if (editingSubmodule?.SubModuleImage) {
-            //     payload.SubModuleImage = editingSubmodule.SubModuleImage;
-            // }
-
             const headers = {
                 "auth-token": userToken,
                 "Content-Type": "application/json",
             };
-            //console.log("image", payload.SubModuleImage);
-
-            //console.log("test data", payload);
+           
             const response = await fetchData(
                 `lmsEdit/updateSubModule/${editingSubmodule.SubModuleID}`,
                 "POST",
@@ -318,15 +302,13 @@ const EditSubModule = ({ module, onBack }) => {
             if (!response?.success) {
                 throw new Error(response?.message || "Failed to update submodule");
             }
-console.log("Test 2:",response.data.SubModuleImage.data);
+            console.log("Test 2:", response.data.SubModuleImage.data);
             const updatedSubmodule = {
                 ...editingSubmodule,
                 SubModuleName: response.data.SubModuleName,
                 SubModuleDescription: response.data.SubModuleDescription,
                 SubModuleImage: response.data.SubModuleImage.data
             };
-
-
             setSubmodules(prev =>
                 prev.map(sub =>
                     sub.SubModuleID === updatedSubmodule.SubModuleID
@@ -334,7 +316,6 @@ console.log("Test 2:",response.data.SubModuleImage.data);
                         : sub
                 )
             );
-
             setIsEditing(false);
             setEditingSubmodule(null);
             setEditedData({});
