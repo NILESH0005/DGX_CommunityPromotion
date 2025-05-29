@@ -15,8 +15,60 @@ const UnitsWithFiles = () => {
   const { fetchData, userToken } = useContext(ApiContext);
   const [selectedFile, setSelectedFile] = useState(null);
   const [viewedFiles, setViewedFiles] = useState(new Set());
+  const [userFileIds, setUserFileIds] = useState([]); // New state for user's file IDs
 
 
+  useEffect(() => {
+    const fetchUserFileIds = async () => {
+      try {
+        if (!userToken) {
+          console.log("No user token available, skipping file IDs fetch");
+          return;
+        }
+
+        console.log("Current user token:", userToken); // Debug token
+
+        const response = await fetchData(
+          "progressTrack/getUserFileIDs",
+          "POST",
+          {},
+          {
+            'Content-Type': 'application/json',
+            'auth-token': userToken
+          }
+        );
+
+        console.log("File IDs response:", response);
+
+        if (response?.success) {
+          const fileIds = response.data.fileIds.map(file => file.FileID);
+          setViewedFiles(new Set(fileIds));
+          setUserFileIds(response.data.fileIds);
+        } else {
+          console.error("Failed to fetch user file IDs:", response?.message);
+          // Swal.fire({
+          //   icon: 'error',
+          //   title: 'Error',
+          //   text: response?.message || 'Failed to load progress data',
+          //   timer: 2000
+          // });
+        }
+      } catch (error) {
+        console.error("Error fetching user's file IDs:", error);
+        // Swal.fire({
+        //   icon: 'error',
+        //   title: 'Connection Error',
+        //   text: 'Could not load your progress data',
+        //   timer: 2000,
+        //   showConfirmButton: false
+        // });
+      }
+    };
+
+    if (userToken) {
+      fetchUserFileIds();
+    }
+  }, [userToken, fetchData]);
   useEffect(() => {
     console.log('subModuleId changed:', subModuleId, typeof subModuleId);
 
@@ -72,8 +124,6 @@ const UnitsWithFiles = () => {
     try {
       if (viewedFiles.has(fileId)) return;
 
-
-      // if (result.isConfirmed) {
       const response = await fetchData(
         "lmsEdit/recordFileView",
         "POST",
@@ -87,29 +137,17 @@ const UnitsWithFiles = () => {
           'auth-token': userToken
         }
       );
-      console.log("recorded files",response)
 
-      if (!response?.success) {
-        // Swal.fire({
-        //   icon: 'error',
-        //   title: 'Error',
-        //   text: `Error recording file view: ${response?.message || 'Unknown error'}`,
-        //   confirmButtonText: 'OK'
-        // });
-      } else {
+      if (response?.success) {
         setViewedFiles(prev => new Set(prev).add(fileId));
+      } else {
+        console.error("Error recording file view:", response?.message || 'Unknown error');
       }
-      // }
     } catch (error) {
-      console.error("Error recording file view:", error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'Something went wrong while recording file view',
-        confirmButtonText: 'OK'
-      });
+      console.error("Error recording file view:", error.message || 'Unknown error');
     }
   };
+
 
   const handleFileSelect = (file, unit) => {
     setSelectedFile({
@@ -118,6 +156,7 @@ const UnitsWithFiles = () => {
       unitDescription: unit.UnitDescription
     });
 
+    // Record the file view
     recordFileView(file.FileID, unit.UnitID);
   };
 
@@ -190,7 +229,7 @@ const UnitsWithFiles = () => {
           {filteredUnits.map(unit => (
             <div
               key={unit.UnitID}
-              className="p-3 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+              className="p-3 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700"
               onClick={() => {
                 if (unit.files?.length > 0) {
                   setSelectedFile({
@@ -206,30 +245,53 @@ const UnitsWithFiles = () => {
 
               {unit.files?.length > 0 && (
                 <div className="mt-2 ml-2 border-l border-gray-600 pl-2">
-                  {unit.files.map(file => (
-                    <div
-                      key={file.FileID}
-                      // Add this style to your file list items:
-                      className={`py-1 px-2 rounded text-sm flex items-center ${selectedFile?.FileID === file.FileID
-                        ? "bg-gray-600 text-white"
-                        : viewedFiles.has(file.FileID)
-                          ? "text-green-300 hover:text-green-200"
-                          : "text-gray-300 hover:text-white"
-                        }`}
-                      // In your file list rendering:
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleFileSelect(file, unit);
-                      }}
-                    >
-                      <span className="mr-2">
-                        {file.fileType === "pdf" ? "📄" :
-                          file.fileType === "ipynb" ? "📓" :
-                            file.fileType === "docx" ? "📝" : "📁"}
-                      </span>
-                      <span className="truncate">{file.FilesName}</span>
-                    </div>
-                  ))}
+                  {unit.files.map(file => {
+                    const isViewed = viewedFiles.has(file.FileID);
+                    const isSelected = selectedFile?.FileID === file.FileID;
+
+                    return (
+                      <div
+                        key={file.FileID}
+                        className={`py-1 px-2 rounded text-sm flex items-center transition-colors ${isSelected
+                            ? "bg-blue-600 text-white"
+                            : isViewed
+                              ? "bg-green-50 text-green-800 border border-green-200 hover:bg-green-100"
+                              : "text-gray-600 hover:bg-gray-100"
+                          }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFileSelect(file, unit);
+                        }}
+                      >
+                        <span className="mr-2">
+                          {file.fileType === "pdf" ? "📄" :
+                            file.fileType === "ipynb" ? "📓" :
+                              file.fileType === "docx" ? "📝" : "📁"}
+                        </span>
+                        <span className="truncate flex-grow">
+                          {file.FilesName}
+                          {isViewed && !isSelected && (
+                            <span className="ml-2 text-xs text-green-600">(viewed)</span>
+                          )}
+                        </span>
+                        {isViewed && (
+                          <svg
+                            className="ml-2 h-4 w-4 text-green-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
