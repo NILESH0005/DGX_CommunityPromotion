@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import ApiContext from "../../context/ApiContext";
 import ByteArrayImage from "../../utils/ByteArrayImage";
 import ProgressBar from "./ProgressBar";
+import { FaAngleDown, FaAngleUp } from "react-icons/fa";
 
 const SubModuleCard = () => {
   const { moduleId } = useParams();
@@ -12,6 +13,7 @@ const SubModuleCard = () => {
   const [error, setError] = useState(null);
   const { fetchData } = useContext(ApiContext);
   const navigate = useNavigate();
+  const [expandedDescriptions, setExpandedDescriptions] = useState({});
 
   useEffect(() => {
     const fetchAllSubModules = async () => {
@@ -30,6 +32,13 @@ const SubModuleCard = () => {
             (module) => module.ModuleID?.toString() === moduleId
           );
           setModuleName(currentModule?.ModuleName || "");
+
+          // Initialize expanded states for all submodules
+          const initialExpandedState = {};
+          subModulesResponse.data.forEach(subModule => {
+            initialExpandedState[subModule.SubModuleID] = false;
+          });
+          setExpandedDescriptions(initialExpandedState);
         } else {
           setError(
             subModulesResponse?.message ||
@@ -45,9 +54,21 @@ const SubModuleCard = () => {
       }
     };
 
-
     fetchAllSubModules();
   }, [moduleId, fetchData]);
+
+  const toggleDescription = (subModuleId, event) => {
+    event.stopPropagation();
+    setExpandedDescriptions(prev => ({
+      ...prev,
+      [subModuleId]: !prev[subModuleId]
+    }));
+  };
+
+  const isDescriptionClamped = (description) => {
+    if (!description) return false;
+    return description.length > 100;
+  };
 
   if (loading) {
     return (
@@ -57,7 +78,7 @@ const SubModuleCard = () => {
             {[...Array(6)].map((_, index) => (
               <div
                 key={index}
-                className="bg-white rounded-lg shadow-md overflow-hidden"
+                className="bg-white rounded-lg shadow-md overflow-hidden h-[400px]"
               >
                 <div className="h-48 bg-gray-200 animate-pulse"></div>
                 <div className="p-6">
@@ -111,10 +132,14 @@ const SubModuleCard = () => {
             filteredSubModules.map((subModule) => (
               <div
                 key={subModule.SubModuleID}
-                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer ${
+                  expandedDescriptions[subModule.SubModuleID] 
+                    ? 'h-auto' 
+                    : 'h-[400px]'
+                }`}
                 onClick={() => navigate(`/submodule/${subModule.SubModuleID}`)}
               >
-                <div className="h-40 bg-gray-100 overflow-hidden">
+                <div className="h-40 bg-gray-100 overflow-hidden flex-shrink-0">
                   {subModule.SubModuleImage ? (
                     <ByteArrayImage
                       byteArray={subModule.SubModuleImage.data}
@@ -127,13 +152,41 @@ const SubModuleCard = () => {
                   )}
                 </div>
                 <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-blue-600 transition-colors duration-200">
+                  <h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-blue-600 transition-colors duration-200 break-words">
                     {subModule.SubModuleName}
                   </h3>
-                  <p className="text-gray-600 text-base mb-4 line-clamp-2 hover:text-gray-800 transition-colors duration-200">
-                    {subModule.SubModuleDescription ||
-                      "No description available"}
-                  </p>
+                  
+                  <div className="overflow-hidden">
+                    <p 
+                      className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${
+                        expandedDescriptions[subModule.SubModuleID] 
+                          ? 'overflow-y-auto max-h-32' 
+                          : 'line-clamp-3'
+                      }`}
+                    >
+                      {subModule.SubModuleDescription || "No description available"}
+                    </p>
+                  </div>
+
+                  {(isDescriptionClamped(subModule.SubModuleDescription) && (
+                    <button
+                      onClick={(e) => toggleDescription(subModule.SubModuleID, e)}
+                      className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm mt-2 flex items-center self-start"
+                    >
+                      {expandedDescriptions[subModule.SubModuleID] ? (
+                        <>
+                          <FaAngleUp className="mr-1" />
+                          Show Less
+                        </>
+                      ) : (
+                        <>
+                          <FaAngleDown className="mr-1" />
+                          Read More
+                        </>
+                      )}
+                    </button>
+                  ))}
+
                   <div className="mt-4">
                     <ProgressBar progress={subModule.progress || 20} />
                   </div>

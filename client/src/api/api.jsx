@@ -8,7 +8,6 @@ const apiRequest = async (endpoint, method = 'GET', body = {}, headers = { 'Cont
         headers,
         body: Object.keys(body).length ? JSON.stringify(body) : undefined,
     };
-    console.log("heeader", headers)
     if (method === 'GET') {
         options = {
             method,
