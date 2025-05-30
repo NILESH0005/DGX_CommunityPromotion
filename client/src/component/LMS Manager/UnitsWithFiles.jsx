@@ -298,8 +298,6 @@ const UnitsWithFiles = () => {
           ))}
         </div>
       </div>
-
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800">
