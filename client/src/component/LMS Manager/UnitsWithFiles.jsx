@@ -65,25 +65,24 @@ const UnitsWithFiles = () => {
         setError(null);
         console.log('Fetching units for subModuleId:', subModuleId);
 
-        const response = await fetchData(
-          `dropdown/getUnitsWithFiles?subModuleId=${subModuleId}`,
-          "GET"
-        );
-
+        const response = await fetchData("dropdown/getUnitsWithFiles", "GET");
         console.log('API Response:', response);
 
         if (response?.success) {
-          const units = response.data;
-          setAllUnits(units);
-          setFilteredUnits(units); // Optional: if you're keeping separate state
+          setAllUnits(response.data);
 
-          // Automatically select first file if available
-          if (units.length > 0 && units[0].files?.length > 0) {
-            const firstFile = units[0].files[0];
+          const filtered = response.data.filter(unit => {
+            return String(unit.SubModuleID) === String(subModuleId);
+          });
+
+          console.log('Filtered Units:', filtered);
+          setFilteredUnits(filtered);
+          if (filtered.length > 0 && filtered[0].files?.length > 0) {
+            const firstFile = filtered[0].files[0];
             setSelectedFile({
               ...firstFile,
-              unitName: units[0].UnitName,
-              unitDescription: units[0].UnitDescription
+              unitName: filtered[0].UnitName,
+              unitDescription: filtered[0].UnitDescription
             });
           }
         } else {
@@ -107,7 +106,6 @@ const UnitsWithFiles = () => {
     }
   }, [subModuleId, fetchData]);
 
-
   const recordFileView = async (fileId, unitId) => {
     try {
       // Check if THIS USER has already viewed THIS FILE
@@ -127,7 +125,6 @@ const UnitsWithFiles = () => {
       );
 
       if (response?.success) {
-        // Only add to viewedFiles if the response indicates it was recorded
         if (response.message !== "File view already recorded for this user") {
           setViewedFiles(prev => new Set(prev).add(fileId));
         }
@@ -137,7 +134,7 @@ const UnitsWithFiles = () => {
     } catch (error) {
       console.error("Error recording file view:", error.message || 'Unknown error');
     }
-  };
+};
 
   const handleFileSelect = (file, unit) => {
     setSelectedFile({
@@ -165,8 +162,8 @@ const UnitsWithFiles = () => {
       case "ipynb":
         return (
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" />
-            <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z" />
+            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z"/>
+            <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z"/>
           </svg>
         );
       case "docx":
@@ -274,7 +271,7 @@ const UnitsWithFiles = () => {
           <div className="mb-6">
             {!isSidebarCollapsed ? (
               <>
-
+            
               </>
             ) : (
               <div className="flex justify-center">
@@ -285,7 +282,7 @@ const UnitsWithFiles = () => {
             )}
           </div>
 
-
+        
 
           {/* Units List */}
           <div className="space-y-4">
@@ -325,12 +322,13 @@ const UnitsWithFiles = () => {
                       return (
                         <div
                           key={file.FileID}
-                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${isSelected
-                            ? "bg-blue-600 text-white"
-                            : isViewed
+                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${
+                            isSelected
+                              ? "bg-blue-600 text-white"
+                              : isViewed
                               ? "bg-green-600 text-white hover:bg-green-500"
                               : "text-gray-300 hover:text-white hover:bg-gray-600"
-                            }`}
+                          }`}
                           title={isSidebarCollapsed ? removeFileExtension(file.FilesName) : ''}
                           onClick={(e) => {
                             e.stopPropagation();

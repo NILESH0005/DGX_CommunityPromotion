@@ -364,16 +364,6 @@ export const getUnitsWithFiles = async (req, res) => {
     let success = false;
 
     try {
-        // Get SubModuleID from request query or params
-        const { subModuleId } = req.query; // or req.params if you're using route parameters
-
-        if (!subModuleId) {
-            return res.status(400).json({
-                success,
-                message: "SubModuleID is required"
-            });
-        }
-
         connectToDatabase(async (err, conn) => {
             if (err) {
                 logError(err);
@@ -384,7 +374,7 @@ export const getUnitsWithFiles = async (req, res) => {
             }
 
             try {
-                // Modified query to filter by SubModuleID
+                // First get all units
                 const unitsQuery = `
                     SELECT 
                         UnitID,
@@ -395,35 +385,27 @@ export const getUnitsWithFiles = async (req, res) => {
                         AuthAdd
                     FROM UnitsDetails
                     WHERE ISNULL(delStatus, 0) = 0
-                    AND SubModuleID = ?
                     ORDER BY UnitID
                 `;
 
-                const units = await queryAsync(conn, unitsQuery, [subModuleId]);
+                const units = await queryAsync(conn, unitsQuery);
 
-                // Then get all files for these units
-                // First get the unit IDs to filter files
-                const unitIds = units.map(unit => unit.UnitID);
+                // Then get all files
+                const filesQuery = `
+                    SELECT 
+                        FileID,
+                        FilesName,
+                        FilePath,
+                        FileType,
+                        UnitID,
+                        AuthAdd,
+                        Percentage
+                    FROM FilesDetails
+                    WHERE ISNULL(delStatus, 0) = 0
+                    ORDER BY FileID
+                `;
 
-                let files = [];
-                if (unitIds.length > 0) {
-                    const filesQuery = `
-                        SELECT 
-                            FileID,
-                            FilesName,
-                            FilePath,
-                            FileType,
-                            UnitID,
-                            AuthAdd,
-                            Percentage
-                        FROM FilesDetails
-                        WHERE ISNULL(delStatus, 0) = 0
-                        AND UnitID IN (?)
-                        ORDER BY FileID
-                    `;
-
-                    files = await queryAsync(conn, filesQuery, [unitIds]);
-                }
+                const files = await queryAsync(conn, filesQuery);
 
                 // Group files by UnitID
                 const filesByUnit = files.reduce((acc, file) => {
