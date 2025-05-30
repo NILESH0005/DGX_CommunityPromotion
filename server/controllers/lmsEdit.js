@@ -1013,144 +1013,103 @@ export const addUnit = async (req, res) => {
     console.log("Incoming request body", req.body);
     let success = false;
     const userId = req.user?.id || req.user?.UserID;
-    console.log("User ID:", userId);
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        const warningMessage = "Data is not in the right format";
-        logWarning(warningMessage);
         return res.status(400).json({
             success,
             data: errors.array(),
-            message: warningMessage
+            message: "Data is not in the right format"
         });
     }
 
     try {
-        const {
-            UnitName,
-            UnitDescription,
-            SubModuleID // Required parent reference
-        } = req.body;
+        const { UnitName, UnitDescription, SubModuleID } = req.body;
 
-        // Validate required fields
         if (!SubModuleID) {
-            const warningMessage = "SubModuleID is required";
-            logWarning(warningMessage);
             return res.status(400).json({
                 success: false,
-                data: {},
-                message: warningMessage
+                message: "SubModuleID is required"
             });
         }
 
-        // Connect to database
         connectToDatabase(async (err, conn) => {
             if (err) {
-                const errorMessage = "Failed to connect to database";
-                logError(errorMessage);
                 return res.status(500).json({
                     success: false,
-                    data: err,
-                    message: errorMessage
+                    message: "Database connection failed"
                 });
             }
 
             try {
                 // Get user details
-                let userQuery, userRows;
-
-                // Try by numeric ID first
+                let userRows;
                 if (!isNaN(Number(userId))) {
-                    userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND UserID = ?`;
-                    userRows = await queryAsync(conn, userQuery, [Number(userId)]);
+                    userRows = await queryAsync(conn,
+                        `SELECT UserID, Name FROM Community_User 
+                         WHERE ISNULL(delStatus,0) = 0 AND UserID = ?`,
+                        [Number(userId)]);
                 }
 
-                // If not found and looks like email, try by email
                 if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
-                    userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
-                    userRows = await queryAsync(conn, userQuery, [userId]);
+                    userRows = await queryAsync(conn,
+                        `SELECT UserID, Name FROM Community_User 
+                         WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`,
+                        [userId]);
                 }
 
                 if (!userRows || userRows.length === 0) {
                     closeConnection(conn);
-                    const warningMessage = "User not found";
-                    logWarning(warningMessage);
                     return res.status(404).json({
                         success: false,
-                        data: {},
-                        message: warningMessage
+                        message: "User not found"
                     });
                 }
+
+                // Start transaction
+                await queryAsync(conn, "BEGIN TRANSACTION");
 
                 // Insert new unit
                 const insertQuery = `
                     INSERT INTO UnitsDetails 
-                    (
-                        UnitName, 
-                        UnitDescription,
-                        SubModuleID,
-                        AuthAdd,
-                        AddOnDt,
-                        delStatus
-                    ) 
+                    (UnitName, UnitDescription, SubModuleID, AuthAdd, AddOnDt, delStatus) 
+                    OUTPUT INSERTED.UnitID, INSERTED.UnitName, INSERTED.UnitDescription,
+                           INSERTED.SubModuleID, INSERTED.AuthAdd, INSERTED.AddOnDt
                     VALUES (?, ?, ?, ?, GETDATE(), 0);
                 `;
 
-                const insertResult = await queryAsync(
-                    conn,
-                    insertQuery,
-                    [
-                        UnitName,
-                        UnitDescription || null,
-                        SubModuleID,
-                        userRows[0].Name
-                    ]
-                );
+                const [newUnit] = await queryAsync(conn, insertQuery, [
+                    UnitName,
+                    UnitDescription || null,
+                    SubModuleID,
+                    userRows[0].Name
+                ]);
 
-                // Get the newly created unit
-                const newUnitQuery = `
-                    SELECT 
-                        UnitID,
-                        UnitName,
-                        UnitDescription,
-                        SubModuleID,
-                        AuthAdd,
-                        AddOnDt
-                    FROM UnitsDetails
-                    WHERE UnitID = SCOPE_IDENTITY() 
-                    AND ISNULL(delStatus,0) = 0;
-                `;
-                const newUnit = await queryAsync(conn, newUnitQuery);
-
-                success = true;
+                // Commit transaction
+                await queryAsync(conn, "COMMIT TRANSACTION");
                 closeConnection(conn);
 
-                const infoMessage = "Unit added successfully";
-                logInfo(infoMessage);
-
                 return res.status(200).json({
-                    success,
-                    data: newUnit[0],
-                    message: infoMessage
+                    success: true,
+                    UnitID: newUnit.UnitID,
+                    data: newUnit,
+                    message: "Unit added successfully"
                 });
 
             } catch (queryErr) {
+                await queryAsync(conn, "ROLLBACK TRANSACTION");
                 closeConnection(conn);
-                console.error("Database Query Error:", queryErr);
-                logError(queryErr);
+                console.error("Database Error:", queryErr);
                 return res.status(500).json({
                     success: false,
-                    data: queryErr,
-                    message: 'Failed to add unit. Please check your input data.'
+                    message: 'Failed to add unit'
                 });
             }
         });
     } catch (error) {
-        logError(error);
+        console.error("Server Error:", error);
         return res.status(500).json({
             success: false,
-            data: {},
             message: 'Internal server error'
         });
     }
