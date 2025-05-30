@@ -1127,13 +1127,13 @@ export const recordFileView = async (req, res) => {
 
     try {
         const { FileID } = req.body;
-        let isFileRead = 0;
-        let alreadyVisitedFiles = [];
+
         if (!FileID) {
             const warningMessage = "FileID is required";
             logWarning(warningMessage);
             return res.status(400).json({ success, message: warningMessage });
         }
+
         connectToDatabase(async (err, conn) => {
             if (err) {
                 const errorMessage = "Database connection failed";
@@ -1142,12 +1142,13 @@ export const recordFileView = async (req, res) => {
             }
 
             try {
+                // Get current user details
                 const userQuery = `SELECT UserID, Name FROM Community_User 
                                  WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
                 const userRows = await queryAsync(conn, userQuery, [userId]);
 
                 if (userRows.length === 0) {
-                    closeConnection();
+                    closeConnection(conn);
                     const warningMessage = "User not found";
                     logWarning(warningMessage);
                     return res.status(404).json({ success: false, message: warningMessage });
@@ -1155,23 +1156,22 @@ export const recordFileView = async (req, res) => {
 
                 const user = userRows[0];
 
-                const strQuery = `select UserID,FileID from UserLmsProgress where FileID = ? and isnull(delStatus,0)=0`;
-                const isFileAvail = await queryAsync(conn, strQuery, [FileID]);
-                console.log("file already visited", [FileID]);
+                // Check if THIS USER has already viewed THIS FILE
+                const checkQuery = `SELECT UserID, FileID FROM UserLmsProgress 
+                                  WHERE FileID = ? AND UserID = ? AND isnull(delStatus,0)=0`;
+                const existingViews = await queryAsync(conn, checkQuery, [FileID, user.UserID]);
 
-                if (isFileAvail.length !== 0) {
-                    isFileRead = 1;
-                    alreadyVisitedFiles.push(FileID);
-
-                }
-
-                //console.log("read test",isFileAvail);
-                if (isFileRead === 0) {
+                if (existingViews.length > 0) {
+                    // This user has already viewed this file
+                    infoMessage = "File view already recorded for this user";
+                    success = true;
+                } else {
+                    // Record new view for this user
                     const insertQuery = `
-                    INSERT INTO UserLmsProgress 
-                    (UserID, FileID, AuthAdd, AddOnDt, delStatus) 
-                    VALUES (?, ?, ?, GETDATE(), 0);
-                `;
+                        INSERT INTO UserLmsProgress 
+                        (UserID, FileID, AuthAdd, AddOnDt, delStatus) 
+                        VALUES (?, ?, ?, GETDATE(), 0);
+                    `;
 
                     await queryAsync(conn, insertQuery, [
                         user.UserID,
@@ -1179,24 +1179,18 @@ export const recordFileView = async (req, res) => {
                         user.Name
                     ]);
                     success = true;
-                    closeConnection();
-                    infoMessage = "File view recorded added successfully";
-                }
-                else {
-                    infoMessage = "File view allready recorded";
+                    infoMessage = "File view recorded successfully";
                 }
 
-
-
+                closeConnection(conn);
                 logInfo(infoMessage);
                 return res.status(200).json({
                     success,
-                    message: infoMessage,
-                    alreadyVisitedFiles
+                    message: infoMessage
                 });
 
             } catch (queryErr) {
-                closeConnection();
+                closeConnection(conn);
                 console.error("Database Query Error:", queryErr);
                 logError(queryErr);
                 return res.status(500).json({

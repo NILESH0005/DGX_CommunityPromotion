@@ -108,16 +108,16 @@ const UnitsWithFiles = () => {
 
   const recordFileView = async (fileId, unitId) => {
     try {
-      if (viewedFiles.has(fileId)) return;
+      // Check if THIS USER has already viewed THIS FILE
+      if (viewedFiles.has(fileId)) {
+        console.log("File already viewed by this user");
+        return;
+      }
 
       const response = await fetchData(
         "lmsEdit/recordFileView",
         "POST",
-        {
-          FileID: fileId,
-          UnitID: unitId,
-          SubModuleID: subModuleId,
-        },
+        { FileID: fileId },
         {
           'Content-Type': 'application/json',
           'auth-token': userToken
@@ -125,7 +125,10 @@ const UnitsWithFiles = () => {
       );
 
       if (response?.success) {
-        setViewedFiles(prev => new Set(prev).add(fileId));
+        // Only add to viewedFiles if the response indicates it was recorded
+        if (response.message !== "File view already recorded for this user") {
+          setViewedFiles(prev => new Set(prev).add(fileId));
+        }
       } else {
         console.error("Error recording file view:", response?.message || 'Unknown error');
       }
@@ -160,8 +163,8 @@ const UnitsWithFiles = () => {
       case "ipynb":
         return (
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z"/>
-            <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z"/>
+            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" />
+            <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z" />
           </svg>
         );
       case "docx":
@@ -269,7 +272,7 @@ const UnitsWithFiles = () => {
           <div className="mb-6">
             {!isSidebarCollapsed ? (
               <>
-            
+
               </>
             ) : (
               <div className="flex justify-center">
@@ -280,7 +283,7 @@ const UnitsWithFiles = () => {
             )}
           </div>
 
-        
+
 
           {/* Units List */}
           <div className="space-y-4">
@@ -320,13 +323,12 @@ const UnitsWithFiles = () => {
                       return (
                         <div
                           key={file.FileID}
-                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${
-                            isSelected
+                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${isSelected
                               ? "bg-blue-600 text-white"
                               : isViewed
-                              ? "bg-green-600 text-white hover:bg-green-500"
-                              : "text-gray-300 hover:text-white hover:bg-gray-600"
-                          }`}
+                                ? "bg-green-600 text-white hover:bg-green-500"
+                                : "text-gray-300 hover:text-white hover:bg-gray-600"
+                            }`}
                           title={isSidebarCollapsed ? removeFileExtension(file.FilesName) : ''}
                           onClick={(e) => {
                             e.stopPropagation();
