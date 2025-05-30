@@ -7,7 +7,7 @@ dotenv.config()
 
 export const getUserFileIDs = async (req, res) => {
     let success = false;
-    const userId = req.user.id; // Changed from userId to id to match getUserDiscussion
+    const userId = req.user.id; 
     console.log("Received request for getUserFileIDs. User ID:", userId);
 
     try {
@@ -23,7 +23,6 @@ export const getUserFileIDs = async (req, res) => {
             }
 
             try {
-                // First get the user details
                 const userQuery = `
                     SELECT UserID 
                     FROM Community_User 
@@ -41,8 +40,6 @@ export const getUserFileIDs = async (req, res) => {
                 }
 
                 const dbUserID = userRows[0].UserID;
-
-                // Get total count of files first
                 const countQuery = `
                     SELECT COUNT(*) as totalCount 
                     FROM UserLmsProgress 
@@ -51,7 +48,6 @@ export const getUserFileIDs = async (req, res) => {
                 const countResult = await queryAsync(conn, countQuery, [dbUserID]);
                 const totalCount = countResult[0].totalCount;
 
-                // Then get the file IDs
                 const fileQuery = `
                     SELECT FileID 
                     FROM UserLmsProgress 
@@ -95,6 +91,7 @@ export const getUserFileIDs = async (req, res) => {
     }
 };
 
+
 export const getSubModuleProgress = async (req, res) => {
   let success = false;
   const errors = validationResult(req);
@@ -134,7 +131,6 @@ export const getSubModuleProgress = async (req, res) => {
         const userID = userResult[0].UserID;
         console.log("Found user ID:", userID);
 
-        // Query 1: Get total files count in the submodule
         const totalFilesQuery = `
           SELECT COUNT(FileID) as totalFiles 
           FROM FilesDetails fd
@@ -143,7 +139,6 @@ export const getSubModuleProgress = async (req, res) => {
           WHERE mds.SubModuleID = ? AND ISNULL(mds.delStatus, 0) = 0 AND ISNULL(fd.delStatus, 0) = 0
         `;
         
-        // Query 2: Get files read by user in the submodule
         const userProgressQuery = `
           SELECT COUNT(*) as filesRead 
           FROM UserLmsProgress 

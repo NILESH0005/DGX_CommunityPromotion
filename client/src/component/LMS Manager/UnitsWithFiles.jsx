@@ -65,24 +65,25 @@ const UnitsWithFiles = () => {
         setError(null);
         console.log('Fetching units for subModuleId:', subModuleId);
 
-        const response = await fetchData("dropdown/getUnitsWithFiles", "GET");
+        const response = await fetchData(
+          `dropdown/getUnitsWithFiles?subModuleId=${subModuleId}`,
+          "GET"
+        );
+
         console.log('API Response:', response);
 
         if (response?.success) {
-          setAllUnits(response.data);
+          const units = response.data;
+          setAllUnits(units);
+          setFilteredUnits(units); // Optional: if you're keeping separate state
 
-          const filtered = response.data.filter(unit => {
-            return String(unit.SubModuleID) === String(subModuleId);
-          });
-
-          console.log('Filtered Units:', filtered);
-          setFilteredUnits(filtered);
-          if (filtered.length > 0 && filtered[0].files?.length > 0) {
-            const firstFile = filtered[0].files[0];
+          // Automatically select first file if available
+          if (units.length > 0 && units[0].files?.length > 0) {
+            const firstFile = units[0].files[0];
             setSelectedFile({
               ...firstFile,
-              unitName: filtered[0].UnitName,
-              unitDescription: filtered[0].UnitDescription
+              unitName: units[0].UnitName,
+              unitDescription: units[0].UnitDescription
             });
           }
         } else {
@@ -105,6 +106,7 @@ const UnitsWithFiles = () => {
       setSelectedFile(null);
     }
   }, [subModuleId, fetchData]);
+
 
   const recordFileView = async (fileId, unitId) => {
     try {
@@ -324,10 +326,10 @@ const UnitsWithFiles = () => {
                         <div
                           key={file.FileID}
                           className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${isSelected
-                              ? "bg-blue-600 text-white"
-                              : isViewed
-                                ? "bg-green-600 text-white hover:bg-green-500"
-                                : "text-gray-300 hover:text-white hover:bg-gray-600"
+                            ? "bg-blue-600 text-white"
+                            : isViewed
+                              ? "bg-green-600 text-white hover:bg-green-500"
+                              : "text-gray-300 hover:text-white hover:bg-gray-600"
                             }`}
                           title={isSidebarCollapsed ? removeFileExtension(file.FilesName) : ''}
                           onClick={(e) => {
