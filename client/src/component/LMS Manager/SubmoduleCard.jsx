@@ -12,7 +12,7 @@ const SubModuleCard = () => {
   const [moduleName, setModuleName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { fetchData } = useContext(ApiContext);
+  const { fetchData, userToken } = useContext(ApiContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
@@ -29,33 +29,50 @@ const SubModuleCard = () => {
       try {
         setLoading(true);
         setError(null);
-        const subModulesResponse = await fetchData(
-          `dropdown/getSubModules?moduleId=${moduleId}`, 
-          "GET"
+
+        // First fetch submodules data
+        const subModulesResponse = await fetchData(`dropdown/getSubModules?moduleId=${moduleId}`, "GET");
+
+        if (!subModulesResponse?.success) {
+          setError(subModulesResponse?.message || "Failed to fetch submodules");
+          return;
+        }
+
+        // Then fetch progress data using the submodule IDs we just got
+        const progressResponse = await fetchData(
+          'progressTrack/getSubModulesProgress',
+          'POST',
+          {
+            moduleId,
+            subModuleIds: subModulesResponse.data.map(sm => sm.SubModuleID)
+          },
+          {
+            "Content-Type": "application/json",
+            "auth-token": userToken
+          }
         );
 
-        if (subModulesResponse?.success) {
-          setFilteredSubModules(subModulesResponse.data);
+        // Merge the data
+        const subModulesWithProgress = subModulesResponse.data.map(subModule => ({
+          ...subModule,
+          progress: progressResponse?.data?.find(p => p.subModuleID === subModule.SubModuleID)?.progressPercentage || 0
+        }));
 
-          // Initialize expanded states
-          const initialExpandedState = {};
-          subModulesResponse.data.forEach(subModule => {
-            initialExpandedState[subModule.SubModuleID] = false;
-          });
-          setExpandedDescriptions(initialExpandedState);
+        setFilteredSubModules(subModulesWithProgress);
 
-          if (!location.state?.moduleName) {
-            const modulesResponse = await fetchData("dropdown/getModules", "GET");
-            if (modulesResponse?.success) {
-              const currentModule = modulesResponse.data.find(
-                (module) => module.ModuleID?.toString() === moduleId
-              );
-              setModuleName(currentModule?.ModuleName || "");
-            }
-          }
-        } else {
-          setError(subModulesResponse?.message || "Failed to fetch submodules");
-        }
+        // Find module name (you might want to fetch this separately if needed)
+        const currentModule = subModulesResponse.data.find(
+          (module) => module.ModuleID?.toString() === moduleId
+        );
+        setModuleName(currentModule?.ModuleName || "");
+
+        // Initialize expanded states
+        const initialExpandedState = {};
+        subModulesResponse.data.forEach(subModule => {
+          initialExpandedState[subModule.SubModuleID] = false;
+        });
+        setExpandedDescriptions(initialExpandedState);
+
       } catch (error) {
         console.error("Error fetching data:", error);
         setError("An error occurred while fetching data");
@@ -65,7 +82,7 @@ const SubModuleCard = () => {
     };
 
     fetchAllSubModules();
-  }, [moduleId, fetchData, location.state?.moduleName]);
+  }, [moduleId, fetchData, userToken]);
 
   const toggleDescription = (subModuleId, event) => {
     event.stopPropagation();
@@ -164,60 +181,42 @@ const SubModuleCard = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSubModules.length > 0 ? (
-            filteredSubModules.map((subModule) => {
-              const isExpanded = expandedDescriptions[subModule.SubModuleID];
-              const files = subModule.files || [];
-              
-              return (
-                <div
-                  key={subModule.SubModuleID}
-                  className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer flex flex-col relative ${
-                    isExpanded ? 'min-h-[430px]' : 'h-[430px]'
+            filteredSubModules.map((subModule) => (
+              <div
+                key={subModule.SubModuleID}
+                className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer ${expandedDescriptions[subModule.SubModuleID]
+                  ? 'h-auto'
+                  : 'h-[400px]'
                   }`}
-                >
-                  {/* Image Section */}
-                  <div 
-                    className="h-40 bg-gray-100 overflow-hidden flex-shrink-0"
-                    onClick={() => handleSubModuleClick(subModule)}
-                  >
-                    {subModule.SubModuleImage ? (
-                      <ByteArrayImage
-                        byteArray={subModule.SubModuleImage.data}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center text-gray-400 text-sm h-full">
-                        No Image
-                      </div>
-                    )}
-                  </div>
+                onClick={() => navigate(`/submodule/${subModule.SubModuleID}`)}
+              >
+                <div className="h-40 bg-gray-100 overflow-hidden flex-shrink-0">
+                  {subModule.SubModuleImage ? (
+                    <ByteArrayImage
+                      byteArray={subModule.SubModuleImage.data}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center text-gray-400 text-sm h-full">
+                      No Image
+                    </div>
+                  )}
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-blue-600 transition-colors duration-200 break-words">
+                    {subModule.SubModuleName}
+                  </h3>
 
-                  {/* Content Section */}
-                  <div 
-                    className={`p-6 flex-grow flex flex-col ${
-                      isExpanded ? 'min-h-[270px]' : 'h-[270px]'
-                    }`}
-                    onClick={() => handleSubModuleClick(subModule)}
-                  >
-                    {/* Title Section */}
-                    <div className="h-16 flex items-start mb-3">
-                      <h3 className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors duration-200 break-words line-clamp-2 leading-tight">
-                        {subModule.SubModuleName}
-                      </h3>
-                    </div>
-                    
-                    {/* Description Section */}
-                    <div className={`mb-3 ${isExpanded ? 'flex-grow' : 'flex-grow overflow-hidden'}`}>
-                      <div className={`${isExpanded ? '' : 'overflow-hidden h-full'}`}>
-                        <p 
-                          className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${
-                            isExpanded ? 'overflow-visible' : 'line-clamp-4'
-                          }`}
-                        >
-                          {subModule.SubModuleDescription || "No description available"}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="overflow-hidden">
+                    <p
+                      className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${expandedDescriptions[subModule.SubModuleID]
+                        ? 'overflow-y-auto max-h-32'
+                        : 'line-clamp-3'
+                        }`}
+                    >
+                      {subModule.SubModuleDescription || "No description available"}
+                    </p>
+                  </div>
 
                     {/* Read More Button */}
                     {isDescriptionClamped(subModule.SubModuleDescription) && (
@@ -241,33 +240,11 @@ const SubModuleCard = () => {
                       </div>
                     )}
 
-                    {/* Progress Bar */}
-                    <div className="h-12 flex items-center flex-shrink-0 mt-auto">
-                      <ProgressBar progress={subModule.progress || 20} />
-                    </div>
-                  </div>
-
-                  {/* Files Section */}
-                  {files.length > 0 && (
-                    <div 
-                      className="p-4 border-t border-gray-100"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <h4 className="text-sm font-semibold mb-2 text-gray-700">Files:</h4>
-                      <div className="space-y-2">
-                        {files.map((file) => (
-                          <div 
-                            key={file.id}
-                            className="file-item p-2 hover:bg-blue-50 rounded transition-colors cursor-pointer"
-                            onClick={() => handleFileClick(file, subModule)}
-                          >
-                            <span className="text-blue-600">{file.name}</span>
-                            <span className="file-type text-xs text-gray-500 ml-2">{file.type}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <div className="mt-4">
+                    <ProgressBar
+                      subModuleID={subModule.SubModuleID}  // Pass the ID explicitly
+                      initialProgress={subModule.progress || 0}  // Optional fallback
+                    />                </div>
                 </div>
               );
             })

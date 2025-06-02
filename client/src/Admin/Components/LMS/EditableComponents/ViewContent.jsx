@@ -33,45 +33,45 @@ const ViewContent = ({ submodule, onBack }) => {
   const [fileLink, setFileLink] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
-    const { fetchData, userToken } = useContext(ApiContext);
+  const { fetchData, userToken } = useContext(ApiContext);
 
 
 
-    useEffect(() => {
+  useEffect(() => {
 
-        // Trigger a refetch of units to ensure we have the latest data
-        const fetchUnits = async () => {
-            try {
-                setLoading(true);
-                const response = await fetchData(
-                    `dropdown/getUnitsWithFiles`,
-                    "GET",
-                    { 'auth-token': userToken }
-                );
+    // Trigger a refetch of units to ensure we have the latest data
+    const fetchUnits = async () => {
+      try {
+        setLoading(true);
+        const response = await fetchData(
+          `dropdown/getUnitsWithFiles`,
+          "GET",
+          { 'auth-token': userToken }
+        );
 
-                if (response?.success) {
-                    const validUnits = response.data.filter(unit => unit);
-                    setUnits(validUnits);
-                    const filtered = validUnits.filter(unit =>
-                        unit.SubModuleID === submodule.SubModuleID
-                    );
-                    setFilteredUnits(filtered);
+        if (response?.success) {
+          const validUnits = response.data.filter(unit => unit);
+          setUnits(validUnits);
+          const filtered = validUnits.filter(unit =>
+            unit.SubModuleID === submodule.SubModuleID
+          );
+          setFilteredUnits(filtered);
 
-                    // Select the newly added unit if it exists in the response
-                    const addedUnit = validUnits.find(unit => unit.UnitID === newUnit.UnitID);
-                    if (addedUnit) {
-                        setSelectedUnit(addedUnit);
-                    }
-                }
-            } catch (err) {
-                console.error("Error refetching units:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
+          // Select the newly added unit if it exists in the response
+          const addedUnit = validUnits.find(unit => unit.UnitID === newUnit.UnitID);
+          if (addedUnit) {
+            setSelectedUnit(addedUnit);
+          }
+        }
+      } catch (err) {
+        console.error("Error refetching units:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        fetchUnits();
-        setShowAddUnitModal(false);
+    fetchUnits();
+    setShowAddUnitModal(false);
 
 
     fetchUnits();
@@ -143,41 +143,41 @@ const ViewContent = ({ submodule, onBack }) => {
         headers
       );
 
-            if (response?.success) {
-                // Update both states using functional updates to ensure we have the latest state
-                setUnits(prevUnits =>
-                    prevUnits.map(unit =>
-                        unit.UnitID === editingUnit.UnitID ?
-                            { ...unit, ...response.data } :
-                            unit
-                    )
-                );
+      if (response?.success) {
+        // Update both states using functional updates to ensure we have the latest state
+        setUnits(prevUnits =>
+          prevUnits.map(unit =>
+            unit.UnitID === editingUnit.UnitID ?
+              { ...unit, ...response.data } :
+              unit
+          )
+        );
 
-                setFilteredUnits(prevFilteredUnits =>
-                    prevFilteredUnits.map(unit =>
-                        unit.UnitID === editingUnit.UnitID ?
-                            { ...unit, ...response.data } :
-                            unit
-                    )
-                );
+        setFilteredUnits(prevFilteredUnits =>
+          prevFilteredUnits.map(unit =>
+            unit.UnitID === editingUnit.UnitID ?
+              { ...unit, ...response.data } :
+              unit
+          )
+        );
 
-                // Update selectedUnit if it's the one being edited
-                if (selectedUnit?.UnitID === editingUnit.UnitID) {
-                    setSelectedUnit(prev => ({ ...prev, ...response.data }));
-                }
-
-                handleCancelEditUnit();
-                Swal.fire('Success!', 'Unit updated successfully', 'success');
-            } else {
-                throw new Error(response?.message || "Failed to update unit");
-            }
-        } catch (err) {
-            console.error("Error:", err);
-            setError(err.message);
-        } finally {
-            setIsSaving(false);
+        // Update selectedUnit if it's the one being edited
+        if (selectedUnit?.UnitID === editingUnit.UnitID) {
+          setSelectedUnit(prev => ({ ...prev, ...response.data }));
         }
-    };
+
+        handleCancelEditUnit();
+        Swal.fire('Success!', 'Unit updated successfully', 'success');
+      } else {
+        throw new Error(response?.message || "Failed to update unit");
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      setError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleDeleteUnit = async (unitId) => {
     const result = await Swal.fire({
@@ -253,107 +253,109 @@ const ViewContent = ({ submodule, onBack }) => {
 
   const handleUploadFile = async () => {
     if ((!newFile && !fileLink.trim()) || !selectedUnit) return;
+    console.log("new file", newFile);
 
-        setIsUploading(true);
-        try {
-            const uploadToast = Swal.fire({
-                title: 'Uploading...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
+    setIsUploading(true);
+    try {
+      const uploadToast = Swal.fire({
+        title: 'Uploading...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
 
-            // Calculate equal percentage for all files (existing + new)
-            const totalFilesAfterUpload = files.length + 1;
-            const equalPercentage = (100 / totalFilesAfterUpload).toFixed(2);
+      const totalFilesAfterUpload = files.length + 1;
+      const equalPercentage = (100 / totalFilesAfterUpload).toFixed(2);
+      console.log("myfile", newFile);
+      if (newFile) {
+        const formData = new FormData();
+        formData.append('file', newFile);
+        console.log("Selected Unit ID:", selectedUnit.UnitID); // Debug log
 
-            if (newFile) {
-                const formData = new FormData();
-                formData.append('file', newFile);
-                formData.append('unitId', selectedUnit.UnitID);
-                formData.append('percentage', equalPercentage);
+        formData.append('unitId', selectedUnit.UnitID);
+        formData.append('percentage', equalPercentage);
+        console.log("mydata", formData);
+        const response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'auth-token': userToken
+          }
+        });
+        console.log("response", response);
 
-                const response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'auth-token': userToken
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || 'Upload failed');
-                }
-
-                const result = await response.json();
-                await uploadToast.close();
-
-                if (result.success) {
-                    // Update all files' percentages in the frontend state
-                    const updatedFiles = files.map(file => ({
-                        ...file,
-                        Percentage: equalPercentage
-                    }));
-
-                    // Add the new file with the same percentage
-                    setFiles([...updatedFiles, {
-                        ...result.data,
-                        Percentage: equalPercentage
-                    }]);
-
-                    setNewFile(null);
-                    setFileLink('');
-                    Swal.fire('Success!', 'File uploaded successfully', 'success');
-                } else {
-                    throw new Error(result.message || "Failed to save");
-                }
-            } else if (fileLink.trim()) {
-                // Handle link upload
-                const response = await fetchData(
-                    "lms/files",
-                    "POST",
-                    {
-                        unitId: selectedUnit.UnitID,
-                        link: fileLink,
-                        percentage: equalPercentage,
-                        fileName: fileLink.split('/').pop() || 'Link',
-                        fileType: 'link'
-                    },
-                    {
-                        'Content-Type': 'application/json',
-                        'auth-token': userToken
-                    }
-                );
-
-                await uploadToast.close();
-
-                if (response?.success) {
-                    // Update all files' percentages in the frontend state
-                    const updatedFiles = files.map(file => ({
-                        ...file,
-                        Percentage: equalPercentage
-                    }));
-
-                    // Add the new link with the same percentage
-                    setFiles([...updatedFiles, {
-                        ...response.data,
-                        Percentage: equalPercentage
-                    }]);
-
-                    setNewFile(null);
-                    setFileLink('');
-                    Swal.fire('Success!', 'Link saved successfully', 'success');
-                } else {
-                    throw new Error(response?.message || "Failed to save link");
-                }
-            }
-        } catch (err) {
-            console.error("Upload error:", err);
-            Swal.fire('Error!', err.message || 'Failed to save', 'error');
-        } finally {
-            setIsUploading(false);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Upload failed');
         }
-    };
+
+        const result = await response.json();
+        await uploadToast.close();
+
+        if (result.success) {
+          const updatedFiles = files.map(file => ({
+            ...file,
+            Percentage: equalPercentage
+          }));
+
+          // Add the new file with the same percentage
+          setFiles([...updatedFiles, {
+            ...result.data,
+            Percentage: equalPercentage
+          }]);
+
+          setNewFile(null);
+          setFileLink('');
+          Swal.fire('Success!', 'File uploaded successfully', 'success');
+        } else {
+          throw new Error(result.message || "Failed to save");
+        }
+      } else if (fileLink.trim()) {
+        const response = await fetchData(
+          "lms/files",
+          "POST",
+          {
+            unitId: selectedUnit.UnitID,
+            link: fileLink,
+            percentage: equalPercentage,
+            fileName: fileLink.split('/').pop() || 'Link',
+            fileType: 'link'
+          },
+          {
+            'Content-Type': 'application/json',
+            'auth-token': userToken
+          }
+        );
+        console.log("response", response);
+
+
+        await uploadToast.close();
+
+        if (response?.success) {
+          const updatedFiles = files.map(file => ({
+            ...file,
+            Percentage: equalPercentage
+          }));
+
+          // Add the new link with the same percentage
+          setFiles([...updatedFiles, {
+            ...response.data,
+            Percentage: equalPercentage
+          }]);
+
+          setNewFile(null);
+          setFileLink('');
+          Swal.fire('Success!', 'Link saved successfully', 'success');
+        } else {
+          throw new Error(response?.message || "Failed to save link");
+        }
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      Swal.fire('Error!', err.message || 'Failed to save', 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleDeleteFile = async (fileId) => {
     const result = await Swal.fire({
@@ -368,29 +370,29 @@ const ViewContent = ({ submodule, onBack }) => {
 
     if (!result.isConfirmed) return;
 
-        try {
-            setFiles(prev => prev.filter(file => file.FileID !== fileId));
-            const response = await fetchData(
-                "lmsEdit/deleteFile",
-                "POST",
-                { fileId },
-                {
-                    "Content-Type": "application/json",
-                    "auth-token": userToken
-                }
-            );
-
-            if (response?.success) {
-
-
-                setFiles(prev => prev.filter(file => file.FileID !== fileId));
-                Swal.fire('Deleted!', 'File has been deleted.', 'success');
-            }
-        } catch (err) {
-            console.error("Delete error:", err);
-            Swal.fire('Error!', 'Failed to delete file', 'error');
+    try {
+      setFiles(prev => prev.filter(file => file.FileID !== fileId));
+      const response = await fetchData(
+        "lmsEdit/deleteFile",
+        "POST",
+        { fileId },
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken
         }
-    };
+      );
+
+      if (response?.success) {
+
+
+        setFiles(prev => prev.filter(file => file.FileID !== fileId));
+        Swal.fire('Deleted!', 'File has been deleted.', 'success');
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      Swal.fire('Error!', 'Failed to delete file', 'error');
+    }
+  };
 
   const handleAddUnitSuccess = (newUnit) => {
     if (!newUnit || !newUnit.UnitID) {
@@ -459,9 +461,9 @@ const ViewContent = ({ submodule, onBack }) => {
 
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
-         
-          
-         
+
+
+
           <button
             onClick={handleAddUnitClick}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
@@ -469,12 +471,12 @@ const ViewContent = ({ submodule, onBack }) => {
             <FaEdit className="mr-2" />
             Add New Unit
           </button>
-            <h1 className="text-2xl font-bold text-Black-800 dark:text-black">
-              Content for:{" "}
-              <span className="text-red-600 dark:text-red-400">
-                {submodule.SubModuleName}
-              </span>
-            </h1>
+          <h1 className="text-2xl font-bold text-Black-800 dark:text-black">
+            Content for:{" "}
+            <span className="text-red-600 dark:text-red-400">
+              {submodule.SubModuleName}
+            </span>
+          </h1>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -493,11 +495,10 @@ const ViewContent = ({ submodule, onBack }) => {
                     .map((unit) => (
                       <div
                         key={unit.UnitID}
-                        className={`p-4 cursor-pointer transition-colors duration-200 ${
-                          selectedUnit?.UnitID === unit.UnitID
-                            ? "bg-blue-50 dark:bg-gray-700"
-                            : "hover:bg-gray-50 dark:hover:bg-gray-700"
-                        }`}
+                        className={`p-4 cursor-pointer transition-colors duration-200 ${selectedUnit?.UnitID === unit.UnitID
+                          ? "bg-blue-50 dark:bg-gray-700"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
                         onClick={() => setSelectedUnit(unit)}
                       >
                         <div className="flex justify-between items-start">

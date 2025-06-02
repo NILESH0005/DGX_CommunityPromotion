@@ -3,12 +3,15 @@ import ApiContext from "../../../context/ApiContext";
 import EditModule from "./EditableComponents/EditModule.jsx";
 import EditSubModule from "./EditableComponents/EditSubModule.jsx";
 import Swal from 'sweetalert2';
+import CreateQuiz from "../Quiz/CreateQuiz.jsx";
 
 const LearningMaterialList = () => {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedModule, setSelectedModule] = useState(null);
+  const [showCreateQuiz, setShowCreateQuiz] = useState(false);
+  const [quizModule, setQuizModule] = useState(null);
   const { fetchData, userToken } = useContext(ApiContext);
 
   useEffect(() => {
@@ -32,13 +35,27 @@ const LearningMaterialList = () => {
     fetchModules();
   }, [fetchData]);
 
+  const handleCreateQuiz = (moduleId, moduleName) => {
+    setQuizModule({ id: moduleId, name: moduleName });
+    setShowCreateQuiz(true);
+  };
+
+  const handleBackFromQuiz = () => {
+    setShowCreateQuiz(false);
+    setQuizModule(null);
+  };
+
+  const navigateToQuizTable = () => {
+    handleBackFromQuiz();
+  };
+
   const handleViewSubmodules = (moduleId) => {
     const module = modules.find((mod) => mod.ModuleID === moduleId);
     if (module) {
       setSelectedModule(module);
     }
     console.log("id ?", moduleId);
-    
+
   };
 
 
@@ -108,6 +125,16 @@ const LearningMaterialList = () => {
     );
   }
 
+  if (showCreateQuiz && quizModule) {
+    return (
+      <CreateQuiz
+        moduleId={quizModule.id}
+        moduleName={quizModule.name}
+        navigateToQuizTable={navigateToQuizTable}
+        onBack={handleBackFromQuiz}
+      />
+    );
+  }
   if (selectedModule) {
     return (
       <EditSubModule
@@ -137,6 +164,7 @@ const LearningMaterialList = () => {
               module={module}
               onDelete={handleDeleteModule}
               onViewSubmodules={handleViewSubmodules}
+              onCreateQuiz={handleCreateQuiz}  
             />
           ))}
         </div>

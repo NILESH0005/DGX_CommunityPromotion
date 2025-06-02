@@ -4,8 +4,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiContext from '../../context/ApiContext';
 import FileViewer from '../../utils/FileViewer';
 import Swal from 'sweetalert2';
-import { FaChevronRight } from 'react-icons/fa';
-import BreadCrumb from './BreadCrumb';
+import Quiz from '../quiz/Quiz';
 
 const UnitsWithFiles = () => {
   const { subModuleId } = useParams();
@@ -13,6 +12,8 @@ const UnitsWithFiles = () => {
   const location = useLocation();
   const [allUnits, setAllUnits] = useState([]);
   const [filteredUnits, setFilteredUnits] = useState([]);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { fetchData, userToken } = useContext(ApiContext);
@@ -68,6 +69,34 @@ const UnitsWithFiles = () => {
     }
   }, [userToken, fetchData]);
 
+  const fetchQuizzes = async () => {
+    try {
+      if (!subModuleId || !userToken) return;
+
+      const response = await fetchData(
+        "quiz/getQuizzesBySubModule",
+        "POST",
+        { subModuleId },
+        {
+          'Content-Type': 'application/json',
+          'auth-token': userToken
+        }
+      );
+
+      console.log("Quizzes response:", response); // Add this for debugging
+
+      if (response?.success) {
+        setQuizzes(response.data.quizzes || []);
+      } else {
+        console.error("Failed to fetch quizzes:", response?.message);
+        setQuizzes([]); // Ensure quizzes is set to empty array on failure
+      }
+    } catch (error) {
+      console.error("Error fetching quizzes:", error);
+      setQuizzes([]); 
+    }
+  };
+
   useEffect(() => {
     const fetchUnitsWithFiles = async () => {
       try {
@@ -104,26 +133,27 @@ const UnitsWithFiles = () => {
 
     if (subModuleId) {
       fetchUnitsWithFiles();
+      fetchQuizzes(); // Fetch quizzes when subModuleId changes
     } else {
       setLoading(false);
       setAllUnits([]);
       setFilteredUnits([]);
       setSelectedFile(null);
     }
-  }, [subModuleId, fetchData]);
+  }, [subModuleId, fetchData, userToken]);
 
   const recordFileView = async (fileId, unitId) => {
     try {
-      if (viewedFiles.has(fileId)) return;
+      // Check if THIS USER has already viewed THIS FILE
+      if (viewedFiles.has(fileId)) {
+        console.log("File already viewed by this user");
+        return;
+      }
 
       const response = await fetchData(
         "lmsEdit/recordFileView",
         "POST",
-        {
-          FileID: fileId,
-          UnitID: unitId,
-          SubModuleID: subModuleId,
-        },
+        { FileID: fileId },
         {
           'Content-Type': 'application/json',
           'auth-token': userToken
@@ -131,7 +161,9 @@ const UnitsWithFiles = () => {
       );
 
       if (response?.success) {
-        setViewedFiles(prev => new Set(prev).add(fileId));
+        if (response.message !== "File view already recorded for this user") {
+          setViewedFiles(prev => new Set(prev).add(fileId));
+        }
       } else {
         console.error("Error recording file view:", response?.message || 'Unknown error');
       }
@@ -164,8 +196,8 @@ const UnitsWithFiles = () => {
       case "ipynb":
         return (
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-            <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z"/>
+            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" />
+            <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z" />
           </svg>
         );
       case "docx":
@@ -186,6 +218,8 @@ const UnitsWithFiles = () => {
   const removeFileExtension = (filename) => {
     return filename.replace(/\.[^/.]+$/, "");
   };
+
+
 
   if (!subModuleId) {
     return (
@@ -247,6 +281,39 @@ const UnitsWithFiles = () => {
     );
   }
 
+  const renderQuizItem = (quiz) => {
+    const isCollapsed = isSidebarCollapsed;
+    const attemptsText = quiz.userAttempts > 0 ? `(Attempts: ${quiz.userAttempts})` : '(Not attempted)';
+
+    return (
+      <div
+        key={quiz.QuizID}
+        className={`${isCollapsed ? 'p-2' : 'p-3'} rounded-lg hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700 mt-2`}
+        onClick={() => setSelectedQuiz(quiz)}
+      >
+
+        {isCollapsed ? (
+          <div className="flex justify-center" title={quiz.QuizName}>
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+              <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+            </svg>
+          </div>
+        ) : (
+          <>
+            <h3 className="font-bold text-lg mb-1">{quiz.QuizName}</h3>
+            <p className="text-gray-300 text-sm">
+              Level: {quiz.QuizLevel} {attemptsText}
+            </p>
+            <div className="mt-2 text-xs text-gray-400">
+              {new Date(quiz.StartDateAndTime).toLocaleDateString()} - {new Date(quiz.EndDateTime).toLocaleDateString()}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* Navigation Sidebar */}
@@ -271,8 +338,7 @@ const UnitsWithFiles = () => {
           <div className="mb-6">
             {!isSidebarCollapsed ? (
               <>
-                <h2 className="text-xl font-bold text-white">Units</h2>
-                <p className="text-gray-300 text-sm">Select a unit to view content</p>
+
               </>
             ) : (
               <div className="flex justify-center">
@@ -283,6 +349,9 @@ const UnitsWithFiles = () => {
             )}
           </div>
 
+
+
+          {/* Units List */}
           <div className="space-y-4">
             {filteredUnits.map(unit => (
               <div
@@ -320,13 +389,12 @@ const UnitsWithFiles = () => {
                       return (
                         <div
                           key={file.FileID}
-                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${
-                            isSelected
-                              ? "bg-blue-600 text-white"
-                              : isViewed
+                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${isSelected
+                            ? "bg-blue-600 text-white"
+                            : isViewed
                               ? "bg-green-600 text-white hover:bg-green-500"
                               : "text-gray-300 hover:text-white hover:bg-gray-600"
-                          }`}
+                            }`}
                           title={isSidebarCollapsed ? removeFileExtension(file.FilesName) : ''}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -371,54 +439,47 @@ const UnitsWithFiles = () => {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden">
-        {/* Breadcrumbs Navigation */}
-        <BreadCrumb customPaths={[
-          {
-            label: moduleName,
-            path: `/module/${location.state?.moduleId || ''}`,
-            isActive: false,
-            state: { moduleName }
-          },
-          {
-            label: subModuleName,
-            path: `/submodule/${subModuleId}`,
-            isActive: false,
-            state: {
-              moduleName,
-              submoduleName: subModuleName,
-              moduleId: location.state?.moduleId
-            }
-          },
-          ...(selectedFile ? [{
-            label: removeFileExtension(selectedFile.FilesName),
-            path: null,
-            isActive: true
-          }] : [])
-        ]} />
-
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">
-            {selectedFile?.unitName || "Select a Unit"}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {selectedFile?.unitDescription || ""}
-          </p>
-          {selectedFile && (
-            <h2 className="text-xl font-semibold text-gray-700 mt-4">
-              {removeFileExtension(selectedFile.FilesName)}
-              {selectedFile.fileType === "ipynb" && (
-                <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
-                  Jupyter Notebook
-                </span>
+          {/* Quiz List */}
+          {quizzes.length > 0 && (
+            <div className="mt-8 pt-4 border-t border-gray-600">
+              {!isSidebarCollapsed && (
+                <h3 className="font-bold text-lg mb-4 text-white">Quizzes</h3>
               )}
-            </h2>
+              <div className="space-y-2">
+                {console.log("Rendering quizzes:", quizzes)}
+                {quizzes.map(quiz => renderQuizItem(quiz))}
+              </div>
+            </div>
           )}
         </div>
+      </div>
+      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        {selectedQuiz ? (
+          // Render Quiz component when a quiz is selected
+          <Quiz
+            quizId={selectedQuiz.QuizID}
+            quiz={selectedQuiz}  // Pass the full quiz object
+            onBack={() => setSelectedQuiz(null)}
+          />
+        ) : (
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-800">
+              {selectedFile?.unitName || "Select a Unit"}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {selectedFile?.unitDescription || ""}
+            </p>
+            {selectedFile && (
+              <h2 className="text-xl font-semibold text-gray-700 mt-4">
+                {removeFileExtension(selectedFile.FilesName)}
+                {selectedFile.fileType === "ipynb" && (
+                  <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                    Jupyter Notebook
+                  </span>
+                )}
+              </h2>
+            )}
+          </div>)}
 
         <div className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${selectedFile?.fileType === "ipynb" ?
           "bg-[#f5f5f5] border border-gray-300" :

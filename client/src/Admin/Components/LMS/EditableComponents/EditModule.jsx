@@ -3,10 +3,10 @@ import ByteArrayImage from "../../../../utils/ByteArrayImage";
 import { compressImage } from "../../../../utils/compressImage";
 import Swal from "sweetalert2";
 import ApiContext from "../../../../context/ApiContext";
-import { FaEdit, FaTrash, FaFolder, FaSave, FaTimes, FaUpload, FaImage, FaEllipsisH, FaAngleDown, FaAngleUp } from "react-icons/fa";
+import { FaEdit, FaTrash, FaFolder, FaSave, FaTimes, FaUpload, FaImage, FaEllipsisH, FaAngleDown, FaAngleUp, FaPlus } from "react-icons/fa";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
-const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
+const EditModule = ({ module, onCancel, onDelete, onViewSubmodules, onCreateQuiz }) => {
     // console.log("sun module ", onViewSubmodules);
     const [editedModule, setEditedModule] = useState(module);
     const [isSaving, setIsSaving] = useState(false);
@@ -146,10 +146,10 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                     ...editedModule,
                     ModuleName: response.data.ModuleName,
                     ModuleDescription: response.data.ModuleDescription,
-                    ModuleImage: response.data.ModuleImage.data 
+                    ModuleImage: response.data.ModuleImage.data
                 };
-                console.log("udate module",updatedModule);
-                
+                console.log("udate module", updatedModule);
+
                 setEditedModule(updatedModule);
                 setImagePreview(
                     response.data.ModuleImage.data
@@ -454,10 +454,23 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules }) => {
                         </>
                     )}
                 </div>
-
-                {/* Action Buttons - Fixed at the bottom */}
                 {!isEditing && (
                     <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <div>
+                            <button
+                                onClick={() => {
+                                    if (onCreateQuiz) {
+                                        onCreateQuiz(editedModule.ModuleID, editedModule.ModuleName);
+                                    }
+                                }}
+                                className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center text-sm"
+                                data-tooltip-id="create-quiz-tooltip"
+                                data-tooltip-content="Create Quiz"
+                            >
+                                <FaPlus className="mr-1" size={12} />
+                                Create Quiz
+                            </button>
+                        </div>
                         <button
                             onClick={() => setIsEditing(true)}
                             className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center"

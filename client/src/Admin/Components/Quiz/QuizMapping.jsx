@@ -390,7 +390,6 @@ const QuizMapping = () => {
 
       if (result.isConfirmed) {
         setLoading(prev => ({ ...prev, mapping: true }));
-
         const endpoint = `quiz/unmappQuestion`;
         const method = "POST";
         const headers = {
@@ -404,33 +403,23 @@ const QuizMapping = () => {
         const response = await fetchData(endpoint, method, body, headers);
 
         if (response.success) {
-          // Get the questions that were unmapped
           const unmappedQuestions = mappedQuestions.filter(q =>
             selectedMappedQuestions.includes(q.mapping_id)
           );
-
-          // Update quizzes count
           setQuizzes(prev => prev.map(quiz =>
             quiz.QuizID.toString() === selectedQuiz
               ? { ...quiz, questionCount: Math.max(0, (quiz.questionCount || 0) - selectedMappedQuestions.length) }
               : quiz
           ));
-
-          // Update mapped questions by removing the unmapped ones
           setMappedQuestions(prev =>
             prev.filter(q => !selectedMappedQuestions.includes(q.mapping_id))
           );
-
-          // Update available questions by adding the unmapped ones back
           setQuestions(prev => {
-            // Create question objects in the format expected by the questions table
             const newQuestions = unmappedQuestions.map(q => ({
               question_id: q.question_id,
               question_text: q.question_text,
               options: q.options || []
             }));
-
-            // Filter out duplicates and merge with existing questions
             return [...prev, ...newQuestions].filter((q, index, self) =>
               index === self.findIndex(t => t.question_id === q.question_id)
             );
@@ -441,8 +430,6 @@ const QuizMapping = () => {
             title: 'Success',
             text: `${selectedMappedQuestions.length} question(s) removed successfully!`,
           });
-
-          // Clear selection
           setSelectedMappedQuestions([]);
         } else {
           throw new Error(response.message || 'Failed to remove questions');
@@ -662,8 +649,6 @@ const QuizMapping = () => {
             )}
           </div>
         )}
-
-        {/* Group and Level Selection (Only shows after quiz is selected) */}
         {selectedQuiz && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-t pt-6">
             <div>

@@ -18,7 +18,7 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
             [name]: value
         }));
         setIsDirty(true);
-        
+
         // Clear error when user types
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: null }));
@@ -27,17 +27,17 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
 
     const validateForm = () => {
         const newErrors = {};
-        
+
         if (!unitData.UnitName?.trim()) {
             newErrors.UnitName = "Unit name is required";
         } else if (unitData.UnitName.trim().length > 100) {
             newErrors.UnitName = "Name must be less than 100 characters";
         }
-        
+
         if (unitData.UnitDescription.length > 500) {
             newErrors.UnitDescription = "Description must be less than 500 characters";
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -45,9 +45,8 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsDirty(true);
-        
+
         if (!validateForm()) {
-            // Scroll to first error
             const firstErrorKey = Object.keys(errors)[0];
             if (firstErrorKey) {
                 document.querySelector(`[name="${firstErrorKey}"]`)?.scrollIntoView({
@@ -57,7 +56,7 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
             }
             return;
         }
-        
+
         setIsSubmitting(true);
         setError(null);
 
@@ -66,6 +65,7 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
                 ...unitData,
                 SubModuleID: submodule.SubModuleID
             };
+            console.log("Payload:", payload);
 
             const response = await fetchData(
                 `lmsEdit/addUnit`,
@@ -77,6 +77,8 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
                 }
             );
 
+            console.log("API Response:", response); // Debug the response structure
+
             if (response?.success) {
                 Swal.fire({
                     icon: 'success',
@@ -86,8 +88,19 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
                     showConfirmButton: false,
                     timerProgressBar: true,
                     didClose: () => {
+                        // Check different possible response structures
+                        const unitId = response.data?.UnitID ||
+                            response.UnitID ||
+                            response.data?.unitID ||
+                            response.id;
+
+                        if (!unitId) {
+                            console.error("UnitID not found in response:", response);
+                            throw new Error("UnitID not received from server");
+                        }
+
                         const completeUnit = {
-                            UnitID: response.data?.UnitID || Date.now(),
+                            UnitID: unitId,
                             UnitName: unitData.UnitName,
                             UnitDescription: unitData.UnitDescription,
                             SubModuleID: submodule.SubModuleID,
@@ -95,6 +108,7 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
                             delStatus: 0
                         };
 
+                        console.log("Complete unit data:", completeUnit);
                         onAddUnit(completeUnit);
                         onClose();
                         setUnitData({ UnitName: '', UnitDescription: '' });
@@ -131,8 +145,8 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
                                 Submodule: {submodule?.SubModuleName || 'N/A'}
                             </div>
                         </div>
-                        <button 
-                            onClick={onClose} 
+                        <button
+                            onClick={onClose}
                             className="text-white hover:text-gray-200 transition-colors"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -221,8 +235,8 @@ const AddUnitModal = ({ isOpen, onClose, onAddUnit, submodule, fetchData, userTo
                         <button
                             type="submit"
                             className={`flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
-                                ${isSubmitting 
-                                    ? 'bg-blue-400 cursor-not-allowed' 
+                                ${isSubmitting
+                                    ? 'bg-blue-400 cursor-not-allowed'
                                     : 'bg-blue-600 hover:bg-blue-700'}`}
                             disabled={isSubmitting}
                         >
