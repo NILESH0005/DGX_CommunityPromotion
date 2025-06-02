@@ -6,20 +6,22 @@ import ApiContext from '../../context/ApiContext';
 import Loader from '../LoadPage';
 import Swal from 'sweetalert2';
 
-const Quiz = () => {
-  const { quizId } = useParams();
+const Quiz = ({ quizId, quiz: initialQuizData, onBack }) => {
+  // const { quizId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const quiz = location.state?.quiz || {};
+  // const quiz = location.state?.quiz || {};
+  const [quiz, setQuiz] = useState(initialQuizData);
+  const [loading, setLoading] = useState(!initialQuizData);
 
-  const STORAGE_KEY = `quiz_attempt_${quiz.QuizID}`;
+  const STORAGE_KEY = `quiz_attempt_${quizId || initialQuizData?.QuizID}`;
   const { userToken, fetchData } = useContext(ApiContext);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [finalScore, setFinalScore] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
@@ -45,6 +47,48 @@ const Quiz = () => {
     }
   };
 
+  useEffect(() => {
+    const initializeQuiz = async () => {
+      try {
+        setLoading(true);
+
+        // If we don't have initial quiz data, fetch it
+        if (!initialQuizData && quizId) {
+          const quizData = await fetchQuizMetadata(quizId);
+          setQuiz(quizData);
+        }
+
+        // Always fetch questions
+        await fetchQuizQuestions();
+      } catch (err) {
+        setError(err.message || "Failed to load quiz");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeQuiz();
+  }, [quizId, initialQuizData]);
+
+  const fetchQuizMetadata = async (id) => {
+    try {
+      const response = await fetchData(
+        "quiz/getQuizMetadata",
+        "POST",
+        { QuizID: id },
+        { 'Content-Type': 'application/json', 'auth-token': userToken }
+      );
+
+      if (response?.success) {
+        return response.data.quiz;
+      }
+      throw new Error(response?.message || "Failed to fetch quiz");
+    } catch (error) {
+      console.error("Error fetching quiz:", error);
+      throw error;
+    }
+  };
+
   const clearAnswerFromStorage = (questionIndex) => {
     const savedData = loadSavedAnswers();
     if (savedData) {
@@ -60,6 +104,28 @@ const Quiz = () => {
 
   const [selectedAnswers, setSelectedAnswers] = useState([]);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Only fetch if we don't have initial data
+        if (!initialQuizData) {
+          const quizRes = await fetchQuizMetadata(quizId);
+          setQuiz(quizRes);
+        }
+
+        // Always fetch questions (your existing implementation)
+        const questionsRes = await fetchQuizQuestions(quizId);
+        setQuestions(questionsRes);
+
+      } catch (error) {
+        // Handle error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [quizId]);
 
   useEffect(() => {
     if (userToken && quiz.QuizID && quiz.group_id) {
@@ -83,67 +149,55 @@ const Quiz = () => {
   }, [STORAGE_KEY]);
 
   const fetchQuizQuestions = async () => {
-    setLoading(true);
-    setError(null);
-
     try {
-      if (!userToken) {
-        throw new Error("Authentication token is missing");
+      const currentQuizId = quizId || initialQuizData?.QuizID;
+      const currentGroupId = quiz.group_id || initialQuizData?.group_id;
+
+      if (!currentQuizId || !currentGroupId) {
+        throw new Error("Missing quiz ID or group ID");
       }
 
-      const endpoint = "quiz/getQuizQuestions";
-      const method = "POST";
-      const headers = {
-        "Content-Type": "application/json",
-        "auth-token": userToken,
-      };
-      const body = {
-        quizGroupID: quiz.group_id,
-        QuizID: quiz.QuizID
-      };
+      const response = await fetchData(
+        "quiz/getQuizQuestions",
+        "POST",
+        {
+          quizGroupID: currentGroupId,
+          QuizID: currentQuizId
+        },
+        { 'Content-Type': 'application/json', 'auth-token': userToken }
+      );
 
-      const data = await fetchData(endpoint, method, body, headers);
-      console.log("ddddaaatttaaa", data);
+      if (response?.success) {
+        const transformed = transformQuestions(response.data.questions);
+        setQuestions(transformed);
 
-      if (!data) {
-        throw new Error("No data received from server");
-      }
+        // Initialize other states based on questions
+        if (transformed.length > 0) {
+          const duration = transformed[0].duration || 30;
+          setTimer({
+            hours: Math.floor(duration / 60),
+            minutes: duration % 60,
+            seconds: 0
+          });
 
-      if (data.success) {
-        const transformedQuestions = transformQuestions(data.data.questions);
-        setQuestions(transformedQuestions);
-
-        const saved = loadSavedAnswers();
-        setSelectedAnswers(saved?.answers || Array(transformedQuestions.length).fill(null));
-
-        if (transformedQuestions.length > 0) {
-          const duration = transformedQuestions[0].duration || 30;
-          const hours = Math.floor(duration / 60);
-          const minutes = duration % 60;
-          setTimer({ hours, minutes, seconds: 0 });
+          setQuestionStatus(
+            transformed.reduce((acc, _, i) => {
+              acc[i + 1] = "not-visited";
+              return acc;
+            }, {})
+          );
         }
-
-        // const initialSelectedAnswers = Array(transformedQuestions.length).fill(null);
-        const initialQuestionStatus = transformedQuestions.reduce((acc, _, index) => {
-          acc[index + 1] = "not-visited";
-          return acc;
-        }, {});
-
-        // setSelectedAnswers(initialSelectedAnswers);
-        setQuestionStatus(initialQuestionStatus);
       } else {
-        throw new Error(data.message || "Failed to fetch questions");
+        throw new Error(response?.message || "Failed to fetch questions");
       }
     } catch (err) {
       console.error("Error fetching questions:", err);
-      setError(err.message || "Something went wrong, please try again.");
+      setError(err.message || "Failed to load questions");
       Swal.fire({
         icon: 'error',
         title: 'Error',
         text: err.message || "Failed to load questions",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -450,11 +504,19 @@ const Quiz = () => {
     );
   }
 
-  if (questions.length === 0) {
+  if (!questions || questions.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="text-center p-6 bg-white rounded-lg shadow-md">
           <p className="text-lg">No questions available for this quiz.</p>
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="mt-4 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition"
+            >
+              Back to Units
+            </button>
+          )}
         </div>
       </div>
     );

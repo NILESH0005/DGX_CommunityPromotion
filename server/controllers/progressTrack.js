@@ -103,7 +103,6 @@ export const getSubModuleProgress = async (req, res) => {
   }
 
   try {
-    // Get user email from JWT token (like in getUserQuizHistory)
     const userEmail = req.user.id;
     console.log("User email from token:", userEmail);
 
@@ -115,9 +114,8 @@ export const getSubModuleProgress = async (req, res) => {
       }
 
       try {
-        const { subModuleID } = req.body; // Now only need subModuleID from body
+        const { subModuleID } = req.body; 
         
-        // First get the user ID from email (like in getUserQuizHistory)
         const userIdQuery = "SELECT UserID FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0";
         const userResult = await queryAsync(conn, userIdQuery, [userEmail]);
 
