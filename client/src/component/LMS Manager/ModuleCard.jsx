@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import ApiContext from "../../context/ApiContext.jsx";
-import ByteArrayImage from "../../utils/ByteArrayImage.jsx";
+import ApiContext from "../../context/ApiContext";
+import ByteArrayImage from "../../utils/ByteArrayImage";
 import { FaAngleDown, FaAngleUp } from "react-icons/fa";
 
 const ModuleCard = () => {
@@ -35,8 +35,8 @@ const ModuleCard = () => {
     fetchModules();
   }, [fetchData]);
 
-  const handleModuleClick = (moduleId) => {
-    navigate(`/module/${moduleId}`);
+  const handleModuleClick = (moduleId, moduleName) => {
+    navigate(`/module/${moduleId}`, { state: { moduleName } });
   };
 
   const toggleDescription = (moduleId, event) => {
@@ -82,7 +82,7 @@ const ModuleCard = () => {
             <div 
               key={module.ModuleID} 
               className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-              onClick={() => handleModuleClick(module.ModuleID)}
+              onClick={() => handleModuleClick(module.ModuleID, module.ModuleName)}
             >
               <div className="h-48 bg-gray-100 overflow-hidden">
                 {module.ModuleImage ? (

@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
 import PropTypes from 'prop-types';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiContext from '../../context/ApiContext';
 import FileViewer from '../../utils/FileViewer';
 import Swal from 'sweetalert2';
+import { FaChevronRight } from 'react-icons/fa';
+import BreadCrumb from './BreadCrumb';
 
 const UnitsWithFiles = () => {
   const { subModuleId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [allUnits, setAllUnits] = useState([]);
   const [filteredUnits, setFilteredUnits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,8 +18,20 @@ const UnitsWithFiles = () => {
   const { fetchData, userToken } = useContext(ApiContext);
   const [selectedFile, setSelectedFile] = useState(null);
   const [viewedFiles, setViewedFiles] = useState(new Set());
-  const [userFileIds, setUserFileIds] = useState([]); // New state for user's file IDs
+  const [userFileIds, setUserFileIds] = useState([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [moduleName, setModuleName] = useState('');
+  const [subModuleName, setSubModuleName] = useState('');
+
+  // Get module and submodule names from location state if available
+  useEffect(() => {
+    if (location.state?.moduleName) {
+      setModuleName(location.state.moduleName);
+    }
+    if (location.state?.submoduleName) {
+      setSubModuleName(location.state.submoduleName);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchUserFileIds = async () => {
@@ -24,8 +40,6 @@ const UnitsWithFiles = () => {
           console.log("No user token available, skipping file IDs fetch");
           return;
         }
-
-        console.log("Current user token:", userToken); // Debug token
 
         const response = await fetchData(
           "progressTrack/getUserFileIDs",
@@ -36,8 +50,6 @@ const UnitsWithFiles = () => {
             'auth-token': userToken
           }
         );
-
-        console.log("File IDs response:", response);
 
         if (response?.success) {
           const fileIds = response.data.fileIds.map(file => file.FileID);
@@ -57,16 +69,11 @@ const UnitsWithFiles = () => {
   }, [userToken, fetchData]);
 
   useEffect(() => {
-    console.log('subModuleId changed:', subModuleId, typeof subModuleId);
-
     const fetchUnitsWithFiles = async () => {
       try {
         setLoading(true);
         setError(null);
-        console.log('Fetching units for subModuleId:', subModuleId);
-
         const response = await fetchData("dropdown/getUnitsWithFiles", "GET");
-        console.log('API Response:', response);
 
         if (response?.success) {
           setAllUnits(response.data);
@@ -75,7 +82,6 @@ const UnitsWithFiles = () => {
             return String(unit.SubModuleID) === String(subModuleId);
           });
 
-          console.log('Filtered Units:', filtered);
           setFilteredUnits(filtered);
           if (filtered.length > 0 && filtered[0].files?.length > 0) {
             const firstFile = filtered[0].files[0];
@@ -140,8 +146,6 @@ const UnitsWithFiles = () => {
       unitName: unit.UnitName,
       unitDescription: unit.UnitDescription
     });
-
-    // Record the file view
     recordFileView(file.FileID, unit.UnitID);
   };
 
@@ -160,7 +164,7 @@ const UnitsWithFiles = () => {
       case "ipynb":
         return (
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z"/>
+            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
             <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z"/>
           </svg>
         );
@@ -247,7 +251,6 @@ const UnitsWithFiles = () => {
     <div className="flex h-screen bg-background text-foreground">
       {/* Navigation Sidebar */}
       <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}>
-        {/* Toggle Button - Made Bigger and More Visible */}
         <button
           onClick={toggleSidebar}
           className="absolute -right-6 top-8 bg-[#1f2937] text-white rounded-full p-4 border-2 border-gray-500 hover:bg-gray-600 hover:border-gray-400 transition-all duration-200 z-10 shadow-xl hover:shadow-2xl transform hover:scale-105"
@@ -265,11 +268,11 @@ const UnitsWithFiles = () => {
         </button>
 
         <div className="p-4">
-          {/* Header Section */}
           <div className="mb-6">
             {!isSidebarCollapsed ? (
               <>
-            
+                <h2 className="text-xl font-bold text-white">Units</h2>
+                <p className="text-gray-300 text-sm">Select a unit to view content</p>
               </>
             ) : (
               <div className="flex justify-center">
@@ -280,9 +283,6 @@ const UnitsWithFiles = () => {
             )}
           </div>
 
-        
-
-          {/* Units List */}
           <div className="space-y-4">
             {filteredUnits.map(unit => (
               <div
@@ -376,6 +376,31 @@ const UnitsWithFiles = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        {/* Breadcrumbs Navigation */}
+        <BreadCrumb customPaths={[
+          {
+            label: moduleName,
+            path: `/module/${location.state?.moduleId || ''}`,
+            isActive: false,
+            state: { moduleName }
+          },
+          {
+            label: subModuleName,
+            path: `/submodule/${subModuleId}`,
+            isActive: false,
+            state: {
+              moduleName,
+              submoduleName: subModuleName,
+              moduleId: location.state?.moduleId
+            }
+          },
+          ...(selectedFile ? [{
+            label: removeFileExtension(selectedFile.FilesName),
+            path: null,
+            isActive: true
+          }] : [])
+        ]} />
+
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800">
             {selectedFile?.unitName || "Select a Unit"}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import ApiContext from "../../context/ApiContext";
 import ByteArrayImage from "../../utils/ByteArrayImage";
 import ProgressBar from "./ProgressBar";
 import { FaAngleDown, FaAngleUp } from "react-icons/fa";
+import BreadCrumb from "./BreadCrumb";
 
 const SubModuleCard = () => {
   const { moduleId } = useParams();
@@ -13,38 +14,47 @@ const SubModuleCard = () => {
   const [error, setError] = useState(null);
   const { fetchData } = useContext(ApiContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
+
+  // Get module name from location state if available
+  useEffect(() => {
+    if (location.state?.moduleName) {
+      setModuleName(location.state.moduleName);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchAllSubModules = async () => {
       try {
         setLoading(true);
         setError(null);
-        const [subModulesResponse, modulesResponse] = await Promise.all([
-          fetchData(`dropdown/getSubModules?moduleId=${moduleId}`, "GET"),
-          fetchData(`dropdown/getSubModules?moduleId=${moduleId}`, "GET"),
-        ]);
+        const subModulesResponse = await fetchData(
+          `dropdown/getSubModules?moduleId=${moduleId}`, 
+          "GET"
+        );
 
-        if (subModulesResponse?.success && modulesResponse?.success) {
+        if (subModulesResponse?.success) {
           setFilteredSubModules(subModulesResponse.data);
 
-          const currentModule = modulesResponse.data.find(
-            (module) => module.ModuleID?.toString() === moduleId
-          );
-          setModuleName(currentModule?.ModuleName || "");
-
-          // Initialize expanded states for all submodules
+          // Initialize expanded states
           const initialExpandedState = {};
           subModulesResponse.data.forEach(subModule => {
             initialExpandedState[subModule.SubModuleID] = false;
           });
           setExpandedDescriptions(initialExpandedState);
+
+          if (!location.state?.moduleName) {
+            const modulesResponse = await fetchData("dropdown/getModules", "GET");
+            if (modulesResponse?.success) {
+              const currentModule = modulesResponse.data.find(
+                (module) => module.ModuleID?.toString() === moduleId
+              );
+              setModuleName(currentModule?.ModuleName || "");
+            }
+          }
         } else {
-          setError(
-            subModulesResponse?.message ||
-            modulesResponse?.message ||
-            "Failed to fetch data"
-          );
+          setError(subModulesResponse?.message || "Failed to fetch submodules");
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -55,7 +65,7 @@ const SubModuleCard = () => {
     };
 
     fetchAllSubModules();
-  }, [moduleId, fetchData]);
+  }, [moduleId, fetchData, location.state?.moduleName]);
 
   const toggleDescription = (subModuleId, event) => {
     event.stopPropagation();
@@ -65,9 +75,31 @@ const SubModuleCard = () => {
     }));
   };
 
+  const handleSubModuleClick = (subModule) => {
+    navigate(`/submodule/${subModule.SubModuleID}`, {
+      state: {
+        moduleName: moduleName,
+        submoduleName: subModule.SubModuleName,
+        moduleId: moduleId
+      }
+    });
+  };
+
+  const handleFileClick = (file, subModule) => {
+    navigate('/file-viewer', {
+      state: {
+        fileUrl: file.url,
+        fileName: file.name,
+        moduleId: moduleId,
+        moduleName: moduleName,
+        submoduleId: subModule.SubModuleID,
+        submoduleName: subModule.SubModuleName
+      }
+    });
+  };
+
   const isDescriptionClamped = (description) => {
-    if (!description) return false;
-    return description.length > 100;
+    return description && description.length > 100;
   };
 
   if (loading) {
@@ -76,16 +108,15 @@ const SubModuleCard = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-lg shadow-md overflow-hidden h-[400px]"
-              >
-                <div className="h-48 bg-gray-200 animate-pulse"></div>
-                <div className="p-6">
+              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden h-[400px] flex flex-col">
+                <div className="h-48 bg-gray-200 animate-pulse flex-shrink-0"></div>
+                <div className="p-6 flex-grow flex flex-col">
                   <div className="h-4 bg-gray-200 rounded w-1/4 mb-4 animate-pulse"></div>
                   <div className="h-6 bg-gray-200 rounded w-3/4 mb-3 animate-pulse"></div>
-                  <div className="h-16 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="mt-4 h-10 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-16 bg-gray-200 rounded animate-pulse flex-grow"></div>
+                  <div className="h-12 mt-4 flex items-center">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -116,12 +147,16 @@ const SubModuleCard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Simplified BreadCrumb - no need for customPaths since we're already on the module page */}
+        <BreadCrumb />
+
+        {/* Module Title Section */}
         {moduleName && (
           <div className="w-full text-center mb-10">
-            <h2 className="text-4xl font-bold text-gray-800">
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">
               {moduleName}
-            </h2>
-            <p className="text-gray-500 mt-2 text-lg">
+            </h1>
+            <p className="text-gray-500 text-lg">
               Explore the learning modules under this section
             </p>
           </div>
@@ -129,70 +164,113 @@ const SubModuleCard = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSubModules.length > 0 ? (
-            filteredSubModules.map((subModule) => (
-              <div
-                key={subModule.SubModuleID}
-                className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer ${
-                  expandedDescriptions[subModule.SubModuleID] 
-                    ? 'h-auto' 
-                    : 'h-[400px]'
-                }`}
-                onClick={() => navigate(`/submodule/${subModule.SubModuleID}`)}
-              >
-                <div className="h-40 bg-gray-100 overflow-hidden flex-shrink-0">
-                  {subModule.SubModuleImage ? (
-                    <ByteArrayImage
-                      byteArray={subModule.SubModuleImage.data}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center text-gray-400 text-sm h-full">
-                      No Image
+            filteredSubModules.map((subModule) => {
+              const isExpanded = expandedDescriptions[subModule.SubModuleID];
+              const files = subModule.files || [];
+              
+              return (
+                <div
+                  key={subModule.SubModuleID}
+                  className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer flex flex-col relative ${
+                    isExpanded ? 'min-h-[430px]' : 'h-[430px]'
+                  }`}
+                >
+                  {/* Image Section */}
+                  <div 
+                    className="h-40 bg-gray-100 overflow-hidden flex-shrink-0"
+                    onClick={() => handleSubModuleClick(subModule)}
+                  >
+                    {subModule.SubModuleImage ? (
+                      <ByteArrayImage
+                        byteArray={subModule.SubModuleImage.data}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center text-gray-400 text-sm h-full">
+                        No Image
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Section */}
+                  <div 
+                    className={`p-6 flex-grow flex flex-col ${
+                      isExpanded ? 'min-h-[270px]' : 'h-[270px]'
+                    }`}
+                    onClick={() => handleSubModuleClick(subModule)}
+                  >
+                    {/* Title Section */}
+                    <div className="h-16 flex items-start mb-3">
+                      <h3 className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors duration-200 break-words line-clamp-2 leading-tight">
+                        {subModule.SubModuleName}
+                      </h3>
+                    </div>
+                    
+                    {/* Description Section */}
+                    <div className={`mb-3 ${isExpanded ? 'flex-grow' : 'flex-grow overflow-hidden'}`}>
+                      <div className={`${isExpanded ? '' : 'overflow-hidden h-full'}`}>
+                        <p 
+                          className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${
+                            isExpanded ? 'overflow-visible' : 'line-clamp-4'
+                          }`}
+                        >
+                          {subModule.SubModuleDescription || "No description available"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Read More Button */}
+                    {isDescriptionClamped(subModule.SubModuleDescription) && (
+                      <div className="h-8 mb-3 flex-shrink-0">
+                        <button
+                          onClick={(e) => toggleDescription(subModule.SubModuleID, e)}
+                          className="text-blue-500 hover:text-blue-700 text-sm flex items-center bg-white hover:bg-blue-50 px-2 py-1 rounded-md shadow-sm hover:shadow-md transition-all duration-200 border border-blue-200 hover:border-blue-300"
+                        >
+                          {isExpanded ? (
+                            <>
+                              <FaAngleUp className="mr-1" />
+                              <span className="font-medium">Show Less</span>
+                            </>
+                          ) : (
+                            <>
+                              <FaAngleDown className="mr-1" />
+                              <span className="font-medium">Read More</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Progress Bar */}
+                    <div className="h-12 flex items-center flex-shrink-0 mt-auto">
+                      <ProgressBar progress={subModule.progress || 20} />
+                    </div>
+                  </div>
+
+                  {/* Files Section */}
+                  {files.length > 0 && (
+                    <div 
+                      className="p-4 border-t border-gray-100"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <h4 className="text-sm font-semibold mb-2 text-gray-700">Files:</h4>
+                      <div className="space-y-2">
+                        {files.map((file) => (
+                          <div 
+                            key={file.id}
+                            className="file-item p-2 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                            onClick={() => handleFileClick(file, subModule)}
+                          >
+                            <span className="text-blue-600">{file.name}</span>
+                            <span className="file-type text-xs text-gray-500 ml-2">{file.type}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-blue-600 transition-colors duration-200 break-words">
-                    {subModule.SubModuleName}
-                  </h3>
-                  
-                  <div className="overflow-hidden">
-                    <p 
-                      className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${
-                        expandedDescriptions[subModule.SubModuleID] 
-                          ? 'overflow-y-auto max-h-32' 
-                          : 'line-clamp-3'
-                      }`}
-                    >
-                      {subModule.SubModuleDescription || "No description available"}
-                    </p>
-                  </div>
-
-                  {(isDescriptionClamped(subModule.SubModuleDescription) && (
-                    <button
-                      onClick={(e) => toggleDescription(subModule.SubModuleID, e)}
-                      className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm mt-2 flex items-center self-start"
-                    >
-                      {expandedDescriptions[subModule.SubModuleID] ? (
-                        <>
-                          <FaAngleUp className="mr-1" />
-                          Show Less
-                        </>
-                      ) : (
-                        <>
-                          <FaAngleDown className="mr-1" />
-                          Read More
-                        </>
-                      )}
-                    </button>
-                  ))}
-
-                  <div className="mt-4">
-                    <ProgressBar progress={subModule.progress || 20} />
-                  </div>
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="col-span-full bg-white rounded-xl shadow-lg p-6 text-center">
               <p className="text-gray-600">
