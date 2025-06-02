@@ -6,10 +6,9 @@ import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
 import ViewContent from "./ViewContent";
 import AddSubmodulePopup from "./AddSubmodulePopup";
-import { FaEdit, FaTrash, FaFolder, FaSave, FaTimes, FaUpload, FaImage, FaChevronRight, FaPlus } from "react-icons/fa";
+import { FaEdit, FaTrash, FaFolder, FaSave, FaTimes, FaUpload, FaImage, FaChevronRight } from "react-icons/fa";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 import { Link } from "react-router-dom";
-import CreateQuiz from "../../Quiz/CreateQuiz";
 
 const EditSubModule = ({ module, onBack }) => {
     const [viewingContent, setViewingContent] = useState(null);
@@ -18,8 +17,6 @@ const EditSubModule = ({ module, onBack }) => {
     const [error, setError] = useState(null);
     const [editingSubmodule, setEditingSubmodule] = useState(null);
     const [showAddSubmodulePopup, setShowAddSubmodulePopup] = useState(false);
-    const [showCreateQuiz, setShowCreateQuiz] = useState(false);
-    const [quizSubmodule, setQuizSubmodule] = useState(null);
     const [editedData, setEditedData] = useState({
         SubModuleName: '',
         SubModuleDescription: '',
@@ -293,7 +290,7 @@ const EditSubModule = ({ module, onBack }) => {
                 "auth-token": userToken,
                 "Content-Type": "application/json",
             };
-
+           
             const response = await fetchData(
                 `lmsEdit/updateSubModule/${editingSubmodule.SubModuleID}`,
                 "POST",
@@ -341,21 +338,6 @@ const EditSubModule = ({ module, onBack }) => {
             setIsSaving(false);
         }
     };
-    const handleCreateQuiz = (submoduleId, submoduleName) => {
-        setQuizSubmodule({ id: submoduleId, name: submoduleName });
-        setShowCreateQuiz(true);
-    };
-
-    const handleBackFromQuiz = () => {
-        setShowCreateQuiz(false);
-        setQuizSubmodule(null);
-    };
-
-    const navigateToQuizTable = () => {
-        // Implement navigation to quiz table if needed
-        // For now, just go back to submodules list
-        handleBackFromQuiz();
-    };
 
     const handleViewContent = (submodule) => {
         setViewingContent(submodule);
@@ -388,18 +370,6 @@ const EditSubModule = ({ module, onBack }) => {
             <ViewContent
                 submodule={viewingContent}
                 onBack={handleBackToSubmodules}
-            />
-        );
-    }
-
-    if (showCreateQuiz && quizSubmodule) {
-        return (
-            <CreateQuiz
-                moduleId={quizSubmodule.id}
-                moduleName={quizSubmodule.name}
-                navigateToQuizTable={navigateToQuizTable}
-                onBack={handleBackFromQuiz}
-                isSubmodule={true}  // Add this prop to distinguish between module and submodule
             />
         );
     }
@@ -639,14 +609,6 @@ const EditSubModule = ({ module, onBack }) => {
 
                                             {/* Action Buttons */}
                                             <div className="flex justify-end gap-2 mt-4 sm:mt-6">
-                                                <button
-                                                    onClick={() => handleCreateQuiz(submodule.SubModuleID, submodule.SubModuleName)}
-                                                    className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors duration-200"
-                                                    data-tooltip-id="create-quiz-tooltip"
-                                                    data-tooltip-content="Create Quiz"
-                                                >
-                                                    <FaPlus size={14} className="sm:size-4" />
-                                                </button>
                                                 <button
                                                     onClick={() => handleEditSubmoduleInit(submodule)}
                                                     className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors duration-200"
