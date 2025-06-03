@@ -360,8 +360,100 @@ export const getSubModules = async (req, res) => {
 };
 
 
+// export const getUnitsWithFiles = async (req, res) => {
+//     let success = false;
+
+//     try {
+//         connectToDatabase(async (err, conn) => {
+//             if (err) {
+//                 logError(err);
+//                 return res.status(500).json({
+//                     success,
+//                     message: "Database connection error"
+//                 });
+//             }
+
+//             try {
+//                 // First get all units
+//                 const unitsQuery = `
+//                     SELECT 
+//                         UnitID,
+//                         UnitName,
+//                         UnitImg,
+//                         UnitDescription,
+//                         SubModuleID,
+//                         AuthAdd
+//                     FROM UnitsDetails
+//                     WHERE ISNULL(delStatus, 0) = 0
+//                     ORDER BY UnitID
+//                 `;
+
+//                 const units = await queryAsync(conn, unitsQuery);
+
+//                 // Then get all files
+//                 const filesQuery = `
+//                     SELECT 
+//                         FileID,
+//                         FilesName,
+//                         FilePath,
+//                         FileType,
+//                         UnitID,
+//                         AuthAdd,
+//                         Percentage
+//                     FROM FilesDetails
+//                     WHERE ISNULL(delStatus, 0) = 0
+//                     ORDER BY FileID
+//                 `;
+
+//                 const files = await queryAsync(conn, filesQuery);
+
+//                 // Group files by UnitID
+//                 const filesByUnit = files.reduce((acc, file) => {
+//                     if (!acc[file.UnitID]) {
+//                         acc[file.UnitID] = [];
+//                     }
+//                     acc[file.UnitID].push(file);
+//                     return acc;
+//                 }, {});
+
+//                 // Combine units with their files
+//                 const result = units.map(unit => ({
+//                     ...unit,
+//                     files: filesByUnit[unit.UnitID] || []
+//                 }));
+
+//                 success = true;
+//                 res.status(200).json({
+//                     success,
+//                     data: result,
+//                     message: "Units with files fetched successfully"
+//                 });
+//             } catch (queryErr) {
+//                 logError(queryErr);
+//                 res.status(500).json({
+//                     success,
+//                     message: "Error fetching units with files"
+//                 });
+//             } finally {
+//                 closeConnection();
+//             }
+//         });
+//     } catch (error) {
+//         logError(error);
+//         res.status(500).json({
+//             success,
+//             message: "Server error"
+//         });
+//     }
+// };
+
+
+
+
+
 export const getUnitsWithFiles = async (req, res) => {
     let success = false;
+    const { subModuleId } = req.params; // Get subModuleId from URL params
 
     try {
         connectToDatabase(async (err, conn) => {
@@ -374,53 +466,57 @@ export const getUnitsWithFiles = async (req, res) => {
             }
 
             try {
-                // First get all units
-                const unitsQuery = `
+                const query = `
                     SELECT 
-                        UnitID,
-                        UnitName,
-                        UnitImg,
-                        UnitDescription,
-                        SubModuleID,
-                        AuthAdd
-                    FROM UnitsDetails
-                    WHERE ISNULL(delStatus, 0) = 0
-                    ORDER BY UnitID
+                        u.UnitID,
+                        u.UnitName,
+                        u.UnitImg,
+                        u.UnitDescription,
+                        u.SubModuleID,
+                        u.AuthAdd,
+                        f.FileID,
+                        f.FilesName,
+                        f.FilePath,
+                        f.FileType,
+                        f.AuthAdd AS FileAuthAdd,
+                        f.Percentage
+                    FROM UnitsDetails u
+                    LEFT JOIN FilesDetails f ON u.UnitID = f.UnitID AND ISNULL(f.delStatus, 0) = 0
+                    WHERE ISNULL(u.delStatus, 0) = 0
+                    AND u.SubModuleID = ?
+                    ORDER BY u.UnitID, f.FileID
                 `;
 
-                const units = await queryAsync(conn, unitsQuery);
-
-                // Then get all files
-                const filesQuery = `
-                    SELECT 
-                        FileID,
-                        FilesName,
-                        FilePath,
-                        FileType,
-                        UnitID,
-                        AuthAdd,
-                        Percentage
-                    FROM FilesDetails
-                    WHERE ISNULL(delStatus, 0) = 0
-                    ORDER BY FileID
-                `;
-
-                const files = await queryAsync(conn, filesQuery);
+                const results = await queryAsync(conn, query, [subModuleId]);
 
                 // Group files by UnitID
-                const filesByUnit = files.reduce((acc, file) => {
-                    if (!acc[file.UnitID]) {
-                        acc[file.UnitID] = [];
+                const unitsMap = new Map();
+                results.forEach(row => {
+                    if (!unitsMap.has(row.UnitID)) {
+                        unitsMap.set(row.UnitID, {
+                            UnitID: row.UnitID,
+                            UnitName: row.UnitName,
+                            UnitImg: row.UnitImg,
+                            UnitDescription: row.UnitDescription,
+                            SubModuleID: row.SubModuleID,
+                            AuthAdd: row.AuthAdd,
+                            files: []
+                        });
                     }
-                    acc[file.UnitID].push(file);
-                    return acc;
-                }, {});
 
-                // Combine units with their files
-                const result = units.map(unit => ({
-                    ...unit,
-                    files: filesByUnit[unit.UnitID] || []
-                }));
+                    if (row.FileID) {
+                        unitsMap.get(row.UnitID).files.push({
+                            FileID: row.FileID,
+                            FilesName: row.FilesName,
+                            FilePath: row.FilePath,
+                            FileType: row.FileType,
+                            AuthAdd: row.FileAuthAdd,
+                            Percentage: row.Percentage
+                        });
+                    }
+                });
+
+                const result = Array.from(unitsMap.values());
 
                 success = true;
                 res.status(200).json({
@@ -446,10 +542,4 @@ export const getUnitsWithFiles = async (req, res) => {
         });
     }
 };
-
-
-
-
-
-
 

@@ -1972,3 +1972,62 @@ export const getUserQuizHistory = async (req, res) => {
 };
 
 
+
+
+/*----------------LMS quiz-----------------------* */
+
+
+// In your backend API
+export const getQuizzesByRefId = async (req, res) => {
+  try {
+    const { refId } = req.body;
+
+    if (!refId) {
+      return res.status(400).json({
+        success: false,
+        message: "refId is required"
+      });
+    }
+
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        console.error("Database connection error:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection failed"
+        });
+      }
+
+      try {
+        const query = `
+          SELECT * FROM QuizDetails 
+          WHERE refId = ? AND delStatus = 0 
+          AND StartDateAndTime <= GETDATE() 
+          AND EndDateTime >= GETDATE()
+          ORDER BY QuizName
+        `;
+
+        const quizzes = await queryAsync(conn, query, [refId]);
+
+        return res.status(200).json({
+          success: true,
+          data: quizzes
+        });
+      } catch (error) {
+        console.error("Error fetching quizzes:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to fetch quizzes"
+        });
+      } finally {
+        closeConnection();
+      }
+    });
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};

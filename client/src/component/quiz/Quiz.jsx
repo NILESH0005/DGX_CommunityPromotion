@@ -62,14 +62,27 @@ const Quiz = () => {
 
 
   useEffect(() => {
-    if (userToken && quiz.QuizID && quiz.group_id) {
-      if (quiz.QuizID && quiz.group_id) {
-        fetchQuizQuestions();
-      } else {
-        setLoading(false);
-      }
+    // console.log("Current quiz data:", quiz); 
+
+    if (!quiz?.QuizID) {
+      setError("Quiz ID is missing");
+      setLoading(false);
+      return;
+    }
+
+    if (!quiz?.group_id) {
+      setError("Group ID is missing");
+      setLoading(false);
+      return;
+    }
+
+    if (userToken) {
+      fetchQuizQuestions();
     }
   }, [quiz, userToken]);
+
+
+ 
 
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -82,28 +95,100 @@ const Quiz = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [STORAGE_KEY]);
 
-  const fetchQuizQuestions = async () => {
+  // const fetchQuizQuestions = async () => {
+  //   setLoading(true);
+  //   setError(null);
+
+  //   try {
+
+  //     if (!userToken) {
+  //       throw new Error("Authentication token is missing");
+  //     }
+
+  //     const endpoint = "quiz/getQuizQuestions";
+  //     const method = "POST";
+  //     const headers = {
+  //       "Content-Type": "application/json",
+  //       "auth-token": userToken,
+  //     };
+  //     const body = {
+  //       quizGroupID: quiz.group_id,
+  //       QuizID: quiz.QuizID
+  //     };
+
+  //     const data = await fetchData(endpoint, method, body, headers);
+  //     console.log("ddddaaatttaaa", data);
+
+  //     if (!data) {
+  //       throw new Error("No data received from server");
+  //     }
+
+  //     if (data.success) {
+  //       const transformedQuestions = transformQuestions(data.data.questions);
+  //       setQuestions(transformedQuestions);
+
+  //       const saved = loadSavedAnswers();
+  //       setSelectedAnswers(saved?.answers || Array(transformedQuestions.length).fill(null));
+
+  //       if (transformedQuestions.length > 0) {
+  //         const duration = transformedQuestions[0].duration || 30;
+  //         const hours = Math.floor(duration / 60);
+  //         const minutes = duration % 60;
+  //         setTimer({ hours, minutes, seconds: 0 });
+  //       }
+
+  //       // const initialSelectedAnswers = Array(transformedQuestions.length).fill(null);
+  //       const initialQuestionStatus = transformedQuestions.reduce((acc, _, index) => {
+  //         acc[index + 1] = "not-visited";
+  //         return acc;
+  //       }, {});
+
+  //       // setSelectedAnswers(initialSelectedAnswers);
+  //       setQuestionStatus(initialQuestionStatus);
+  //     } else {
+  //       throw new Error(data.message || "Failed to fetch questions");
+  //     }
+  //   } catch (err) {
+  //     console.error("Error fetching questions:", err);
+  //     setError(err.message || "Something went wrong, please try again.");
+  //     Swal.fire({
+  //       icon: 'error',
+  //       title: 'Error',
+  //       text: err.message || "Failed to load questions",
+  //     });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+
+
+  const fetchQuizQuestions = async (quizData) => {
     setLoading(true);
     setError(null);
+    console.log();
+    
 
     try {
-      if (!userToken) {
-        throw new Error("Authentication token is missing");
-      }
+      console.log("Fetching questions with:", {
+        quizGroupID: quizData.group_id,
+        QuizID: quizData.QuizID
+      });
 
-      const endpoint = "quiz/getQuizQuestions";
-      const method = "POST";
-      const headers = {
-        "Content-Type": "application/json",
-        "auth-token": userToken,
-      };
-      const body = {
-        quizGroupID: quiz.group_id,
-        QuizID: quiz.QuizID
-      };
+      const data = await fetchData(
+        "quiz/getQuizQuestions",
+        "POST",
+        {
+          quizGroupID: quizData.group_id,
+          QuizID: quizData.QuizID
+        },
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        }
+      );
 
-      const data = await fetchData(endpoint, method, body, headers);
-      console.log("ddddaaatttaaa", data);
+      console.log("API Response:", data);
 
       if (!data) {
         throw new Error("No data received from server");
@@ -116,27 +201,26 @@ const Quiz = () => {
         const saved = loadSavedAnswers();
         setSelectedAnswers(saved?.answers || Array(transformedQuestions.length).fill(null));
 
+        // Initialize timer and question status
         if (transformedQuestions.length > 0) {
-          const duration = transformedQuestions[0].duration || 30;
+          const duration = transformedQuestions[0].duration || quizData.duration || 30;
           const hours = Math.floor(duration / 60);
           const minutes = duration % 60;
           setTimer({ hours, minutes, seconds: 0 });
         }
 
-        // const initialSelectedAnswers = Array(transformedQuestions.length).fill(null);
         const initialQuestionStatus = transformedQuestions.reduce((acc, _, index) => {
           acc[index + 1] = "not-visited";
           return acc;
         }, {});
 
-        // setSelectedAnswers(initialSelectedAnswers);
         setQuestionStatus(initialQuestionStatus);
       } else {
         throw new Error(data.message || "Failed to fetch questions");
       }
     } catch (err) {
       console.error("Error fetching questions:", err);
-      setError(err.message || "Something went wrong, please try again.");
+      setError(err.message || "Failed to load questions");
       Swal.fire({
         icon: 'error',
         title: 'Error',

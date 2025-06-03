@@ -3,18 +3,21 @@ import PropTypes from 'prop-types';
 import { useParams } from 'react-router-dom';
 import ApiContext from '../../context/ApiContext';
 import FileViewer from '../../utils/FileViewer';
+import Quiz from '../quiz/Quiz'
 import Swal from 'sweetalert2';
 
 const UnitsWithFiles = () => {
   const { subModuleId } = useParams();
   const [allUnits, setAllUnits] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
   const [filteredUnits, setFilteredUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { fetchData, userToken } = useContext(ApiContext);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [viewedFiles, setViewedFiles] = useState(new Set());
-  const [userFileIds, setUserFileIds] = useState([]); // New state for user's file IDs
+  const [userFileIds, setUserFileIds] = useState([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
@@ -57,54 +60,53 @@ const UnitsWithFiles = () => {
   }, [userToken, fetchData]);
 
   useEffect(() => {
-    console.log('subModuleId changed:', subModuleId, typeof subModuleId);
-
-    const fetchUnitsWithFiles = async () => {
+    const fetchDataForSubmodule = async () => {
       try {
         setLoading(true);
         setError(null);
-        console.log('Fetching units for subModuleId:', subModuleId);
+        const unitsResponse = await fetchData(`dropdown/getUnitsWithFiles/${subModuleId}`, "GET");
 
-        const response = await fetchData("dropdown/getUnitsWithFiles", "GET");
-        console.log('API Response:', response);
+        const quizzesResponse = await fetchData(
+          "quiz/getQuizzesByRefId",
+          "POST",
+          { refId: subModuleId },
+          {
+            'Content-Type': 'application/json',
+            'auth-token': userToken
+          }
+        );
 
-        if (response?.success) {
-          setAllUnits(response.data);
+        console.log("reessspoonnseee", quizzesResponse)
 
-          const filtered = response.data.filter(unit => {
+        if (unitsResponse?.success) {
+          setAllUnits(unitsResponse.data);
+          const filtered = unitsResponse.data.filter(unit => {
             return String(unit.SubModuleID) === String(subModuleId);
           });
-
-          console.log('Filtered Units:', filtered);
           setFilteredUnits(filtered);
-          if (filtered.length > 0 && filtered[0].files?.length > 0) {
-            const firstFile = filtered[0].files[0];
-            setSelectedFile({
-              ...firstFile,
-              unitName: filtered[0].UnitName,
-              unitDescription: filtered[0].UnitDescription
-            });
-          }
-        } else {
-          setError('Failed to fetch units data');
         }
+
+        if (quizzesResponse?.success) {
+          const transformedQuizzes = quizzesResponse.data.map(quiz => ({
+            ...quiz,
+            group_id: quiz.QuizGroupID
+          }));
+          setQuizzes(transformedQuizzes);
+        }
+
       } catch (error) {
-        console.error("Error fetching units:", error);
-        setError('An error occurred while fetching units');
+        console.error("Error fetching data:", error);
+        setError('An error occurred while fetching data');
       } finally {
         setLoading(false);
       }
     };
 
     if (subModuleId) {
-      fetchUnitsWithFiles();
-    } else {
-      setLoading(false);
-      setAllUnits([]);
-      setFilteredUnits([]);
-      setSelectedFile(null);
+      fetchDataForSubmodule();
     }
-  }, [subModuleId, fetchData]);
+  }, [subModuleId, fetchData, userToken]);
+
 
   const recordFileView = async (fileId, unitId) => {
     try {
@@ -134,16 +136,15 @@ const UnitsWithFiles = () => {
     } catch (error) {
       console.error("Error recording file view:", error.message || 'Unknown error');
     }
-};
+  };
 
   const handleFileSelect = (file, unit) => {
+    setSelectedQuiz(null); // Clear any selected quiz
     setSelectedFile({
       ...file,
       unitName: unit.UnitName,
       unitDescription: unit.UnitDescription
     });
-
-    // Record the file view
     recordFileView(file.FileID, unit.UnitID);
   };
 
@@ -162,8 +163,8 @@ const UnitsWithFiles = () => {
       case "ipynb":
         return (
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z"/>
-            <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z"/>
+            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" />
+            <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z" />
           </svg>
         );
       case "docx":
@@ -197,6 +198,11 @@ const UnitsWithFiles = () => {
       </div>
     );
   }
+
+  const handleQuizSelect = (quiz) => {
+    setSelectedQuiz(quiz);
+    setSelectedFile(null);
+  };
 
   if (loading) {
     return (
@@ -247,7 +253,6 @@ const UnitsWithFiles = () => {
 
   return (
     <div className="flex h-screen bg-background text-foreground">
-      {/* Navigation Sidebar */}
       <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}>
         {/* Toggle Button - Made Bigger and More Visible */}
         <button
@@ -267,22 +272,38 @@ const UnitsWithFiles = () => {
         </button>
 
         <div className="p-4">
-          {/* Header Section */}
-          <div className="mb-6">
-            {!isSidebarCollapsed ? (
-              <>
-            
-              </>
-            ) : (
-              <div className="flex justify-center">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                </svg>
+          {quizzes.length > 0 && (
+            <div className="mb-6">
+              <h3 className={`font-bold ${isSidebarCollapsed ? 'text-center' : 'text-lg mb-2'}`}>
+                {isSidebarCollapsed ? 'Q' : 'Quizzes'}
+              </h3>
+              <div className="space-y-2">
+                {quizzes.map(quiz => (
+                  <div
+                    key={quiz.QuizID}
+                    className={`${isSidebarCollapsed ? 'p-2 flex justify-center' : 'p-2'} rounded hover:bg-gray-700 cursor-pointer ${selectedQuiz?.QuizID === quiz.QuizID ? 'bg-blue-600' : ''}`}
+                    onClick={() => handleQuizSelect(quiz)}
+                    title={isSidebarCollapsed ? quiz.QuizName : ''}
+                  >
+                    {isSidebarCollapsed ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <div>
+                        <h4 className="font-medium">{quiz.QuizName}</h4>
+                        <p className="text-xs text-gray-300">
+                          {quiz.QuizDuration} min • {quiz.PassingPercentage}% to pass
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-        
 
           {/* Units List */}
           <div className="space-y-4">
@@ -322,13 +343,12 @@ const UnitsWithFiles = () => {
                       return (
                         <div
                           key={file.FileID}
-                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${
-                            isSelected
-                              ? "bg-blue-600 text-white"
-                              : isViewed
+                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${isSelected
+                            ? "bg-blue-600 text-white"
+                            : isViewed
                               ? "bg-green-600 text-white hover:bg-green-500"
                               : "text-gray-300 hover:text-white hover:bg-gray-600"
-                          }`}
+                            }`}
                           title={isSidebarCollapsed ? removeFileExtension(file.FilesName) : ''}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -375,57 +395,102 @@ const UnitsWithFiles = () => {
           </div>
         </div>
       </div>
-      <div className="flex-1 flex flex-col p-6 overflow-hidden">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">
-            {selectedFile?.unitName || "Select a Unit"}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {selectedFile?.unitDescription || ""}
-          </p>
-          {selectedFile && (
-            <h2 className="text-xl font-semibold text-gray-700 mt-4">
-              {removeFileExtension(selectedFile.FilesName)}
-              {selectedFile.fileType === "ipynb" && (
-                <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
-                  Jupyter Notebook
-                </span>
-              )}
-            </h2>
-          )}
-        </div>
 
-        <div className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${selectedFile?.fileType === "ipynb" ?
-          "bg-[#f5f5f5] border border-gray-300" :
-          "bg-white border"
-          }`}>
-          {selectedFile?.fileType === "ipynb" && (
-            <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
-              <div className="flex space-x-2">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              </div>
-              <div className="ml-4 text-sm text-gray-600 font-medium">
-                {removeFileExtension(selectedFile.FilesName)}
-              </div>
+
+      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        {selectedQuiz ? (
+          // Render Quiz component when a quiz is selected
+          <div className="flex-1">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-800">
+                {selectedQuiz.QuizName}
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Duration: {selectedQuiz.QuizDuration} minutes | Passing Score: {selectedQuiz.PassingPercentage}%
+              </p>
             </div>
-          )}
-          <div className={selectedFile?.fileType === "ipynb" ? "h-full pt-8" : "h-full"}>
-            <FileViewer
-              fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile?.FilePath}`}
-              className="w-full h-full"
+            <Quiz
+              quiz={{
+                ...selectedQuiz,
+                QuizID: selectedQuiz.QuizID,
+                group_id: selectedQuiz.group_id || selectedQuiz.QuizGroupID, // Fallback to QuizGroupID
+                title: selectedQuiz.QuizName,
+                duration: selectedQuiz.QuizDuration,
+                passingPercentage: selectedQuiz.PassingPercentage
+              }}
+              onQuizComplete={() => {
+                setSelectedQuiz(null);
+                Swal.fire({
+                  title: 'Quiz Completed!',
+                  icon: 'success',
+                  confirmButtonText: 'OK'
+                });
+              }}
             />
           </div>
-          {selectedFile?.fileType === "ipynb" && (
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gray-100 flex items-center px-4 border-t border-gray-300 text-xs text-gray-500">
-              <span>Kernel: Python 3</span>
-              <span className="mx-2">|</span>
-              <span>Notebook</span>
+        ) : selectedFile ? (
+          <>
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-800">
+                {selectedFile?.unitName || "Select a Unit"}
+              </h1>
+              <p className="text-gray-600 mt-2">
+                {selectedFile?.unitDescription || ""}
+              </p>
+              {selectedFile && (
+                <h2 className="text-xl font-semibold text-gray-700 mt-4">
+                  {removeFileExtension(selectedFile.FilesName)}
+                  {selectedFile.fileType === "ipynb" && (
+                    <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                      Jupyter Notebook
+                    </span>
+                  )}
+                </h2>
+              )}
             </div>
-          )}
-        </div>
+
+            <div className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${selectedFile?.fileType === "ipynb" ?
+              "bg-[#f5f5f5] border border-gray-300" :
+              "bg-white border"
+              }`}>
+              {selectedFile?.fileType === "ipynb" && (
+                <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
+                  <div className="flex space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  </div>
+                  <div className="ml-4 text-sm text-gray-600 font-medium">
+                    {removeFileExtension(selectedFile.FilesName)}
+                  </div>
+                </div>
+              )}
+              <div className={selectedFile?.fileType === "ipynb" ? "h-full pt-8" : "h-full"}>
+                <FileViewer
+                  fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile?.FilePath}`}
+                  className="w-full h-full"
+                />
+              </div>
+              {selectedFile?.fileType === "ipynb" && (
+                <div className="absolute bottom-0 left-0 right-0 h-8 bg-gray-100 flex items-center px-4 border-t border-gray-300 text-xs text-gray-500">
+                  <span>Kernel: Python 3</span>
+                  <span className="mx-2">|</span>
+                  <span>Notebook</span>
+                </div>
+              )}
+            </div>
+          </>) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center p-8 max-w-md">
+              <h2 className="text-2xl font-bold mb-4">Select Content</h2>
+              <p className="text-gray-600">
+                Please select a quiz or file from the sidebar to view its content.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
+
     </div>
   );
 };
