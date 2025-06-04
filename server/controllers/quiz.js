@@ -22,6 +22,7 @@ export const createQuiz = async (req, res) => {
       level,
       duration,
       negativeMarking,
+      passingPercentage,
       startDate,
       startTime,
       endDate,
@@ -29,8 +30,8 @@ export const createQuiz = async (req, res) => {
       type,
       quizVisibility,
       quizImage,
-      refId,
-      refName
+      refId = 0,
+      refName = 'quiz'
     } = req.body;
 
     console.log("Request Body:", req.body);
@@ -42,8 +43,8 @@ export const createQuiz = async (req, res) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
-    let startDateAndTime = `${startDate} ${startTime}`;
-    let endDateTime = `${endDate} ${endTime}`;
+    let startDateAndTime = `${ startDate } ${ startTime }`;
+    let endDateTime = `${ endDate } ${ endTime }`;
 
     // Set default values for null checks
     category = category ?? null;
@@ -51,11 +52,14 @@ export const createQuiz = async (req, res) => {
     level = level ?? null;
     duration = duration ?? null;
     negativeMarking = negativeMarking ?? false;
+    passingPercentage = passingPercentage ?? 50
     startDateAndTime = startDateAndTime ?? null;
     endDateTime = endDateTime ?? null;
     type = type ?? null;
     quizVisibility = quizVisibility ?? "Public";
     quizImage = quizImage ?? null;
+    refId = refId ?? 0;
+    refName = refName ?? 'quiz';
 
     connectToDatabase(async (err, conn) => {
       if (err) {
@@ -67,7 +71,7 @@ export const createQuiz = async (req, res) => {
       logInfo("Database connection established successfully");
 
       try {
-        const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userQuery = 'SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?';
         const userRows = await queryAsync(conn, userQuery, [userId]);
         console.log("User Rows:", userRows);
 
@@ -81,17 +85,14 @@ export const createQuiz = async (req, res) => {
 
         const user = userRows[0];
         const authAdd = user.Name;
-        const authDel = null;
         //const AuthLstEdt = "Rohit"//userRows[1];
         // const refId = 0;
         // const refName = 'quiz';
         // Insert quiz data with image
         const quizQuery = `
-          INSERT INTO QuizDetails 
-          (QuizCategory, QuizName, QuizLevel, QuizDuration, NegativeMarking, StartDateAndTime, EndDateTime, QuizVisibility, QuizImage, AuthAdd,
-            AddOnDt, delStatus,refId,refName) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 0,?,?);
-        `;
+        INSERT INTO QuizDetails 
+        (QuizCategory, QuizName, QuizLevel, QuizDuration, NegativeMarking, PassingPercentage, StartDateAndTime, EndDateTime, QuizVisibility, QuizImage, AuthAdd, AddOnDt, delStatus, refId, refName) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), 0, ?, ?);`;
         console.log("Executing query: ", quizQuery);
 
         await queryAsync(conn, quizQuery, [
@@ -100,6 +101,7 @@ export const createQuiz = async (req, res) => {
           level,
           duration,
           negativeMarking,
+          passingPercentage,
           startDateAndTime,
           endDateTime,
           quizVisibility,
@@ -110,7 +112,7 @@ export const createQuiz = async (req, res) => {
         ]);
 
         // Fetch last inserted Quiz ID
-        const lastInsertedIdQuery = `SELECT TOP 1 QuizID FROM QuizDetails WHERE ISNULL(delStatus, 0) = 0 ORDER BY QuizID DESC;`;
+        const lastInsertedIdQuery = `SELECT TOP 1 QuizID FROM QuizDetails WHERE ISNULL(delStatus, 0) = 0 ORDER BY QuizID DESC`;
         const lastInsertedId = await queryAsync(conn, lastInsertedIdQuery);
         console.log("Last Inserted ID:", lastInsertedId);
 
@@ -2002,8 +2004,6 @@ export const getQuizzesByRefId = async (req, res) => {
         const query = `
           SELECT * FROM QuizDetails 
           WHERE refId = ? AND delStatus = 0 
-          AND StartDateAndTime <= GETDATE() 
-          AND EndDateTime >= GETDATE()
           ORDER BY QuizName
         `;
 
