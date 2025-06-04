@@ -415,12 +415,12 @@ const EditSubModule = ({ module, onBack }) => {
                             className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center mt-1"
                         >
                             <FaChevronRight className="mr-1 text-xs" />
-                            Back to Modules
+                            {module.ModuleName}
                         </button>
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-800 dark:text-Black">
+                    {/* <h1 className="text-2xl font-bold text-gray-800 dark:text-Black">
                         Submodules for: <span className="text-red-600 dark:text-red-400">{module.ModuleName}</span>
-                    </h1>
+                    </h1> */}
                     <button
                         onClick={handleAddSubmodule}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
@@ -473,7 +473,7 @@ const EditSubModule = ({ module, onBack }) => {
                                                     <FaUpload className="mr-1" />
                                                     {isCompressing ? "Processing..." : (imagePreview ? "Change" : "Upload")}
                                                 </button>
-                                                {(submodule.SubModuleImage || imagePreview) && (
+                                                {/* {(submodule.SubModuleImage || imagePreview) && (
                                                     <button
                                                         type="button"
                                                         onClick={handleDeleteImage}
@@ -483,7 +483,7 @@ const EditSubModule = ({ module, onBack }) => {
                                                         <FaTrash className="mr-1" />
                                                         Remove
                                                     </button>
-                                                )}
+                                                )} */}
                                                 <button
                                                     type="button"
                                                     onClick={handleCancelImageEdit}

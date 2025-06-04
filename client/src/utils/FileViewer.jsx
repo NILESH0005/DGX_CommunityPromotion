@@ -29,7 +29,7 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
   const renderDownloadButton = () => (
     <button
       onClick={handleDownload}
-      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+      className="absolute top-4 right-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors z-10"
     >
       Download File
     </button>
@@ -124,7 +124,8 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
   // Handle image files
   if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(fileExtension)) {
     return (
-      <div className="flex flex-col items-center">
+      <div className="relative flex flex-col items-center">
+        {renderDownloadButton()}
         {renderSubmoduleHeader()}
         <div className="max-w-full max-h-[80vh] overflow-auto">
           <img 
@@ -134,7 +135,6 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
             onError={() => setIframeKey(prev => prev + 1)}
           />
         </div>
-        {renderDownloadButton()}
       </div>
     );
   }
@@ -142,13 +142,13 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
   // Handle PDF files
   if (fileExtension === 'pdf') {
     return (
-      <div className="w-full flex flex-col items-center">
+      <div className="relative w-full flex flex-col items-center">
+        {renderDownloadButton()}
         {renderSubmoduleHeader()}
         <div className="w-full max-w-4xl bg-white rounded-lg shadow-md overflow-hidden">
           {pdfError ? (
             <div className="p-8 text-center">
               <div className="text-red-500 mb-4">Error loading PDF</div>
-              {renderDownloadButton()}
             </div>
           ) : (
             <Document
@@ -185,9 +185,6 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
             </Document>
           )}
         </div>
-        <div className="mt-4">
-          {renderDownloadButton()}
-        </div>
       </div>
     );
   }
@@ -195,7 +192,8 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
   // Handle Office files
   if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(fileExtension)) {
     return (
-      <div className="w-full h-full flex flex-col">
+      <div className="relative w-full h-full flex flex-col">
+        {renderDownloadButton()}
         {renderSubmoduleHeader()}
         <div className="flex-1">
           <iframe
@@ -209,9 +207,6 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
             onError={() => setIframeKey(prev => prev + 1)}
           />
         </div>
-        <div className="mt-4">
-          {renderDownloadButton()}
-        </div>
       </div>
     );
   }
@@ -221,7 +216,8 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
     // Try to use nbviewer for external files
     if (!fileUrl.startsWith('http://localhost') && !fileUrl.startsWith('file://')) {
       return (
-        <div className="w-full h-full flex flex-col">
+        <div className="relative w-full h-full flex flex-col">
+          {renderDownloadButton()}
           {renderSubmoduleHeader()}
           <div className="flex-1">
             <iframe
@@ -234,16 +230,14 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
               onError={() => setIframeKey(prev => prev + 1)}
             />
           </div>
-          <div className="mt-4">
-            {renderDownloadButton()}
-          </div>
         </div>
       );
     }
 
     // Fallback for local files
     return (
-      <div className="w-full h-full flex flex-col p-4 overflow-auto">
+      <div className="relative w-full h-full flex flex-col p-4 overflow-auto">
+        {renderDownloadButton()}
         {renderSubmoduleHeader()}
         {loading ? (
           <div className="flex justify-center items-center h-64">
@@ -252,14 +246,10 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
         ) : error ? (
           <div className="text-center p-8">
             <div className="text-red-500 mb-4">{error}</div>
-            {renderDownloadButton()}
           </div>
         ) : (
           <>
             {notebookContent}
-            <div className="mt-4">
-              {renderDownloadButton()}
-            </div>
           </>
         )}
       </div>
@@ -269,7 +259,8 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
   // Handle CSV files
   if (fileExtension === 'csv') {
     return (
-      <div className="w-full h-full flex flex-col">
+      <div className="relative w-full h-full flex flex-col">
+        {renderDownloadButton()}
         {renderSubmoduleHeader()}
         <iframe 
           key={iframeKey}
@@ -280,18 +271,17 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
           className="border rounded-lg"
           onError={() => setIframeKey(prev => prev + 1)}
         />
-        {renderDownloadButton()}
       </div>
     );
   }
 
   // Default for unsupported files
   return (
-    <div className="flex flex-col items-center justify-center p-8">
+    <div className="relative flex flex-col items-center justify-center p-8">
+      {renderDownloadButton()}
       {renderSubmoduleHeader()}
       <div className="text-6xl mb-4">📁</div>
       <p className="text-gray-500 mb-6">This file type cannot be previewed</p>
-      {renderDownloadButton()}
     </div>
   );
 };

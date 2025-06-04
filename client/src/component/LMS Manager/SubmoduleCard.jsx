@@ -184,11 +184,12 @@ const SubModuleCard = () => {
             filteredSubModules.map((subModule) => (
               <div
                 key={subModule.SubModuleID}
-                className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer ${expandedDescriptions[subModule.SubModuleID]
-                  ? 'h-auto'
-                  : 'h-[400px]'
-                  }`}
-                onClick={() => navigate(`/submodule/${subModule.SubModuleID}`)}
+                className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer ${
+                  expandedDescriptions[subModule.SubModuleID]
+                    ? 'h-auto'
+                    : 'h-[400px]'
+                }`}
+                onClick={() => handleSubModuleClick(subModule)}
               >
                 <div className="h-40 bg-gray-100 overflow-hidden flex-shrink-0">
                   {subModule.SubModuleImage ? (
@@ -209,45 +210,47 @@ const SubModuleCard = () => {
 
                   <div className="overflow-hidden">
                     <p
-                      className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${expandedDescriptions[subModule.SubModuleID]
-                        ? 'overflow-y-auto max-h-32'
-                        : 'line-clamp-3'
-                        }`}
+                      className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${
+                        expandedDescriptions[subModule.SubModuleID]
+                          ? 'overflow-y-auto max-h-32'
+                          : 'line-clamp-3'
+                      }`}
                     >
                       {subModule.SubModuleDescription || "No description available"}
                     </p>
                   </div>
 
-                    {/* Read More Button */}
-                    {isDescriptionClamped(subModule.SubModuleDescription) && (
-                      <div className="h-8 mb-3 flex-shrink-0">
-                        <button
-                          onClick={(e) => toggleDescription(subModule.SubModuleID, e)}
-                          className="text-blue-500 hover:text-blue-700 text-sm flex items-center bg-white hover:bg-blue-50 px-2 py-1 rounded-md shadow-sm hover:shadow-md transition-all duration-200 border border-blue-200 hover:border-blue-300"
-                        >
-                          {isExpanded ? (
-                            <>
-                              <FaAngleUp className="mr-1" />
-                              <span className="font-medium">Show Less</span>
-                            </>
-                          ) : (
-                            <>
-                              <FaAngleDown className="mr-1" />
-                              <span className="font-medium">Read More</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
+                  {/* Read More Button */}
+                  {isDescriptionClamped(subModule.SubModuleDescription) && (
+                    <div className="h-8 mb-3 flex-shrink-0">
+                      <button
+                        onClick={(e) => toggleDescription(subModule.SubModuleID, e)}
+                        className="text-blue-500 hover:text-blue-700 text-sm flex items-center bg-white hover:bg-blue-50 px-2 py-1 rounded-md shadow-sm hover:shadow-md transition-all duration-200 border border-blue-200 hover:border-blue-300"
+                      >
+                        {expandedDescriptions[subModule.SubModuleID] ? (
+                          <>
+                            <FaAngleUp className="mr-1" />
+                            <span className="font-medium">Show Less</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaAngleDown className="mr-1" />
+                            <span className="font-medium">Read More</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
 
                   <div className="mt-4">
                     <ProgressBar
                       subModuleID={subModule.SubModuleID}  // Pass the ID explicitly
                       initialProgress={subModule.progress || 0}  // Optional fallback
-                    />                </div>
+                    />
+                  </div>
                 </div>
-              );
-            })
+              </div>
+            ))
           ) : (
             <div className="col-span-full bg-white rounded-xl shadow-lg p-6 text-center">
               <p className="text-gray-600">

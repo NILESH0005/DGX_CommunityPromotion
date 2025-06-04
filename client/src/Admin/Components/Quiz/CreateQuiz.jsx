@@ -506,7 +506,7 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
 
           {/* Start Date & Time */}
           <div>
-            <label className="block text-gray-700 font-medium mb-2 flex items-center gap-2">
+            <label className="block text-gray-700 font-medium mb-2  items-center gap-2">
               <FaCalendarAlt /> Start Date & Time *
             </label>
             <div className="flex gap-4">
@@ -539,7 +539,7 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
 
           {/* End Date & Time */}
           <div>
-            <label className="block text-gray-700 font-medium mb-2 flex items-center gap-2">
+            <label className="block text-gray-700 font-medium mb-2  items-center gap-2">
               <FaCalendarAlt /> End Date & Time *
             </label>
             <div className="flex gap-4">

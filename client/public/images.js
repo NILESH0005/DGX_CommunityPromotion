@@ -1,5 +1,5 @@
 
-import nvidiaPP from '../public/nvidiapp.png';
+import nvidiaPP from '../public/nvidiapp.jpg';
 import verifyImg from '../public/verifyImg.png';
 import Refresh from '../public/Refresh.png';
 import robo from '../public/robo.png'

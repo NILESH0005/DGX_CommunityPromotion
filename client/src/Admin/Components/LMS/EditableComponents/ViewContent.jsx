@@ -439,14 +439,14 @@ const ViewContent = ({ submodule, onBack }) => {
 
       <div className="max-w-7xl mx-auto">
         {/* Breadcrumb Navigation */}
-        <div className="text-lg flex items-center text-sm text-black  mb-6">
+        <div className="text-lg flex items-center  text-black  mb-6">
           <button
             onClick={() => onBack(EditModule)} // Pass the module data back
             className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center"
           >
             Modules
           </button>
-          <FaChevronRight className="text-lg mx-2 text-xs text-black " />
+          <FaChevronRight className="text-lg mx-2  text-black " />
           <button
             onClick={onBack} // Default back behavior
             className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center"
@@ -471,12 +471,12 @@ const ViewContent = ({ submodule, onBack }) => {
             <FaEdit className="mr-2" />
             Add New Unit
           </button>
-          <h1 className="text-2xl font-bold text-Black-800 dark:text-black">
+          {/* <h1 className="text-2xl font-bold text-Black-800 dark:text-black">
             Content for:{" "}
             <span className="text-red-600 dark:text-red-400">
               {submodule.SubModuleName}
             </span>
-          </h1>
+          </h1> */}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

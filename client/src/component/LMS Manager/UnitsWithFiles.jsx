@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useContext } from 'react';
-import PropTypes from 'prop-types';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import ApiContext from '../../context/ApiContext';
-import FileViewer from '../../utils/FileViewer';
-import Swal from 'sweetalert2';
-import Quiz from '../quiz/Quiz';
+import React, { useState, useEffect, useContext } from "react";
+import PropTypes from "prop-types";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { FiMenu, FiX, FiFolder, FiFileText, FiBook } from "react-icons/fi";
+import ApiContext from "../../context/ApiContext";
+import FileViewer from "../../utils/FileViewer";
+import Swal from "sweetalert2";
+import Quiz from "../quiz/Quiz";
+import BreadCrumb from "./BreadCrumb"; // Added BreadCrumb import
 
 const UnitsWithFiles = () => {
   const { subModuleId } = useParams();
@@ -21,8 +23,9 @@ const UnitsWithFiles = () => {
   const [viewedFiles, setViewedFiles] = useState(new Set());
   const [userFileIds, setUserFileIds] = useState([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [moduleName, setModuleName] = useState('');
-  const [subModuleName, setSubModuleName] = useState('');
+  const [moduleName, setModuleName] = useState("");
+  const [subModuleName, setSubModuleName] = useState("");
+  const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
 
   // Get module and submodule names from location state if available
   useEffect(() => {
@@ -47,13 +50,13 @@ const UnitsWithFiles = () => {
           "POST",
           {},
           {
-            'Content-Type': 'application/json',
-            'auth-token': userToken
+            "Content-Type": "application/json",
+            "auth-token": userToken,
           }
         );
 
         if (response?.success) {
-          const fileIds = response.data.fileIds.map(file => file.FileID);
+          const fileIds = response.data.fileIds.map((file) => file.FileID);
           setViewedFiles(new Set(fileIds));
           setUserFileIds(response.data.fileIds);
         } else {
@@ -78,8 +81,8 @@ const UnitsWithFiles = () => {
         "POST",
         { subModuleId },
         {
-          'Content-Type': 'application/json',
-          'auth-token': userToken
+          "Content-Type": "application/json",
+          "auth-token": userToken,
         }
       );
 
@@ -93,7 +96,7 @@ const UnitsWithFiles = () => {
       }
     } catch (error) {
       console.error("Error fetching quizzes:", error);
-      setQuizzes([]); 
+      setQuizzes([]);
     }
   };
 
@@ -107,7 +110,7 @@ const UnitsWithFiles = () => {
         if (response?.success) {
           setAllUnits(response.data);
 
-          const filtered = response.data.filter(unit => {
+          const filtered = response.data.filter((unit) => {
             return String(unit.SubModuleID) === String(subModuleId);
           });
 
@@ -117,15 +120,15 @@ const UnitsWithFiles = () => {
             setSelectedFile({
               ...firstFile,
               unitName: filtered[0].UnitName,
-              unitDescription: filtered[0].UnitDescription
+              unitDescription: filtered[0].UnitDescription,
             });
           }
         } else {
-          setError('Failed to fetch units data');
+          setError("Failed to fetch units data");
         }
       } catch (error) {
         console.error("Error fetching units:", error);
-        setError('An error occurred while fetching units');
+        setError("An error occurred while fetching units");
       } finally {
         setLoading(false);
       }
@@ -155,20 +158,26 @@ const UnitsWithFiles = () => {
         "POST",
         { FileID: fileId },
         {
-          'Content-Type': 'application/json',
-          'auth-token': userToken
+          "Content-Type": "application/json",
+          "auth-token": userToken,
         }
       );
 
       if (response?.success) {
         if (response.message !== "File view already recorded for this user") {
-          setViewedFiles(prev => new Set(prev).add(fileId));
+          setViewedFiles((prev) => new Set(prev).add(fileId));
         }
       } else {
-        console.error("Error recording file view:", response?.message || 'Unknown error');
+        console.error(
+          "Error recording file view:",
+          response?.message || "Unknown error"
+        );
       }
     } catch (error) {
-      console.error("Error recording file view:", error.message || 'Unknown error');
+      console.error(
+        "Error recording file view:",
+        error.message || "Unknown error"
+      );
     }
   };
 
@@ -176,7 +185,7 @@ const UnitsWithFiles = () => {
     setSelectedFile({
       ...file,
       unitName: unit.UnitName,
-      unitDescription: unit.UnitDescription
+      unitDescription: unit.UnitDescription,
     });
     recordFileView(file.FileID, unit.UnitID);
   };
@@ -185,41 +194,49 @@ const UnitsWithFiles = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
+  // Helper function to check if text needs "Read more" functionality
+  const needsReadMore = (text) => {
+    if (!text) return false;
+    return text.split(" ").length > 10;
+  };
+
+  // Helper function to get truncated text
+  const getTruncatedText = (text, wordLimit = 10) => {
+    if (!text) return "";
+    const words = text.split(" ");
+    if (words.length <= wordLimit) return text;
+    return words.slice(0, wordLimit).join(" ") + "...";
+  };
+
+  // Toggle expanded description
+  const toggleDescription = (id) => {
+    setExpandedDescriptions((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   const getFileIcon = (fileType) => {
     switch (fileType) {
       case "pdf":
-        return (
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-          </svg>
-        );
+        return <FiFileText className="w-4 h-4" />;
       case "ipynb":
-        return (
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" />
-            <path d="M6 8h2v4H6zM10 8h2v4h-2zM14 10h-2v2h2z" />
-          </svg>
-        );
+        return <FiBook className="w-4 h-4" />;
       case "docx":
-        return (
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-          </svg>
-        );
+        return <FiFileText className="w-4 h-4" />;
       default:
-        return (
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        );
+        return <FiFileText className="w-4 h-4" />;
     }
   };
 
   const removeFileExtension = (filename) => {
     return filename.replace(/\.[^/.]+$/, "");
   };
-
-
 
   if (!subModuleId) {
     return (
@@ -237,10 +254,17 @@ const UnitsWithFiles = () => {
   if (loading) {
     return (
       <div className="flex h-screen bg-background text-foreground">
-        <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-[#1f2937] text-white p-4 border-r border-gray-700 transition-all duration-300`}>
+        <div
+          className={`${
+            isSidebarCollapsed ? "w-16" : "w-64 lg:w-80"
+          } bg-[#1f2937] text-white p-4 border-r border-gray-700 transition-all duration-300`}
+        >
           <div className="h-8 bg-gray-700 rounded w-3/4 mb-6 animate-pulse"></div>
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-16 bg-gray-700 rounded mb-3 animate-pulse"></div>
+            <div
+              key={i}
+              className="h-16 bg-gray-700 rounded mb-3 animate-pulse"
+            ></div>
           ))}
         </div>
         <div className="flex-1 p-6">
@@ -283,30 +307,68 @@ const UnitsWithFiles = () => {
 
   const renderQuizItem = (quiz) => {
     const isCollapsed = isSidebarCollapsed;
-    const attemptsText = quiz.userAttempts > 0 ? `(Attempts: ${quiz.userAttempts})` : '(Not attempted)';
+    const attemptsText =
+      quiz.userAttempts > 0
+        ? `(Attempts: ${quiz.userAttempts})`
+        : "(Not attempted)";
+
+    const quizDescription = `Level: ${quiz.QuizLevel} ${attemptsText}`;
+    const needsReadMoreQuiz = needsReadMore(quiz.QuizName);
+    const isExpanded = expandedDescriptions.has(`quiz-${quiz.QuizID}`);
 
     return (
       <div
         key={quiz.QuizID}
-        className={`${isCollapsed ? 'p-2' : 'p-3'} rounded-lg hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700 mt-2`}
+        className={`${
+          isCollapsed ? "p-2" : "p-4"
+        } rounded-lg hover:bg-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer border border-gray-600 hover:border-gray-500 mt-3 transform hover:scale-[1.02]`}
         onClick={() => setSelectedQuiz(quiz)}
       >
-
         {isCollapsed ? (
           <div className="flex justify-center" title={quiz.QuizName}>
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              className="w-5 h-5 text-blue-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-              <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                clipRule="evenodd"
+              />
             </svg>
           </div>
         ) : (
           <>
-            <h3 className="font-bold text-lg mb-1">{quiz.QuizName}</h3>
-            <p className="text-gray-300 text-sm">
-              Level: {quiz.QuizLevel} {attemptsText}
+            <div className="flex items-start justify-between">
+              <h3 className="font-semibold text-lg mb-2 text-blue-100 leading-tight">
+                {needsReadMoreQuiz ? (
+                  <>
+                    {isExpanded
+                      ? quiz.QuizName
+                      : getTruncatedText(quiz.QuizName)}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleDescription(`quiz-${quiz.QuizID}`);
+                      }}
+                      className="ml-2 text-xs text-blue-400 hover:text-blue-300 underline transition-colors"
+                    >
+                      {isExpanded ? "Read less" : "Read more"}
+                    </button>
+                  </>
+                ) : (
+                  quiz.QuizName
+                )}
+              </h3>
+            </div>
+            <p className="text-gray-300 text-sm mb-2 font-medium">
+              {quizDescription}
             </p>
-            <div className="mt-2 text-xs text-gray-400">
-              {new Date(quiz.StartDateAndTime).toLocaleDateString()} - {new Date(quiz.EndDateTime).toLocaleDateString()}
+            <div className="mt-3 text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">
+              📅 {new Date(quiz.StartDateAndTime).toLocaleDateString()} -{" "}
+              {new Date(quiz.EndDateTime).toLocaleDateString()}
             </div>
           </>
         )}
@@ -317,161 +379,283 @@ const UnitsWithFiles = () => {
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* Navigation Sidebar */}
-      <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}>
-        <button
+      <div
+        className={`${
+          isSidebarCollapsed ? "w-16" : "w-64 lg:w-80"
+        } bg-gradient-to-b from-[#1f2937] to-[#111827] text-white border-r border-gray-600 overflow-y-auto transition-all duration-300 ease-in-out relative shadow-xl`}
+      >
+        {/* Modern Toggle Button */}
+
+        {/* <button
           onClick={toggleSidebar}
-          className="absolute -right-6 top-8 bg-[#1f2937] text-white rounded-full p-4 border-2 border-gray-500 hover:bg-gray-600 hover:border-gray-400 transition-all duration-200 z-10 shadow-xl hover:shadow-2xl transform hover:scale-105"
+          className=" top-8 ml-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-3 border-2 border-blue-500 hover:from-blue-700 hover:to-blue-800 hover:border-blue-400 transition-all duration-200 z-20 shadow-lg hover:shadow-xl transform hover:scale-110 group"
+
+          // className="absolute -right-4 top-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-3 border-2 border-blue-500 hover:from-blue-700 hover:to-blue-800 hover:border-blue-400 transition-all duration-200 z-20 shadow-lg hover:shadow-xl transform hover:scale-110 group"
           title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          <svg
-            className={`w-6 h-6 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            strokeWidth={3}
+          {isSidebarCollapsed ? (
+            <FiMenu className="w-5 h-5 group-hover:rotate-12 transition-transform duration-200" />
+          ) : (
+            <FiX className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
+          )}
+        </button> */}
+
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={toggleSidebar}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-3 border-2 border-blue-500 hover:from-blue-700 hover:to-blue-800 hover:border-blue-400 transition-all duration-200 z-20 shadow-lg hover:shadow-xl transform hover:scale-110 group"
+            title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+            {isSidebarCollapsed ? (
+              <FiMenu className="w-5 h-5 group-hover:rotate-12 transition-transform duration-200" />
+            ) : (
+              <FiX className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
+            )}
+          </button>
+        </div>
 
-        <div className="p-4">
-          <div className="mb-6">
+        <div className="p-4 pt-6">
+          <div className="mb-8">
             {!isSidebarCollapsed ? (
-              <>
-
-              </>
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-600 rounded-lg">
+                  <FiFolder className="w-6 h-6" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-white">
+                    Course Content
+                  </h1>
+                  <p className="text-xs text-gray-400">Learning Materials</p>
+                </div>
+              </div>
             ) : (
               <div className="flex justify-center">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                </svg>
+                <div className="p-2 bg-blue-600 rounded-lg">
+                  <FiFolder className="w-6 h-6" />
+                </div>
               </div>
             )}
           </div>
 
-
-
           {/* Units List */}
           <div className="space-y-4">
-            {filteredUnits.map(unit => (
-              <div
-                key={unit.UnitID}
-                className={`${isSidebarCollapsed ? 'p-2' : 'p-3'} rounded-lg hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700`}
-                onClick={() => {
-                  if (unit.files?.length > 0) {
-                    setSelectedFile({
-                      ...unit.files[0],
-                      unitName: unit.UnitName,
-                      unitDescription: unit.UnitDescription
-                    });
-                  }
-                }}
-              >
-                {isSidebarCollapsed ? (
-                  <div className="flex justify-center" title={unit.UnitName}>
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                    </svg>
-                  </div>
-                ) : (
-                  <>
-                    <h3 className="font-bold text-lg mb-1">{unit.UnitName}</h3>
-                    <p className="text-gray-300 text-sm">{unit.UnitDescription}</p>
-                  </>
-                )}
+            {filteredUnits.map((unit) => {
+              const needsReadMoreUnit = needsReadMore(unit.UnitDescription);
+              const isExpanded = expandedDescriptions.has(
+                `unit-${unit.UnitID}`
+              );
 
-                {unit.files?.length > 0 && (
-                  <div className={`${isSidebarCollapsed ? 'mt-2' : 'mt-2 ml-2 border-l border-gray-600 pl-2'}`}>
-                    {unit.files.map(file => {
-                      const isViewed = viewedFiles.has(file.FileID);
-                      const isSelected = selectedFile?.FileID === file.FileID;
-
-                      return (
-                        <div
-                          key={file.FileID}
-                          className={`${isSidebarCollapsed ? 'p-1 flex justify-center' : 'py-1 px-2'} rounded text-sm flex items-center transition-colors ${isSelected
-                            ? "bg-blue-600 text-white"
-                            : isViewed
-                              ? "bg-green-600 text-white hover:bg-green-500"
-                              : "text-gray-300 hover:text-white hover:bg-gray-600"
-                            }`}
-                          title={isSidebarCollapsed ? removeFileExtension(file.FilesName) : ''}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFileSelect(file, unit);
-                          }}
-                        >
-                          {isSidebarCollapsed ? (
-                            getFileIcon(file.fileType)
-                          ) : (
-                            <>
-                              <span className="mr-2">
-                                {getFileIcon(file.fileType)}
-                              </span>
-                              <span className="truncate flex-grow">
-                                {removeFileExtension(file.FilesName)}
-                                {isViewed && !isSelected && (
-                                  <span className="ml-2 text-xs text-green-300">(viewed)</span>
-                                )}
-                              </span>
-                              {isViewed && (
-                                <svg
-                                  className="ml-2 h-4 w-4 text-green-300"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                              )}
-                            </>
-                          )}
+              return (
+                <div
+                  key={unit.UnitID}
+                  className={`${
+                    isSidebarCollapsed ? "p-3" : "p-4"
+                  } rounded-xl hover:bg-gray-700 hover:shadow-lg transition-all duration-200 cursor-pointer border border-gray-600 hover:border-gray-500 bg-gray-800/50 backdrop-blur-sm transform hover:scale-[1.02]`}
+                  onClick={() => {
+                    if (unit.files?.length > 0) {
+                      setSelectedFile({
+                        ...unit.files[0],
+                        unitName: unit.UnitName,
+                        unitDescription: unit.UnitDescription,
+                      });
+                    }
+                  }}
+                >
+                  {isSidebarCollapsed ? (
+                    <div className="flex justify-center" title={unit.UnitName}>
+                      <FiFolder className="w-6 h-6 text-yellow-400" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start space-x-3 mb-3">
+                        <div className="p-2 bg-yellow-500/20 rounded-lg flex-shrink-0">
+                          <FiFolder className="w-5 h-5 text-yellow-400" />
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-lg mb-2 text-white leading-tight">
+                            {unit.UnitName}
+                          </h3>
+                          {/* <p className="text-gray-300 text-sm leading-relaxed">
+                            {needsReadMoreUnit ? (
+                              <>
+                                {isExpanded
+                                  ? unit.UnitDescription
+                                  : getTruncatedText(unit.UnitDescription)}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleDescription(`unit-${unit.UnitID}`);
+                                  }}
+                                  className="ml-2 text-xs text-blue-400 hover:text-blue-300 underline transition-colors"
+                                >
+                                  {isExpanded ? "Read less" : "Read more"}
+                                </button>
+                              </>
+                            ) : (
+                              unit.UnitDescription
+                            )}
+                          </p> */}
+                          <p className="text-gray-300 text-sm leading-relaxed break-words">
+                            {needsReadMoreUnit ? (
+                              <>
+                                {isExpanded
+                                  ? unit.UnitDescription
+                                  : getTruncatedText(unit.UnitDescription)}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleDescription(`unit-${unit.UnitID}`);
+                                  }}
+                                  className="ml-2 text-xs text-blue-400 hover:text-blue-300 underline transition-colors"
+                                >
+                                  {isExpanded ? "Read less" : "Read more"}
+                                </button>
+                              </>
+                            ) : (
+                              unit.UnitDescription
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {unit.files?.length > 0 && (
+                    <div
+                      className={`${
+                        isSidebarCollapsed
+                          ? "mt-3 space-y-1"
+                          : "mt-4 ml-2 border-l-2 border-gray-600 pl-4 space-y-2"
+                      }`}
+                    >
+                      {unit.files.map((file) => {
+                        const isViewed = viewedFiles.has(file.FileID);
+                        const isSelected = selectedFile?.FileID === file.FileID;
+
+                        return (
+                          <div
+                            key={file.FileID}
+                            className={`${
+                              isSidebarCollapsed
+                                ? "p-2 flex justify-center rounded-lg"
+                                : "py-3 px-3 rounded-lg"
+                            } flex items-center transition-all duration-200 ${
+                              isSelected
+                                ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md transform scale-105"
+                                : isViewed
+                                ? "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-500 hover:to-green-600 shadow-sm"
+                                : "text-gray-300 hover:text-white hover:bg-gray-600/70 hover:shadow-sm"
+                            } cursor-pointer group`}
+                            title={
+                              isSidebarCollapsed
+                                ? removeFileExtension(file.FilesName)
+                                : ""
+                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFileSelect(file, unit);
+                            }}
+                          >
+                            {isSidebarCollapsed ? (
+                              <div className="flex justify-center">
+                                {getFileIcon(file.fileType)}
+                              </div>
+                            ) : (
+                              <>
+                                <div className="mr-3 flex-shrink-0 transition-transform group-hover:scale-110">
+                                  {getFileIcon(file.fileType)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <span className="block truncate font-medium text-sm">
+                                    {removeFileExtension(file.FilesName)}
+                                  </span>
+                                  {isViewed && !isSelected && (
+                                    <span className="text-xs text-green-300 mt-1 block">
+                                      ✓ Completed
+                                    </span>
+                                  )}
+                                </div>
+                                {isViewed && (
+                                  <div className="ml-2 flex-shrink-0">
+                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                      <svg
+                                        className="w-3 h-3 text-white"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={3}
+                                          d="M5 13l4 4L19 7"
+                                        />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
+
           {/* Quiz List */}
           {quizzes.length > 0 && (
-            <div className="mt-8 pt-4 border-t border-gray-600">
+            <div className="mt-8 pt-6 border-t-2 border-gray-600">
               {!isSidebarCollapsed && (
-                <h3 className="font-bold text-lg mb-4 text-white">Quizzes</h3>
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-2 bg-purple-600 rounded-lg">
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                      <path
+                        fillRule="evenodd"
+                        d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-white">Quizzes</h3>
+                    <p className="text-xs text-gray-400">Test your knowledge</p>
+                  </div>
+                </div>
               )}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {console.log("Rendering quizzes:", quizzes)}
-                {quizzes.map(quiz => renderQuizItem(quiz))}
+                {quizzes.map((quiz) => renderQuizItem(quiz))}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Main content area */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        {/* Add BreadCrumb component here - position it above the sidebar */}
+        <BreadCrumb />
+
         {selectedQuiz ? (
           // Render Quiz component when a quiz is selected
           <Quiz
             quizId={selectedQuiz.QuizID}
-            quiz={selectedQuiz}  // Pass the full quiz object
+            quiz={selectedQuiz} // Pass the full quiz object
             onBack={() => setSelectedQuiz(null)}
           />
         ) : (
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">
-              {selectedFile?.unitName || "Select a Unit"}
-            </h1>
-            <p className="text-gray-600 mt-2">
-              {selectedFile?.unitDescription || ""}
-            </p>
             {selectedFile && (
               <h2 className="text-xl font-semibold text-gray-700 mt-4">
-                {removeFileExtension(selectedFile.FilesName)}
                 {selectedFile.fileType === "ipynb" && (
                   <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
                     Jupyter Notebook
@@ -479,12 +663,16 @@ const UnitsWithFiles = () => {
                 )}
               </h2>
             )}
-          </div>)}
+          </div>
+        )}
 
-        <div className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${selectedFile?.fileType === "ipynb" ?
-          "bg-[#f5f5f5] border border-gray-300" :
-          "bg-white border"
-          }`}>
+        <div
+          className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${
+            selectedFile?.fileType === "ipynb"
+              ? "bg-[#f5f5f5] border border-gray-300"
+              : "bg-white border"
+          }`}
+        >
           {selectedFile?.fileType === "ipynb" && (
             <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
               <div className="flex space-x-2">
@@ -497,9 +685,15 @@ const UnitsWithFiles = () => {
               </div>
             </div>
           )}
-          <div className={selectedFile?.fileType === "ipynb" ? "h-full pt-8" : "h-full"}>
+          <div
+            className={
+              selectedFile?.fileType === "ipynb" ? "h-full pt-8" : "h-full"
+            }
+          >
             <FileViewer
-              fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile?.FilePath}`}
+              fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${
+                selectedFile?.FilePath
+              }`}
               className="w-full h-full"
             />
           </div>
@@ -517,7 +711,7 @@ const UnitsWithFiles = () => {
 };
 
 UnitsWithFiles.propTypes = {
-  subModuleId: PropTypes.string.isRequired
+  subModuleId: PropTypes.string.isRequired,
 };
 
 export default UnitsWithFiles;

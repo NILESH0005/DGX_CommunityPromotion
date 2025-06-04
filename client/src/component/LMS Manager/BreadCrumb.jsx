@@ -39,10 +39,12 @@ const BreadCrumb = ({ customPaths = [] }) => {
 
     // Submodule level
     if (pathnames.includes('submodule') && (state?.submoduleName || params.subModuleId)) {
+      const isSubmoduleActive = pathnames.length === 2 && pathnames.includes('submodule');
+      
       items.push({
         label: state?.submoduleName || `Submodule ${params.subModuleId}`,
         path: `/submodule/${params.subModuleId}`,
-        isActive: pathnames.length === 2 && pathnames.includes('submodule'), // Active if we're at submodule level
+        isActive: isSubmoduleActive,
         state: {
           moduleName: state?.moduleName,
           submoduleName: state?.submoduleName,
@@ -51,13 +53,64 @@ const BreadCrumb = ({ customPaths = [] }) => {
       });
     }
 
-    // File level (from state)
-    if (state?.fileName) {
+    // Unit File level - Check if we're in a unit file view
+    // This handles cases where we're viewing files within a submodule
+    if (params.subModuleId && state?.unitName && !pathnames.includes('submodule')) {
+      // Add submodule breadcrumb if we're in unit file view but coming from submodule
+      if (state?.submoduleName) {
+        items.push({
+          label: state.submoduleName,
+          path: `/submodule/${params.subModuleId}`,
+          isActive: false,
+          state: {
+            moduleName: state?.moduleName,
+            submoduleName: state?.submoduleName,
+            moduleId: state?.moduleId
+          }
+        });
+      }
+      
+      // Add unit file name as the last breadcrumb (non-clickable)
+      items.push({
+        label: state.unitName,
+        path: null, // Current page, not clickable
+        isActive: true
+      });
+    }
+
+    // File level (from state) - for individual file views
+    if (state?.fileName && !state?.unitName) {
       items.push({
         label: removeExtension(state.fileName),
         path: null, // Current page, not clickable
         isActive: true
       });
+    }
+
+    // Handle file-viewer route specifically
+    if (pathnames.includes('file-viewer') && state) {
+      // Ensure we have submodule in breadcrumb if not already added
+      if (state?.submoduleName && !items.some(item => item.label === state.submoduleName)) {
+        items.push({
+          label: state.submoduleName,
+          path: `/submodule/${state.submoduleId}`,
+          isActive: false,
+          state: {
+            moduleName: state?.moduleName,
+            submoduleName: state?.submoduleName,
+            moduleId: state?.moduleId
+          }
+        });
+      }
+      
+      // Add file name as final breadcrumb
+      if (state?.fileName) {
+        items.push({
+          label: removeExtension(state.fileName),
+          path: null, // Current page, not clickable
+          isActive: true
+        });
+      }
     }
 
     // Merge with any custom paths passed as props

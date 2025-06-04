@@ -278,7 +278,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules, onCreateQuiz
                                 <FaUpload className="mr-1" />
                                 {isCompressing ? "Processing..." : (imagePreview ? "Change" : "Upload")}
                             </button>
-                            {(editedModule.ModuleImage || imagePreview) && (
+                            {/* {(editedModule.ModuleImage || imagePreview) && (
                                 <button
                                     type="button"
                                     onClick={handleDeleteImage}
@@ -288,7 +288,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules, onCreateQuiz
                                     <FaTrash className="mr-1" />
                                     Remove
                                 </button>
-                            )}
+                            )} */}
                             <button
                                 type="button"
                                 onClick={handleCancelImageEdit}

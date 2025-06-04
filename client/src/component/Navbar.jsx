@@ -60,7 +60,7 @@ const Navbar = () => {
         { label: 'Quiz', to: '/QuizInterface', icon: FaBrain },
         { label: 'Contact Us', to: '/ContactUs', icon: faEnvelope },
         { label: 'Community Guidelines', to: '/CommunityGuidelines', icon: faBook },
-        { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher },
+        // { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher },
         { label: 'LMS', to: '/LearningPath', icon: faChalkboardTeacher }
     ];
 
