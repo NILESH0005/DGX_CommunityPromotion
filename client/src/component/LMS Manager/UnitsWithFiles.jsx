@@ -1,25 +1,23 @@
-import React, { useState, useEffect, useContext } from "react";
-import PropTypes from "prop-types";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { FiMenu, FiX, FiFolder, FiFileText, FiBook } from "react-icons/fi";
-import ApiContext from "../../context/ApiContext";
-import FileViewer from "../../utils/FileViewer";
-import Swal from "sweetalert2";
-import Quiz from "../quiz/Quiz";
-import BreadCrumb from "./BreadCrumb"; // Added BreadCrumb import
+import React, { useState, useEffect, useContext } from 'react';
+import PropTypes from 'prop-types';
+import { useParams } from 'react-router-dom';
+import ApiContext from '../../context/ApiContext';
+import FileViewer from '../../utils/FileViewer';
+import Quiz from '../quiz/Quiz'
+import Swal from 'sweetalert2';
 
 const UnitsWithFiles = () => {
   const { subModuleId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [allUnits, setAllUnits] = useState([]);
-  const [filteredUnits, setFilteredUnits] = useState([]);
-  const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
+  const [filteredUnits, setFilteredUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { fetchData, userToken } = useContext(ApiContext);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [viewedFiles, setViewedFiles] = useState(new Set());
   const [userFileIds, setUserFileIds] = useState([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -72,78 +70,54 @@ const UnitsWithFiles = () => {
     }
   }, [userToken, fetchData]);
 
-  const fetchQuizzes = async () => {
-    try {
-      if (!subModuleId || !userToken) return;
-
-      const response = await fetchData(
-        "quiz/getQuizzesBySubModule",
-        "POST",
-        { subModuleId },
-        {
-          "Content-Type": "application/json",
-          "auth-token": userToken,
-        }
-      );
-
-      console.log("Quizzes response:", response); // Add this for debugging
-
-      if (response?.success) {
-        setQuizzes(response.data.quizzes || []);
-      } else {
-        console.error("Failed to fetch quizzes:", response?.message);
-        setQuizzes([]); // Ensure quizzes is set to empty array on failure
-      }
-    } catch (error) {
-      console.error("Error fetching quizzes:", error);
-      setQuizzes([]);
-    }
-  };
-
   useEffect(() => {
-    const fetchUnitsWithFiles = async () => {
+    const fetchDataForSubmodule = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetchData("dropdown/getUnitsWithFiles", "GET");
+        const unitsResponse = await fetchData(`dropdown/getUnitsWithFiles/${subModuleId}`, "GET");
 
-        if (response?.success) {
-          setAllUnits(response.data);
+        const quizzesResponse = await fetchData(
+          "quiz/getQuizzesByRefId",
+          "POST",
+          { refId: subModuleId },
+          {
+            'Content-Type': 'application/json',
+            'auth-token': userToken
+          }
+        );
 
-          const filtered = response.data.filter((unit) => {
+        console.log("reessspoonnseee", quizzesResponse)
+
+        if (unitsResponse?.success) {
+          setAllUnits(unitsResponse.data);
+          const filtered = unitsResponse.data.filter(unit => {
             return String(unit.SubModuleID) === String(subModuleId);
           });
-
           setFilteredUnits(filtered);
-          if (filtered.length > 0 && filtered[0].files?.length > 0) {
-            const firstFile = filtered[0].files[0];
-            setSelectedFile({
-              ...firstFile,
-              unitName: filtered[0].UnitName,
-              unitDescription: filtered[0].UnitDescription,
-            });
-          }
-        } else {
-          setError("Failed to fetch units data");
         }
+
+        if (quizzesResponse?.success) {
+          const transformedQuizzes = quizzesResponse.data.map(quiz => ({
+            ...quiz,
+            group_id: quiz.QuizGroupID
+          }));
+          setQuizzes(transformedQuizzes);
+        }
+
       } catch (error) {
-        console.error("Error fetching units:", error);
-        setError("An error occurred while fetching units");
+        console.error("Error fetching data:", error);
+        setError('An error occurred while fetching data');
       } finally {
         setLoading(false);
       }
     };
 
     if (subModuleId) {
-      fetchUnitsWithFiles();
-      fetchQuizzes(); // Fetch quizzes when subModuleId changes
-    } else {
-      setLoading(false);
-      setAllUnits([]);
-      setFilteredUnits([]);
-      setSelectedFile(null);
+      fetchDataForSubmodule();
     }
   }, [subModuleId, fetchData, userToken]);
+
 
   const recordFileView = async (fileId, unitId) => {
     try {
@@ -182,6 +156,7 @@ const UnitsWithFiles = () => {
   };
 
   const handleFileSelect = (file, unit) => {
+    setSelectedQuiz(null); // Clear any selected quiz
     setSelectedFile({
       ...file,
       unitName: unit.UnitName,
@@ -251,6 +226,11 @@ const UnitsWithFiles = () => {
     );
   }
 
+  const handleQuizSelect = (quiz) => {
+    setSelectedQuiz(quiz);
+    setSelectedFile(null);
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen bg-background text-foreground">
@@ -305,88 +285,11 @@ const UnitsWithFiles = () => {
     );
   }
 
-  const renderQuizItem = (quiz) => {
-    const isCollapsed = isSidebarCollapsed;
-    const attemptsText =
-      quiz.userAttempts > 0
-        ? `(Attempts: ${quiz.userAttempts})`
-        : "(Not attempted)";
-
-    const quizDescription = `Level: ${quiz.QuizLevel} ${attemptsText}`;
-    const needsReadMoreQuiz = needsReadMore(quiz.QuizName);
-    const isExpanded = expandedDescriptions.has(`quiz-${quiz.QuizID}`);
-
-    return (
-      <div
-        key={quiz.QuizID}
-        className={`${
-          isCollapsed ? "p-2" : "p-4"
-        } rounded-lg hover:bg-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer border border-gray-600 hover:border-gray-500 mt-3 transform hover:scale-[1.02]`}
-        onClick={() => setSelectedQuiz(quiz)}
-      >
-        {isCollapsed ? (
-          <div className="flex justify-center" title={quiz.QuizName}>
-            <svg
-              className="w-5 h-5 text-blue-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-              <path
-                fillRule="evenodd"
-                d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-start justify-between">
-              <h3 className="font-semibold text-lg mb-2 text-blue-100 leading-tight">
-                {needsReadMoreQuiz ? (
-                  <>
-                    {isExpanded
-                      ? quiz.QuizName
-                      : getTruncatedText(quiz.QuizName)}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleDescription(`quiz-${quiz.QuizID}`);
-                      }}
-                      className="ml-2 text-xs text-blue-400 hover:text-blue-300 underline transition-colors"
-                    >
-                      {isExpanded ? "Read less" : "Read more"}
-                    </button>
-                  </>
-                ) : (
-                  quiz.QuizName
-                )}
-              </h3>
-            </div>
-            <p className="text-gray-300 text-sm mb-2 font-medium">
-              {quizDescription}
-            </p>
-            <div className="mt-3 text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">
-              📅 {new Date(quiz.StartDateAndTime).toLocaleDateString()} -{" "}
-              {new Date(quiz.EndDateTime).toLocaleDateString()}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="flex h-screen bg-background text-foreground">
-      {/* Navigation Sidebar */}
-      <div
-        className={`${
-          isSidebarCollapsed ? "w-16" : "w-64 lg:w-80"
-        } bg-gradient-to-b from-[#1f2937] to-[#111827] text-white border-r border-gray-600 overflow-y-auto transition-all duration-300 ease-in-out relative shadow-xl`}
-      >
-        {/* Modern Toggle Button */}
-
-        {/* <button
+      <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}>
+        {/* Toggle Button - Made Bigger and More Visible */}
+        <button
           onClick={toggleSidebar}
           className=" top-8 ml-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-3 border-2 border-blue-500 hover:from-blue-700 hover:to-blue-800 hover:border-blue-400 transition-all duration-200 z-20 shadow-lg hover:shadow-xl transform hover:scale-110 group"
 
@@ -414,28 +317,39 @@ const UnitsWithFiles = () => {
           </button>
         </div>
 
-        <div className="p-4 pt-6">
-          <div className="mb-8">
-            {!isSidebarCollapsed ? (
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-600 rounded-lg">
-                  <FiFolder className="w-6 h-6" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-white">
-                    Course Content
-                  </h1>
-                  <p className="text-xs text-gray-400">Learning Materials</p>
-                </div>
+        <div className="p-4">
+          {quizzes.length > 0 && (
+            <div className="mb-6">
+              <h3 className={`font-bold ${isSidebarCollapsed ? 'text-center' : 'text-lg mb-2'}`}>
+                {isSidebarCollapsed ? 'Q' : 'Quizzes'}
+              </h3>
+              <div className="space-y-2">
+                {quizzes.map(quiz => (
+                  <div
+                    key={quiz.QuizID}
+                    className={`${isSidebarCollapsed ? 'p-2 flex justify-center' : 'p-2'} rounded hover:bg-gray-700 cursor-pointer ${selectedQuiz?.QuizID === quiz.QuizID ? 'bg-blue-600' : ''}`}
+                    onClick={() => handleQuizSelect(quiz)}
+                    title={isSidebarCollapsed ? quiz.QuizName : ''}
+                  >
+                    {isSidebarCollapsed ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <div>
+                        <h4 className="font-medium">{quiz.QuizName}</h4>
+                        <p className="text-xs text-gray-300">
+                          {quiz.QuizDuration} min • {quiz.PassingPercentage}% to pass
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="flex justify-center">
-                <div className="p-2 bg-blue-600 rounded-lg">
-                  <FiFolder className="w-6 h-6" />
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
+
 
           {/* Units List */}
           <div className="space-y-4">
@@ -605,107 +519,107 @@ const UnitsWithFiles = () => {
               );
             })}
           </div>
-
-          {/* Quiz List */}
-          {quizzes.length > 0 && (
-            <div className="mt-8 pt-6 border-t-2 border-gray-600">
-              {!isSidebarCollapsed && (
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="p-2 bg-purple-600 rounded-lg">
-                    <svg
-                      className="w-5 h-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                      <path
-                        fillRule="evenodd"
-                        d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-white">Quizzes</h3>
-                    <p className="text-xs text-gray-400">Test your knowledge</p>
-                  </div>
-                </div>
-              )}
-              <div className="space-y-3">
-                {console.log("Rendering quizzes:", quizzes)}
-                {quizzes.map((quiz) => renderQuizItem(quiz))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Main content area */}
+
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
         {/* Add BreadCrumb component here - position it above the sidebar */}
         <BreadCrumb />
 
         {selectedQuiz ? (
           // Render Quiz component when a quiz is selected
-          <Quiz
-            quizId={selectedQuiz.QuizID}
-            quiz={selectedQuiz} // Pass the full quiz object
-            onBack={() => setSelectedQuiz(null)}
-          />
-        ) : (
-          <div className="mb-6">
-            {selectedFile && (
-              <h2 className="text-xl font-semibold text-gray-700 mt-4">
-                {selectedFile.fileType === "ipynb" && (
-                  <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
-                    Jupyter Notebook
-                  </span>
-                )}
-              </h2>
-            )}
-          </div>
-        )}
-
-        <div
-          className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${
-            selectedFile?.fileType === "ipynb"
-              ? "bg-[#f5f5f5] border border-gray-300"
-              : "bg-white border"
-          }`}
-        >
-          {selectedFile?.fileType === "ipynb" && (
-            <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
-              <div className="flex space-x-2">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              </div>
-              <div className="ml-4 text-sm text-gray-600 font-medium">
-                {removeFileExtension(selectedFile.FilesName)}
-              </div>
+          <div className="flex-1">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-800">
+                {selectedQuiz.QuizName}
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Duration: {selectedQuiz.QuizDuration} minutes | Passing Score: {selectedQuiz.PassingPercentage}%
+              </p>
             </div>
-          )}
-          <div
-            className={
-              selectedFile?.fileType === "ipynb" ? "h-full pt-8" : "h-full"
-            }
-          >
-            <FileViewer
-              fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${
-                selectedFile?.FilePath
-              }`}
-              className="w-full h-full"
+            <Quiz
+              quiz={{
+                ...selectedQuiz,
+                QuizID: selectedQuiz.QuizID,
+                group_id: selectedQuiz.group_id || selectedQuiz.QuizGroupID, // Fallback to QuizGroupID
+                title: selectedQuiz.QuizName,
+                duration: selectedQuiz.QuizDuration,
+                passingPercentage: selectedQuiz.PassingPercentage
+              }}
+              onQuizComplete={() => {
+                setSelectedQuiz(null);
+                Swal.fire({
+                  title: 'Quiz Completed!',
+                  icon: 'success',
+                  confirmButtonText: 'OK'
+                });
+              }}
             />
           </div>
-          {selectedFile?.fileType === "ipynb" && (
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gray-100 flex items-center px-4 border-t border-gray-300 text-xs text-gray-500">
-              <span>Kernel: Python 3</span>
-              <span className="mx-2">|</span>
-              <span>Notebook</span>
+        ) : selectedFile ? (
+          <>
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-800">
+                {selectedFile?.unitName || "Select a Unit"}
+              </h1>
+              <p className="text-gray-600 mt-2">
+                {selectedFile?.unitDescription || ""}
+              </p>
+              {selectedFile && (
+                <h2 className="text-xl font-semibold text-gray-700 mt-4">
+                  {removeFileExtension(selectedFile.FilesName)}
+                  {selectedFile.fileType === "ipynb" && (
+                    <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                      Jupyter Notebook
+                    </span>
+                  )}
+                </h2>
+              )}
             </div>
-          )}
-        </div>
+
+            <div className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${selectedFile?.fileType === "ipynb" ?
+              "bg-[#f5f5f5] border border-gray-300" :
+              "bg-white border"
+              }`}>
+              {selectedFile?.fileType === "ipynb" && (
+                <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
+                  <div className="flex space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  </div>
+                  <div className="ml-4 text-sm text-gray-600 font-medium">
+                    {removeFileExtension(selectedFile.FilesName)}
+                  </div>
+                </div>
+              )}
+              <div className={selectedFile?.fileType === "ipynb" ? "h-full pt-8" : "h-full"}>
+                <FileViewer
+                  fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile?.FilePath}`}
+                  className="w-full h-full"
+                />
+              </div>
+              {selectedFile?.fileType === "ipynb" && (
+                <div className="absolute bottom-0 left-0 right-0 h-8 bg-gray-100 flex items-center px-4 border-t border-gray-300 text-xs text-gray-500">
+                  <span>Kernel: Python 3</span>
+                  <span className="mx-2">|</span>
+                  <span>Notebook</span>
+                </div>
+              )}
+            </div>
+          </>) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center p-8 max-w-md">
+              <h2 className="text-2xl font-bold mb-4">Select Content</h2>
+              <p className="text-gray-600">
+                Please select a quiz or file from the sidebar to view its content.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
+
     </div>
   );
 };

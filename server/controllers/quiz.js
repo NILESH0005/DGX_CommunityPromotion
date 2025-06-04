@@ -43,8 +43,8 @@ export const createQuiz = async (req, res) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
-    let startDateAndTime = `${startDate} ${startTime}`;
-    let endDateTime = `${endDate} ${endTime}`;
+    let startDateAndTime = `${ startDate } ${ startTime }`;
+    let endDateTime = `${ endDate } ${ endTime }`;
 
     // Set default values for null checks
     category = category ?? null;
@@ -71,7 +71,7 @@ export const createQuiz = async (req, res) => {
       logInfo("Database connection established successfully");
 
       try {
-        const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userQuery = 'SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?';
         const userRows = await queryAsync(conn, userQuery, [userId]);
         console.log("User Rows:", userRows);
 
@@ -112,7 +112,7 @@ export const createQuiz = async (req, res) => {
         ]);
 
         // Fetch last inserted Quiz ID
-        const lastInsertedIdQuery = `SELECT TOP 1 QuizID FROM QuizDetails WHERE ISNULL(delStatus, 0) = 0 ORDER BY QuizID DESC;`;
+        const lastInsertedIdQuery = `SELECT TOP 1 QuizID FROM QuizDetails WHERE ISNULL(delStatus, 0) = 0 ORDER BY QuizID DESC`;
         const lastInsertedId = await queryAsync(conn, lastInsertedIdQuery);
         console.log("Last Inserted ID:", lastInsertedId);
 
@@ -174,7 +174,6 @@ export const getQuizzes = async (req, res) => {
     qd.QuizDuration,
     qd.NegativeMarking,
     qd.StartDateAndTime,
-    qd.PassingPercentage,
     qd.EndDateTime,
     qd.QuizVisibility,
     (SELECT COUNT(*) FROM QuizMapping qm WHERE qm.quizId = qd.QuizID AND ISNULL(qm.delStatus, 0) = 0) AS QuestionMappedCount,
@@ -214,7 +213,6 @@ GROUP BY
     qd.QuizLevel,
     qd.QuizDuration,
     qd.NegativeMarking,
-	qd.PassingPercentage,
     qd.StartDateAndTime,
     qd.EndDateTime,
     qd.QuizVisibility,
@@ -841,10 +839,6 @@ export const createQuizQuestionMapping = async (req, res) => {
         const authAdd = user.Name;
         await queryAsync(conn, "BEGIN TRANSACTION");
 
-        // First get unique quiz IDs from mappings
-        const uniqueQuizIds = [...new Set(mappings.map(m => m.quizId))];
-
-        // Insert all mappings
         const insertPromises = mappings.map(async (mapping) => {
           const {
             quizGroupID,
@@ -875,37 +869,12 @@ export const createQuizQuestionMapping = async (req, res) => {
               quizGroupID, quizId, QuestionsID, QuestionTxt,
               negativeMarks, totalMarks, Ques_level, AuthAdd, AddOnDt, delStatus
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?)
-            `,
+          `,
             params
           );
         });
 
         await Promise.all(insertPromises);
-
-        // Update question count for each affected quiz
-        const updatePromises = uniqueQuizIds.map(async (quizId) => {
-          // Get count of questions for this quiz
-          const countQuery = `
-            SELECT COUNT(*) as questionCount 
-            FROM QuizMapping 
-            WHERE quizId = ? AND ISNULL(delStatus, 0) = 0
-          `;
-          const countResult = await queryAsync(conn, countQuery, [quizId]);
-          const questionCount = countResult[0].questionCount;
-
-          // Update QuizDetails with the count
-          return queryAsync(
-            conn,
-            `
-            UPDATE QuizDetails
-            SET TotalQuestions = ?
-            WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
-            `,
-            [questionCount, quizId]
-          );
-        });
-
-        await Promise.all(updatePromises);
         await queryAsync(conn, "COMMIT TRANSACTION");
 
         success = true;
@@ -950,7 +919,7 @@ export const getUserQuizCategory = async (req, res) => {
   }
 
   try {
-    const userEmail = req.user.id; 
+    const userEmail = req.user.id; // Assuming this contains the email from JWT
     console.log("User email from token:", userEmail);
 
     connectToDatabase(async (err, conn) => {
@@ -961,6 +930,7 @@ export const getUserQuizCategory = async (req, res) => {
       }
 
       try {
+        // First get the user ID from email
         const userIdQuery = "SELECT UserID FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0";
         const userResult = await queryAsync(conn, userIdQuery, [userEmail]);
 
@@ -986,17 +956,17 @@ export const getUserQuizCategory = async (req, res) => {
     SUM(QuizMapping.totalMarks) AS MaxScore,
     COUNT(DISTINCT QuizMapping.QuestionsID) AS Total_Question_No,
     ISNULL(UserAttempts.noOfAttempts, 0) AS userAttempts
-    FROM QuizMapping
-    LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
-    LEFT JOIN GroupMaster ON QuizDetails.QuizCategory = GroupMaster.group_id
-    LEFT JOIN (
+FROM QuizMapping
+LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
+LEFT JOIN GroupMaster ON QuizDetails.QuizCategory = GroupMaster.group_id
+LEFT JOIN (
     SELECT quizID, MAX(noOfAttempts) AS noOfAttempts
     FROM quiz_score
     WHERE userID = ?
     GROUP BY quizID
-    ) AS UserAttempts ON QuizMapping.quizId = UserAttempts.quizID
-    WHERE ISNULL(QuizMapping.delStatus, 0) = 0
-    GROUP BY 
+) AS UserAttempts ON QuizMapping.quizId = UserAttempts.quizID
+WHERE ISNULL(QuizMapping.delStatus, 0) = 0
+GROUP BY 
     QuizDetails.QuizID, 
     QuizDetails.QuizImage, 
     QuizDetails.QuizName,
@@ -1483,7 +1453,7 @@ export const updateQuiz = async (req, res) => {
   }
 };
 
-export const unmappQuestion = async (req, res) => {
+export const unmappQuestion = (req, res) => {
   const { mappingIds } = req.body;
   const adminName = req.user?.id;
 
@@ -1507,18 +1477,6 @@ export const unmappQuestion = async (req, res) => {
       }
 
       try {
-        await queryAsync(conn, "BEGIN TRANSACTION");
-
-        // 1. First get the quiz IDs for these mappings before deleting
-        const getQuizIdsQuery = `
-          SELECT DISTINCT quizId 
-          FROM QuizMapping 
-          WHERE idCode IN (?) AND (delStatus IS NULL OR delStatus = 0)
-        `;
-        const quizIdsResult = await queryAsync(conn, getQuizIdsQuery, [idsToUnmap]);
-        const quizIds = quizIdsResult.map(row => row.quizId);
-
-        // 2. Perform the unmapping (soft delete)
         const updateQuery = `
           UPDATE QuizMapping 
           SET 
@@ -1528,40 +1486,16 @@ export const unmappQuestion = async (req, res) => {
           WHERE 
             idCode IN (?) AND (delStatus IS NULL OR delStatus = 0)
         `;
+
+        // Execute the update without checking affected rows
         await queryAsync(conn, updateQuery, [adminName, idsToUnmap]);
 
-        // 3. Update question counts for affected quizzes
-        const updateCountPromises = quizIds.map(async (quizId) => {
-          // Get current count of active questions for this quiz
-          const countQuery = `
-            SELECT COUNT(*) as questionCount 
-            FROM QuizMapping 
-            WHERE quizId = ? AND (delStatus IS NULL OR delStatus = 0)
-          `;
-          const countResult = await queryAsync(conn, countQuery, [quizId]);
-          const questionCount = countResult[0].questionCount;
-
-          // Update QuizDetails with the new count
-          return queryAsync(
-            conn,
-            `
-            UPDATE QuizDetails
-            SET TotalQuestions = ?
-            WHERE QuizID = ? AND (delStatus IS NULL OR delStatus = 0)
-            `,
-            [questionCount, quizId]
-          );
-        });
-
-        await Promise.all(updateCountPromises);
-        await queryAsync(conn, "COMMIT TRANSACTION");
-
+        // Always return success if the query executed without errors
         return res.status(200).json({
           success: true,
-          message: "Questions unmapped successfully and counts updated",
+          message: "Unmapping request processed successfully",
         });
       } catch (updateErr) {
-        await queryAsync(conn, "ROLLBACK TRANSACTION");
         logError(updateErr);
         return res.status(500).json({
           success: false,
@@ -2042,129 +1976,58 @@ export const getUserQuizHistory = async (req, res) => {
 
 
 
+/*----------------LMS quiz-----------------------* */
 
-/*------------lma quiz----------------------*/
 
-export const getQuizzesBySubModule = async (req, res) => {
-  let success = false;
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const warningMessage = "Data is not in the right format";
-    console.error(warningMessage, errors.array());
-    logWarning(warningMessage);
-    return res.status(400).json({ success, data: errors.array(), message: warningMessage });
-  }
-
+// In your backend API
+export const getQuizzesByRefId = async (req, res) => {
   try {
-    const { subModuleId } = req.body; // Get submodule ID from request body
-    const userEmail = req.user.id; // Get user email from auth token
-    
-    if (!subModuleId) {
-      const errorMessage = "Submodule ID is required";
-      logError(errorMessage);
-      return res.status(400).json({ success: false, message: errorMessage });
-    }
+    const { refId } = req.body;
 
-    console.log("User email from token:", userEmail);
-    console.log("Submodule ID from request:", subModuleId);
+    if (!refId) {
+      return res.status(400).json({
+        success: false,
+        message: "refId is required"
+      });
+    }
 
     connectToDatabase(async (err, conn) => {
       if (err) {
-        const errorMessage = "Failed to connect to database";
-        logError(err);
-        return res.status(500).json({ success: false, data: err, message: errorMessage });
+        console.error("Database connection error:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection failed"
+        });
       }
 
       try {
-        // First get the user ID from email
-        const userIdQuery = "SELECT UserID FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0";
-        const userResult = await queryAsync(conn, userIdQuery, [userEmail]);
+        const query = `
+          SELECT * FROM QuizDetails 
+          WHERE refId = ? AND delStatus = 0 
+          ORDER BY QuizName
+        `;
 
-        if (!userResult || userResult.length === 0) {
-          const errorMessage = "User not found";
-          logError(errorMessage);
-          closeConnection();
-          return res.status(404).json({ success: false, message: errorMessage });
-        }
+        const quizzes = await queryAsync(conn, query, [refId]);
 
-        const userId = userResult[0].UserID;
-        console.log("Found user ID:", userId);
-
-        // Main query with submodule filter
-        const query = `SELECT 
-          QuizDetails.QuizID,
-          QuizDetails.QuizName,
-          QuizDetails.StartDateAndTime,
-          QuizDetails.EndDateTime,
-          QuizDetails.QuizLevel,
-          QuizDetails.refId,
-          GroupMaster.group_name,
-          GroupMaster.group_id, 
-          SUM(QuizMapping.totalMarks) AS MaxScore,
-          COUNT(DISTINCT QuizMapping.QuestionsID) AS Total_Question_No,
-          ISNULL(UserAttempts.noOfAttempts, 0) AS userAttempts
-        FROM QuizMapping
-        LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
-        LEFT JOIN GroupMaster ON QuizDetails.QuizCategory = GroupMaster.group_id
-        LEFT JOIN (
-          SELECT quizID, MAX(noOfAttempts) AS noOfAttempts
-          FROM quiz_score
-          WHERE userID = ?
-          GROUP BY quizID
-        ) AS UserAttempts ON QuizMapping.quizId = UserAttempts.quizID
-        WHERE ISNULL(QuizMapping.delStatus, 0) = 0 
-          AND QuizDetails.refId = ?
-        GROUP BY 
-          QuizDetails.QuizID, 
-          QuizDetails.QuizName,
-          GroupMaster.group_id, 
-          GroupMaster.group_name, 
-          QuizDetails.QuizLevel,
-          QuizDetails.refId,
-          QuizDetails.StartDateAndTime, 
-          QuizDetails.EndDateTime,
-          UserAttempts.noOfAttempts`;
-
-        const quizzes = await queryAsync(conn, query, [userId, subModuleId]);
-
-        const validQuizzes = quizzes.filter(
-          (quiz) =>
-            quiz.QuizID !== null &&
-            quiz.QuizName !== null &&
-            quiz.group_id !== null &&
-            quiz.group_name !== null
-        );
-
-        success = true;
-        closeConnection();
-        const infoMessage = "Quizzes fetched successfully by submodule";
-        logInfo(infoMessage);
         return res.status(200).json({
-          success,
-          data: { quizzes: validQuizzes },
-          message: infoMessage,
+          success: true,
+          data: quizzes
         });
-      } catch (queryErr) {
-        logError(queryErr);
-        closeConnection();
+      } catch (error) {
+        console.error("Error fetching quizzes:", error);
         return res.status(500).json({
           success: false,
-          data: queryErr,
-          message: "Something went wrong please try again",
+          message: "Failed to fetch quizzes"
         });
+      } finally {
+        closeConnection();
       }
     });
   } catch (error) {
-    logError(error);
+    console.error("Unexpected error:", error);
     return res.status(500).json({
       success: false,
-      data: {},
-      message: "Something went wrong please try again",
+      message: "Internal server error"
     });
   }
 };
-
-
-
-
-

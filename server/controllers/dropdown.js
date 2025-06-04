@@ -448,8 +448,12 @@ export const getSubModules = async (req, res) => {
 // };
 
 
+
+
+
 export const getUnitsWithFiles = async (req, res) => {
     let success = false;
+    const { subModuleId } = req.params; // Get subModuleId from URL params
 
     try {
         connectToDatabase(async (err, conn) => {
@@ -479,10 +483,11 @@ export const getUnitsWithFiles = async (req, res) => {
                     FROM UnitsDetails u
                     LEFT JOIN FilesDetails f ON u.UnitID = f.UnitID AND ISNULL(f.delStatus, 0) = 0
                     WHERE ISNULL(u.delStatus, 0) = 0
+                    AND u.SubModuleID = ?
                     ORDER BY u.UnitID, f.FileID
                 `;
 
-                const results = await queryAsync(conn, query);
+                const results = await queryAsync(conn, query, [subModuleId]);
 
                 // Group files by UnitID
                 const unitsMap = new Map();
@@ -499,7 +504,6 @@ export const getUnitsWithFiles = async (req, res) => {
                         });
                     }
 
-                    // Only add file data if FileID exists (LEFT JOIN might return nulls)
                     if (row.FileID) {
                         unitsMap.get(row.UnitID).files.push({
                             FileID: row.FileID,
@@ -538,8 +542,4 @@ export const getUnitsWithFiles = async (req, res) => {
         });
     }
 };
-
-
-
-
 
