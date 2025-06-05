@@ -594,11 +594,11 @@ const UnitsWithFiles = () => {
                 <div className="max-w-md w-full text-center">
                   <div className="mb-6">
                     <svg
-                      className="w-16 h-16 mx-auto text-red-500"
+                      className="w-16 h-16 mx-auto text-blue-500"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                      <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-2v6H5V5z" />
                     </svg>
                   </div>
                   <h3 className="text-xl font-bold mb-4">
@@ -612,14 +612,14 @@ const UnitsWithFiles = () => {
                     href={selectedFile.FilePath}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg shadow-md transition-colors duration-200 inline-flex items-center"
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-md transition-colors duration-200 inline-flex items-center"
                   >
                     <svg
                       className="w-5 h-5 mr-2"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                      <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-2v6H5V5z" />
                     </svg>
                     Open Link
                   </a>
