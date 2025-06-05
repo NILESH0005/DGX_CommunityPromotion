@@ -453,7 +453,7 @@ export const getSubModules = async (req, res) => {
 
 export const getUnitsWithFiles = async (req, res) => {
     let success = false;
-    const { subModuleId } = req.params; // Get subModuleId from URL params
+    const { subModuleId } = req.params; 
 
     try {
         connectToDatabase(async (err, conn) => {

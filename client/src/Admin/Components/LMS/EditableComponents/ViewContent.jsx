@@ -44,7 +44,7 @@ const ViewContent = ({ submodule, onBack }) => {
       try {
         setLoading(true);
         const response = await fetchData(
-          `dropdown/getUnitsWithFiles`,
+          `dropdown/getUnitsWithFiles/${submodule.SubModuleID}`,
           "GET",
           { 'auth-token': userToken }
         );

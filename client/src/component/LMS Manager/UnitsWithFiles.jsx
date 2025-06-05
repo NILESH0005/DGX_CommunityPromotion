@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useContext } from 'react';
-import PropTypes from 'prop-types';
-import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import ApiContext from '../../context/ApiContext';
-import FileViewer from '../../utils/FileViewer';
-import Quiz from '../quiz/Quiz'
-import Swal from 'sweetalert2';
-import { FiFileText, FiFolder, FiX, FiMenu, FiBook } from 'react-icons/fi';
-import BreadCrumb from './BreadCrumb';
+import React, { useState, useEffect, useContext } from "react";
+import PropTypes from "prop-types";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
+import ApiContext from "../../context/ApiContext";
+import FileViewer from "../../utils/FileViewer";
+import Quiz from "../quiz/Quiz";
+import Swal from "sweetalert2";
+import { FiFileText, FiFolder, FiX, FiMenu, FiBook } from "react-icons/fi";
+import BreadCrumb from "./BreadCrumb";
 
 const UnitsWithFiles = () => {
   const { subModuleId } = useParams();
@@ -77,41 +77,42 @@ const UnitsWithFiles = () => {
       try {
         setLoading(true);
         setError(null);
-        const unitsResponse = await fetchData(`dropdown/getUnitsWithFiles/${subModuleId}`, "GET");
-        console.log("rrrrrrrrrrrrrr", unitsResponse)
+        const unitsResponse = await fetchData(
+          `dropdown/getUnitsWithFiles/${subModuleId}`,
+          "GET"
+        );
+        console.log("rrrrrrrrrrrrrr", unitsResponse);
 
         const quizzesResponse = await fetchData(
           "quiz/getQuizzesByRefId",
           "POST",
           { refId: subModuleId },
           {
-            'Content-Type': 'application/json',
-            'auth-token': userToken
+            "Content-Type": "application/json",
+            "auth-token": userToken,
           }
         );
 
-
-        console.log("reessspoonnseee", quizzesResponse)
+        console.log("reessspoonnseee", quizzesResponse);
 
         if (unitsResponse?.success) {
           setAllUnits(unitsResponse.data);
-          const filtered = unitsResponse.data.filter(unit => {
+          const filtered = unitsResponse.data.filter((unit) => {
             return String(unit.SubModuleID) === String(subModuleId);
           });
           setFilteredUnits(filtered);
         }
 
         if (quizzesResponse?.success) {
-          const transformedQuizzes = quizzesResponse.data.map(quiz => ({
+          const transformedQuizzes = quizzesResponse.data.map((quiz) => ({
             ...quiz,
-            group_id: quiz.QuizGroupID
+            group_id: quiz.QuizGroupID,
           }));
           setQuizzes(transformedQuizzes);
         }
-
       } catch (error) {
         console.error("Error fetching data:", error);
-        setError('An error occurred while fetching data');
+        setError("An error occurred while fetching data");
       } finally {
         setLoading(false);
       }
@@ -121,7 +122,6 @@ const UnitsWithFiles = () => {
       fetchDataForSubmodule();
     }
   }, [subModuleId, fetchData, userToken]);
-
 
   const recordFileView = async (fileId, unitId) => {
     try {
@@ -213,6 +213,15 @@ const UnitsWithFiles = () => {
     }
   };
 
+  const isExternalLink = (file) => {
+    return (
+      file.FileType === "link" ||
+      (file.FilePath &&
+        (file.FilePath.startsWith("http://") ||
+          file.FilePath.startsWith("https://")))
+    );
+  };
+
   const removeFileExtension = (filename) => {
     return filename.replace(/\.[^/.]+$/, "");
   };
@@ -291,7 +300,11 @@ const UnitsWithFiles = () => {
 
   return (
     <div className="flex h-screen bg-background text-foreground">
-      <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}>
+      <div
+        className={`${
+          isSidebarCollapsed ? "w-16" : "w-64"
+        } bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}
+      >
         {/* Toggle Button - Made Bigger and More Visible */}
         <div className="flex justify-center pt-4">
           <button
@@ -310,27 +323,44 @@ const UnitsWithFiles = () => {
         <div className="p-4">
           {quizzes.length > 0 && (
             <div className="mb-6">
-              <h3 className={`font-bold ${isSidebarCollapsed ? 'text-center' : 'text-lg mb-2'}`}>
-                {isSidebarCollapsed ? 'Q' : 'Quizzes'}
+              <h3
+                className={`font-bold ${
+                  isSidebarCollapsed ? "text-center" : "text-lg mb-2"
+                }`}
+              >
+                {isSidebarCollapsed ? "Q" : "Quizzes"}
               </h3>
               <div className="space-y-2">
-                {quizzes.map(quiz => (
+                {quizzes.map((quiz) => (
                   <div
                     key={quiz.QuizID}
-                    className={`${isSidebarCollapsed ? 'p-2 flex justify-center' : 'p-2'} rounded hover:bg-gray-700 cursor-pointer ${selectedQuiz?.QuizID === quiz.QuizID ? 'bg-blue-600' : ''}`}
+                    className={`${
+                      isSidebarCollapsed ? "p-2 flex justify-center" : "p-2"
+                    } rounded hover:bg-gray-700 cursor-pointer ${
+                      selectedQuiz?.QuizID === quiz.QuizID ? "bg-blue-600" : ""
+                    }`}
                     onClick={() => handleQuizSelect(quiz)}
-                    title={isSidebarCollapsed ? quiz.QuizName : ''}
+                    title={isSidebarCollapsed ? quiz.QuizName : ""}
                   >
                     {isSidebarCollapsed ? (
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <svg
+                        className="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
                         <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                        <path
+                          fillRule="evenodd"
+                          d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     ) : (
                       <div>
                         <h4 className="font-medium">{quiz.QuizName}</h4>
                         <p className="text-xs text-gray-300">
-                          {quiz.QuizDuration} min • {quiz.PassingPercentage}% to pass
+                          {quiz.QuizDuration} min • {quiz.PassingPercentage}% to
+                          pass
                         </p>
                       </div>
                     )}
@@ -339,7 +369,6 @@ const UnitsWithFiles = () => {
               </div>
             </div>
           )}
-
 
           {/* Units List */}
           <div className="space-y-4">
@@ -512,7 +541,6 @@ const UnitsWithFiles = () => {
         </div>
       </div>
 
-
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
         {/* Add BreadCrumb component here - position it above the sidebar */}
         <BreadCrumb />
@@ -525,7 +553,8 @@ const UnitsWithFiles = () => {
                 {selectedQuiz.QuizName}
               </h1>
               <p className="text-gray-600 mt-2">
-                Duration: {selectedQuiz.QuizDuration} minutes | Passing Score: {selectedQuiz.PassingPercentage}%
+                Duration: {selectedQuiz.QuizDuration} minutes | Passing Score:{" "}
+                {selectedQuiz.PassingPercentage}%
               </p>
             </div>
             <Quiz
@@ -535,14 +564,14 @@ const UnitsWithFiles = () => {
                 group_id: selectedQuiz.group_id || selectedQuiz.QuizGroupID, // Fallback to QuizGroupID
                 title: selectedQuiz.QuizName,
                 duration: selectedQuiz.QuizDuration,
-                passingPercentage: selectedQuiz.PassingPercentage
+                passingPercentage: selectedQuiz.PassingPercentage,
               }}
               onQuizComplete={() => {
                 setSelectedQuiz(null);
                 Swal.fire({
-                  title: 'Quiz Completed!',
-                  icon: 'success',
-                  confirmButtonText: 'OK'
+                  title: "Quiz Completed!",
+                  icon: "success",
+                  confirmButtonText: "OK",
                 });
               }}
             />
@@ -556,60 +585,102 @@ const UnitsWithFiles = () => {
               <p className="text-gray-600 mt-2">
                 {selectedFile?.unitDescription || ""}
               </p> */}
-              {selectedFile && (
-                <h2 className="text-xl font-semibold text-gray-700 mt-4">
-                  {removeFileExtension(selectedFile.FilesName)}
-                  {selectedFile.fileType === "ipynb" && (
-                    <span className="ml-2 text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
-                      Jupyter Notebook
-                    </span>
-                  )}
-                </h2>
-              )}
+              <h2 className="text-xl font-semibold text-gray-700 mt-4">
+                {removeFileExtension(selectedFile.FilesName)}
+              </h2>
             </div>
-
-            <div className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${selectedFile?.fileType === "ipynb" ?
-              "bg-[#f5f5f5] border border-gray-300" :
-              "bg-white border"
-              }`}>
-              {selectedFile?.fileType === "ipynb" && (
-                <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
-                  <div className="flex space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            {isExternalLink(selectedFile) ? (
+              <div className="flex flex-col items-center justify-center h-full bg-gray-50 rounded-lg p-8">
+                <div className="max-w-md w-full text-center">
+                  <div className="mb-6">
+                    <svg
+                      className="w-16 h-16 mx-auto text-red-500"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                    </svg>
                   </div>
-                  <div className="ml-4 text-sm text-gray-600 font-medium">
-                    {removeFileExtension(selectedFile.FilesName)}
-                  </div>
+                  <h3 className="text-xl font-bold mb-4">
+                    External Content Link
+                  </h3>
+                  <p className="mb-6 text-gray-600">
+                    This content is hosted externally. Click the button below to
+                    view it.
+                  </p>
+                  <a
+                    href={selectedFile.FilePath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg shadow-md transition-colors duration-200 inline-flex items-center"
+                  >
+                    <svg
+                      className="w-5 h-5 mr-2"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                    </svg>
+                    Open Link
+                  </a>
                 </div>
-              )}
-              <div className={selectedFile?.fileType === "ipynb" ? "h-full pt-8" : "h-full"}>
-                <FileViewer
-                  fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile?.FilePath}`}
-                  className="w-full h-full"
-                />
               </div>
-              {selectedFile?.fileType === "ipynb" && (
-                <div className="absolute bottom-0 left-0 right-0 h-8 bg-gray-100 flex items-center px-4 border-t border-gray-300 text-xs text-gray-500">
-                  <span>Kernel: Python 3</span>
-                  <span className="mx-2">|</span>
-                  <span>Notebook</span>
+            ) : (
+              <div
+                className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${
+                  selectedFile?.fileType === "ipynb"
+                    ? "bg-[#f5f5f5] border border-gray-300"
+                    : "bg-white border"
+                }`}
+              >
+                {selectedFile?.fileType === "ipynb" && (
+                  <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
+                    <div className="flex space-x-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                    <div className="ml-4 text-sm text-gray-600 font-medium">
+                      {removeFileExtension(selectedFile.FilesName)}
+                    </div>
+                  </div>
+                )}
+                <div
+                  className={
+                    selectedFile?.fileType === "ipynb"
+                      ? "h-full pt-8"
+                      : "h-full"
+                  }
+                >
+                  <FileViewer
+                    fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${
+                      selectedFile?.FilePath
+                    }`}
+                    className="w-full h-full"
+                  />
                 </div>
-              )}
-            </div>
-          </>) : (
+                {selectedFile?.fileType === "ipynb" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gray-100 flex items-center px-4 border-t border-gray-300 text-xs text-gray-500">
+                    <span>Kernel: Python 3</span>
+                    <span className="mx-2">|</span>
+                    <span>Notebook</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center p-8 max-w-md">
               <h2 className="text-2xl font-bold mb-4">Select Content</h2>
               <p className="text-gray-600">
-                Please select a quiz or file from the sidebar to view its content.
+                Please select a quiz or file from the sidebar to view its
+                content.
               </p>
             </div>
           </div>
         )}
       </div>
-
     </div>
   );
 };
