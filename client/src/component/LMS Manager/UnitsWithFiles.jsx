@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import PropTypes from 'prop-types';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import ApiContext from '../../context/ApiContext';
 import FileViewer from '../../utils/FileViewer';
 import Quiz from '../quiz/Quiz'
 import Swal from 'sweetalert2';
+import { FiFileText, FiFolder, FiX, FiMenu, FiBook } from 'react-icons/fi';
+import BreadCrumb from './BreadCrumb';
 
 const UnitsWithFiles = () => {
   const { subModuleId } = useParams();
@@ -76,6 +78,7 @@ const UnitsWithFiles = () => {
         setLoading(true);
         setError(null);
         const unitsResponse = await fetchData(`dropdown/getUnitsWithFiles/${subModuleId}`, "GET");
+        console.log("rrrrrrrrrrrrrr", unitsResponse)
 
         const quizzesResponse = await fetchData(
           "quiz/getQuizzesByRefId",
@@ -86,6 +89,7 @@ const UnitsWithFiles = () => {
             'auth-token': userToken
           }
         );
+
 
         console.log("reessspoonnseee", quizzesResponse)
 
@@ -289,20 +293,6 @@ const UnitsWithFiles = () => {
     <div className="flex h-screen bg-background text-foreground">
       <div className={`${isSidebarCollapsed ? 'w-16' : 'w-64'} bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}>
         {/* Toggle Button - Made Bigger and More Visible */}
-        <button
-          onClick={toggleSidebar}
-          className=" top-8 ml-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-3 border-2 border-blue-500 hover:from-blue-700 hover:to-blue-800 hover:border-blue-400 transition-all duration-200 z-20 shadow-lg hover:shadow-xl transform hover:scale-110 group"
-
-          // className="absolute -right-4 top-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-3 border-2 border-blue-500 hover:from-blue-700 hover:to-blue-800 hover:border-blue-400 transition-all duration-200 z-20 shadow-lg hover:shadow-xl transform hover:scale-110 group"
-          title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
-          {isSidebarCollapsed ? (
-            <FiMenu className="w-5 h-5 group-hover:rotate-12 transition-transform duration-200" />
-          ) : (
-            <FiX className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
-          )}
-        </button> */}
-
         <div className="flex justify-center pt-4">
           <button
             onClick={toggleSidebar}
@@ -560,12 +550,12 @@ const UnitsWithFiles = () => {
         ) : selectedFile ? (
           <>
             <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-800">
+              {/* <h1 className="text-3xl font-bold text-gray-800">
                 {selectedFile?.unitName || "Select a Unit"}
               </h1>
               <p className="text-gray-600 mt-2">
                 {selectedFile?.unitDescription || ""}
-              </p>
+              </p> */}
               {selectedFile && (
                 <h2 className="text-xl font-semibold text-gray-700 mt-4">
                   {removeFileExtension(selectedFile.FilesName)}

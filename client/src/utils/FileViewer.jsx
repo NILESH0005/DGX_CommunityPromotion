@@ -5,7 +5,7 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-const FileViewer = ({ fileUrl, submoduleName }) => {
+const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
   const [numPages, setNumPages] = useState(null);
   const [pdfError, setPdfError] = useState(null);
   const [iframeKey, setIframeKey] = useState(0);
@@ -15,7 +15,7 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
 
   // Extract file extension and name safely
   const fileExtension = fileUrl?.split('.').pop()?.toLowerCase() || '';
-  const fileName = fileUrl?.split('/').pop() || 'file';
+  const fileName = filesName || fileUrl?.split('/').pop() || 'file';
 
   const handleDownload = () => {
     const link = document.createElement('a');
@@ -24,6 +24,10 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleLinkClick = () => {
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
   };
 
   const renderDownloadButton = () => (
@@ -58,9 +62,8 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
         setLoading(true);
         setError(null);
         try {
-          // Try to load via nbviewer first for external files
           if (!fileUrl.startsWith('http://localhost') && !fileUrl.startsWith('file://')) {
-            return; // Let iframe handle it
+            return; 
           }
           
           // Fallback for local files
@@ -121,6 +124,36 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
     );
   };
 
+  // Handle link file type
+  if (fileType === 'link') {
+    return (
+      <div className="relative flex flex-col items-center justify-center p-8 min-h-[400px]">
+        {renderDownloadButton()}
+        {renderSubmoduleHeader()}
+        <div className="flex flex-col items-center space-y-6">
+          <div className="text-6xl mb-4">🔗</div>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">External Link</h3>
+          <p className="text-gray-500 mb-6 text-center max-w-md">
+            Click the button below to visit the link in a new tab
+          </p>
+          <button
+            onClick={handleLinkClick}
+            className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 flex items-center space-x-2"
+          >
+            <span>🌐</span>
+            <span>Visit Link</span>
+            <span>↗</span>
+          </button>
+          <div className="mt-4 p-3 bg-gray-100 rounded-lg max-w-md break-all">
+            <p className="text-sm text-gray-600">
+              <strong>URL:</strong> {fileUrl}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Handle image files
   if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(fileExtension)) {
     return (
@@ -172,7 +205,7 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
                     <Page 
                       pageNumber={index + 1} 
                       width={800}
-		      renderTextLayer={false}
+                      renderTextLayer={false}
                       loading={
                         <div className="flex justify-center items-center h-64">
                           Loading page {index + 1}...
@@ -210,10 +243,7 @@ const FileViewer = ({ fileUrl, submoduleName }) => {
       </div>
     );
   }
-
-  // Handle Jupyter Notebooks
   if (fileExtension === 'ipynb') {
-    // Try to use nbviewer for external files
     if (!fileUrl.startsWith('http://localhost') && !fileUrl.startsWith('file://')) {
       return (
         <div className="relative w-full h-full flex flex-col">
