@@ -42,10 +42,12 @@ const BlogPage = () => {
             'Content-Type': 'application/json',
             'auth-token': userToken
           };
+          const body = {}
+
           console.log("toookkkeeenn:", userToken)
 
           setLoading(true);
-          fetchData(endpoint, method, headers)
+          fetchData(endpoint, method, body, headers)
             .then(result => {
               if (result && result.data) {
                 return result.data;
@@ -55,7 +57,9 @@ const BlogPage = () => {
             })
             .then((data) => {
               console.log(data);
-              setBlogs(data)
+              setBlogs(data);
+              setLoading(false); // ✅ Add this here
+
             })
             .catch(error => {
               setLoading(false);
@@ -167,8 +171,6 @@ const BlogPage = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-
-          {/* Category Filters */}
           <div className="flex flex-wrap justify-center gap-3">
             <button
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${!selectedCategory
@@ -194,8 +196,6 @@ const BlogPage = () => {
             ))}
           </div>
         </div>
-
-        {/* Blog List */}
         {loading ? (
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-DGXblue"></div>

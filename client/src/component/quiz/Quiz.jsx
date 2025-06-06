@@ -76,13 +76,18 @@ const Quiz = () => {
       return;
     }
 
-    if (userToken) {
-      fetchQuizQuestions();
-    }
-  }, [quiz, userToken]);
+     if (userToken) {
+    // Call fetchQuizQuestions with the quiz object
+    fetchQuizQuestions({
+      QuizID: quiz.QuizID,
+      group_id: quiz.group_id || null, // Make group_id optional
+      duration: quiz.QuizDuration // Pass duration if available
+    });
+  }
+}, [quiz, userToken]);
 
 
- 
+
 
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -166,22 +171,35 @@ const Quiz = () => {
   const fetchQuizQuestions = async (quizData) => {
     setLoading(true);
     setError(null);
-    console.log();
-    
 
     try {
-      console.log("Fetching questions with:", {
-        quizGroupID: quizData.group_id,
-        QuizID: quizData.QuizID
-      });
+      console.log("Fetching questions with:", quizData);
 
-      const data = await fetchData(
-        "quiz/getQuizQuestions",
-        "POST",
-        {
+      // Determine the endpoint and request body based on available data
+      let endpoint, requestBody;
+
+      if (quizData.group_id && quizData.QuizID) {
+        // Regular quiz flow with both group_id and QuizID
+        endpoint = "quiz/getQuizQuestions";
+        requestBody = {
           quizGroupID: quizData.group_id,
           QuizID: quizData.QuizID
-        },
+        };
+      } else if (quizData.QuizID) {
+        // LMS module flow with only QuizID
+        endpoint = "quiz/getQuizQuestionsByQuizId"; // You'll need to create this endpoint
+        requestBody = {
+          QuizID: quizData.QuizID
+        };
+      } else {
+        throw new Error("Insufficient data to fetch questions");
+      }
+      console.log("leetttss go", requestBody)
+
+      const data = await fetchData(
+        endpoint,
+        "POST",
+        requestBody,
         {
           "Content-Type": "application/json",
           "auth-token": userToken,
@@ -580,9 +598,8 @@ const Quiz = () => {
                   <div
                     className="h-2 bg-blue-500 rounded-full"
                     style={{
-                      width: `${
-                        ((currentQuestion + 1) / questions.length) * 100
-                      }%`,
+                      width: `${((currentQuestion + 1) / questions.length) * 100
+                        }%`,
                     }}
                   ></div>
                 </div>
@@ -619,11 +636,10 @@ const Quiz = () => {
                     <label
                       key={optionId}
                       className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition
-          ${
-            isSelected
-              ? "bg-blue-100 border-2 border-blue-500"
-              : "hover:bg-gray-50 border border-transparent"
-          }`}
+          ${isSelected
+                          ? "bg-blue-100 border-2 border-blue-500"
+                          : "hover:bg-gray-50 border border-transparent"
+                        }`}
                     >
                       <input
                         type="radio"
@@ -671,11 +687,10 @@ const Quiz = () => {
               </div>
               <button
                 className={`px-6 py-2 text-white rounded transition
-                    ${
-                      currentQuestion + 1 === questions.length
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
+                    ${currentQuestion + 1 === questions.length
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-blue-600 hover:bg-blue-700"
+                  }`}
                 onClick={handleSaveAndNext}
               >
                 {currentQuestion + 1 === questions.length
