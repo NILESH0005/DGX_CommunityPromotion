@@ -100,8 +100,6 @@ const QuizList = () => {
             } else {
                 throw new Error(data.message || "Failed to fetch quizzes");
             }
-
-            // Leaderboard code remains the same
             if (leaderboardData.success) {
                 const sortedLeaderboard = leaderboardData.data.quizzes
                     .sort((a, b) => b.totalPoints - a.totalPoints)
@@ -134,6 +132,8 @@ const QuizList = () => {
     }, [userToken]);
 
     const handleQuizClick = (quiz, group) => {
+        console.log("quiz is",quiz.QuizID)
+
         navigate(`/quiz/${quiz.QuizID}`, {
             state: {
                 quiz: {
@@ -144,13 +144,16 @@ const QuizList = () => {
             }
         });
     };
+
     const adjustTimeZone = (date) => {
         if (!date) return null;
         return new Date(date.getTime() - 5 * 60 * 60 * 1000 - 30 * 60 * 1000);
     };
+
     const formatTime = (time) => {
         return time < 10 ? `0${time}` : time;
     };
+
     const getTimeRemaining = (startDate) => {
         const diff = startDate - now;
 
@@ -163,6 +166,7 @@ const QuizList = () => {
 
         return { days, hours, minutes, seconds };
     };
+
     const getQuizStatus = (quiz) => {
         if (now < quiz.startDate) {
             return 'upcoming';

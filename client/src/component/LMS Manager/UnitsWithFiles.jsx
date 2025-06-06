@@ -7,6 +7,7 @@ import Quiz from "../quiz/Quiz";
 import Swal from "sweetalert2";
 import { FiFileText, FiFolder, FiX, FiMenu, FiBook } from "react-icons/fi";
 import BreadCrumb from "./BreadCrumb";
+import FetchQuizQuestions from "../quiz/DemoQuiz";
 
 const UnitsWithFiles = () => {
   const { subModuleId } = useParams();
@@ -160,7 +161,7 @@ const UnitsWithFiles = () => {
   };
 
   const handleFileSelect = (file, unit) => {
-    setSelectedQuiz(null); // Clear any selected quiz
+    setSelectedQuiz(null); 
     setSelectedFile({
       ...file,
       unitName: unit.UnitName,
@@ -240,8 +241,15 @@ const UnitsWithFiles = () => {
   }
 
   const handleQuizSelect = (quiz) => {
-    setSelectedQuiz(quiz);
-    setSelectedFile(null);
+     navigate(`/quiz/${quiz.QuizID}`, {
+            state: {
+                quiz: {
+                    ...quiz,
+                    group_id: 2,
+                    QuizID: quiz.QuizID
+                }
+            }
+        });
   };
 
   if (loading) {
@@ -369,15 +377,12 @@ const UnitsWithFiles = () => {
               </div>
             </div>
           )}
-
-          {/* Units List */}
           <div className="space-y-4">
             {filteredUnits.map((unit) => {
               const needsReadMoreUnit = needsReadMore(unit.UnitDescription);
               const isExpanded = expandedDescriptions.has(
                 `unit-${unit.UnitID}`
               );
-
               return (
                 <div
                   key={unit.UnitID}
@@ -547,6 +552,7 @@ const UnitsWithFiles = () => {
 
         {selectedQuiz ? (
           // Render Quiz component when a quiz is selected
+          
           <div className="flex-1">
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-gray-800">
@@ -554,14 +560,16 @@ const UnitsWithFiles = () => {
               </h1>
               <p className="text-gray-600 mt-2">
                 Duration: {selectedQuiz.QuizDuration} minutes | Passing Score:{" "}
-                {selectedQuiz.PassingPercentage}%
+                {selectedQuiz.PassingPercentage}% id:{selectedQuiz.QuizID}
               </p>
             </div>
+         
             <Quiz
-              quiz={{
+            
+              quizz={{
                 ...selectedQuiz,
                 QuizID: selectedQuiz.QuizID,
-                group_id: selectedQuiz.group_id || selectedQuiz.QuizGroupID, // Fallback to QuizGroupID
+                group_id: selectedQuiz.group_id || selectedQuiz.QuizGroupID, 
                 title: selectedQuiz.QuizName,
                 duration: selectedQuiz.QuizDuration,
                 passingPercentage: selectedQuiz.PassingPercentage,

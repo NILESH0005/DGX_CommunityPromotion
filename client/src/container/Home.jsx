@@ -11,6 +11,8 @@ import ProjectShowcase from "../component/ProjectShowcase";
 import CommunityHighlights from "../component/CommunityHighlights";
 import LogoMarquee from "../component/LogoMarquee";
 import { TextParallax } from "../component/TextParallax.jsx";
+import Swal from "sweetalert2";
+
 
 const Home = () => {
   const { user, userToken } = useContext(ApiContext);

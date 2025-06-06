@@ -2031,3 +2031,156 @@ export const getQuizzesByRefId = async (req, res) => {
     });
   }
 };
+
+
+export const getQuizQuestionsByQuizId = async (req, res) => {
+  let success = false;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: "Data is not in the right format",
+    });
+  }
+
+  try {
+    const { QuizID } = req.body;
+
+    if (!QuizID) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: "QuizID is required",
+      });
+    }
+
+    const quizId = parseInt(QuizID);
+    if (isNaN(quizId)) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: "QuizID must be a valid number",
+      });
+    }
+
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        console.error("Database connection error:", err);
+        return res.status(500).json({
+          success: false,
+          data: null,
+          message: "Database connection failed",
+        });
+      }
+
+      try {
+        const query = `
+          SELECT 
+            QuizMapping.idCode,
+            QuizMapping.quizGroupID,
+            GroupMaster.group_name,
+            QuizMapping.quizId,
+            QuizMapping.QuestionsID,
+            Questions.question_text AS QuestionTxt,
+            Questions.Ques_level,
+            QuizMapping.negativeMarks,
+            QuizMapping.totalMarks,
+            QuizMapping.AuthAdd,
+            QuizMapping.AddOnDt,
+            QuizMapping.delStatus,
+            QuizDetails.QuizName,
+            QuizDetails.QuizDuration,
+            QuizDetails.NegativeMarking,
+            tblDDReferences.ddValue AS question_level,
+            Questions.image AS question_image,
+            QuestionOptions.is_correct,
+            QuestionOptions.option_text,
+            QuestionOptions.id AS optionId
+          FROM QuizMapping
+          LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
+          LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
+          LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
+          LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
+          LEFT JOIN GroupMaster ON QuizMapping.quizGroupID = GroupMaster.group_id
+          WHERE QuizMapping.quizId = ? AND QuizMapping.delStatus = 0 AND QuestionOptions.delStatus = 0
+        `;
+
+        const questions = await queryAsync(conn, query, [quizId]);
+
+        if (!questions || questions.length === 0) {
+          closeConnection();
+          return res.status(404).json({
+            success: false,
+            data: null,
+            message: "No questions found for this quiz",
+          });
+        }
+
+        const questionMap = {};
+        questions.forEach((q) => {
+          if (!questionMap[q.QuestionsID]) {
+            questionMap[q.QuestionsID] = {
+              idCode: q.idCode,
+              quizGroupID: q.quizGroupID,
+              group_name: q.group_name,
+              quizId: q.quizId,
+              QuestionsID: q.QuestionsID,
+              QuestionTxt: q.QuestionTxt,
+              Ques_level: q.Ques_level,
+              negativeMarks: q.negativeMarks,
+              negativeMarking: q.NegativeMarking,
+              totalMarks: q.totalMarks,
+              AuthAdd: q.AuthAdd,
+              AddOnDt: q.AddOnDt,
+              delStatus: q.delStatus,
+              QuizName: q.QuizName,
+              QuizDuration: q.QuizDuration,
+              question_level: q.question_level,
+              question_image: q.question_image,
+              options: [],
+            };
+          }
+
+          if (q.option_text) {
+            questionMap[q.QuestionsID].options.push({
+              id: q.optionId,
+              option_text: q.option_text,
+              is_correct: q.is_correct === 1,
+            });
+          }
+        });
+
+        const formattedQuestions = Object.values(questionMap);
+
+        success = true;
+        closeConnection();
+        return res.status(200).json({
+          success,
+          data: {
+            quizId,
+            quizName: questions[0]?.QuizName || "",
+            quizDuration: questions[0]?.QuizDuration || 0,
+            questions: formattedQuestions,
+          },
+          message: "Quiz questions fetched successfully",
+        });
+      } catch (queryErr) {
+        console.error("Query error:", queryErr);
+        closeConnection();
+        return res.status(500).json({
+          success: false,
+          data: null,
+          message: "Failed to execute query",
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    return res.status(500).json({
+      success: false,
+      data: null,
+      message: "Internal server error",
+    });
+  }
+};

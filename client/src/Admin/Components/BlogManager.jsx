@@ -8,7 +8,7 @@ const BlogManager = (props) => {
   // const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { fetchData } = useContext(ApiContext);
+  const { fetchData, userToken } = useContext(ApiContext);
   const [isTableView, setIsTableView] = useState(true);
 
   // Fetch blog data when the component mounts
@@ -18,21 +18,20 @@ const BlogManager = (props) => {
         const endpoint = 'blog/getBlog'
         const method = 'POST'
         const headers = {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'auth-token': userToken
         }
         const body = {}
 
-        const result = await fetchData(endpoint, method);
+        const result = await fetchData(endpoint, method, body, headers );
         if (result.success) {
           props.setBlogs(result.data);
-          // console.log("result is ",result.data);
         } else {
           setError(result.message);
         }
       } catch (err) {
         setError('Failed to fetch blogs. Please try again later.');
       } finally {
-        // console.log(blogs);
         setLoading(false);
 
       }

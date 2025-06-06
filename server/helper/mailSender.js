@@ -3,18 +3,19 @@ import nodemailer from "nodemailer";
 
 dotenv.config();
 const pass = process.env.GMAIL_PASSWORD_KEY;
+const user = process.env.GMAIL_USER
 
 export async function mailSender(receiver, message, htmlContent = "thank You") {
   var transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "dgxmailer005@gmail.com",
+      user: user,
       pass: pass,
     },
   });
 
   var mailOptions = {
-    from: "dgxmailer005@gmail.com",
+    from: user,
     to: receiver,
     subject: "Yours DGX Community",
     text: message,
