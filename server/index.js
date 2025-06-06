@@ -51,8 +51,6 @@ app.use('/lmsEdit', lmsEdit);
 app.use('/progressTrack', progressRoute )
 
 
-
-
 const learningMaterialStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'D:/dgx_deployed/server/uploads/learning-materials');

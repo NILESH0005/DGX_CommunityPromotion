@@ -151,6 +151,8 @@ const EditSubModule = ({ module, onBack }) => {
             if (response?.success) {
                 setSubmodules(prev => [...prev, response.data]);
                 Swal.fire('Success!', 'Submodule added successfully', 'success');
+                setShowAddSubmodulePopup(false); // Close the popup
+
             } else {
                 throw new Error(response?.message || "Failed to add submodule");
             }

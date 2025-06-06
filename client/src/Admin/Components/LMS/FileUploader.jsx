@@ -1,27 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
+import { motion } from "framer-motion";
 
-const FileUploader = ({ 
-  selectedFile, 
+const FileUploader = ({
+  selectedFile,
   onFileSelect,
   onClearFile,
-  moduleId, 
-  submoduleId, 
-  unitId 
+  moduleId,
+  submoduleId,
+  unitId,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [localFiles, setLocalFiles] = useState([]);
 
   // Load files from localStorage
   useEffect(() => {
-    const storedFiles = localStorage.getItem('pendingUploads');
+    const storedFiles = localStorage.getItem("pendingUploads");
     if (storedFiles) {
       try {
         const parsedFiles = JSON.parse(storedFiles);
         setLocalFiles(parsedFiles);
       } catch (error) {
-        console.error('Error parsing stored files:', error);
+        console.error("Error parsing stored files:", error);
       }
     }
   }, []);
@@ -60,90 +60,125 @@ const FileUploader = ({
   };
 
   const handleFiles = (files) => {
-    const validFiles = Array.from(files).filter(file => {
-      if (file.size > 10 * 1024 * 1024) {
-        Swal.fire('Error', `File ${file.name} exceeds 10MB limit`, 'error');
-        return false;
-      }
-      return true;
+    const validFiles = Array.from(files).filter((file) => {
+      return true; // Accept all files
     });
 
     if (validFiles.length > 0) {
       const newFile = validFiles[0]; // Only take the first file
       onFileSelect(newFile);
-      
+
       // Store in localStorage
       const uploadData = {
         file: {
           name: newFile.name,
           size: newFile.size,
           type: newFile.type,
-          lastModified: newFile.lastModified
+          lastModified: newFile.lastModified,
         },
         moduleId,
         submoduleId,
         unitId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       const updatedFiles = [...localFiles, uploadData];
-      localStorage.setItem('learningMaterials', JSON.stringify(updatedFiles));
+      localStorage.setItem("learningMaterials", JSON.stringify(updatedFiles));
       setLocalFiles(updatedFiles);
     }
   };
 
   const removeFile = () => {
     onClearFile();
-    const newFiles = localFiles.filter(file => 
-      !(file.moduleId === moduleId && 
-        file.submoduleId === submoduleId && 
-        file.unitId === unitId)
+    const newFiles = localFiles.filter(
+      (file) =>
+        !(
+          file.moduleId === moduleId &&
+          file.submoduleId === submoduleId &&
+          file.unitId === unitId
+        )
     );
-    localStorage.setItem('pendingUploads', JSON.stringify(newFiles));
+    localStorage.setItem("pendingUploads", JSON.stringify(newFiles));
     setLocalFiles(newFiles);
   };
 
   const getFileIcon = (fileName) => {
-    const extension = fileName.split('.').pop().toLowerCase();
+    const extension = fileName.split(".").pop().toLowerCase();
     switch (extension) {
-      case 'pdf':
+      case "pdf":
         return (
-          <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+          <svg
+            className="w-6 h-6 text-red-500"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+              clipRule="evenodd"
+            />
           </svg>
         );
-      case 'doc':
-      case 'docx':
+      case "doc":
+      case "docx":
         return (
-          <svg className="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+          <svg
+            className="w-6 h-6 text-blue-500"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+              clipRule="evenodd"
+            />
           </svg>
         );
-      case 'ppt':
-      case 'pptx':
+      case "ppt":
+      case "pptx":
         return (
-          <svg className="w-6 h-6 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+          <svg
+            className="w-6 h-6 text-orange-500"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+              clipRule="evenodd"
+            />
           </svg>
         );
-      case 'mp4':
-      case 'mov':
+      case "mp4":
+      case "mov":
         return (
-          <svg className="w-6 h-6 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+          <svg
+            className="w-6 h-6 text-purple-500"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
             <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v8a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z" />
           </svg>
         );
       default:
         return (
-          <svg className="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+          <svg
+            className="w-6 h-6 text-gray-500"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+              clipRule="evenodd"
+            />
           </svg>
         );
     }
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="card bg-white shadow-sm border border-gray-200"
@@ -155,7 +190,9 @@ const FileUploader = ({
 
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            isDragging ? 'border-DGXblue bg-blue-50' : 'border-gray-300 bg-gray-50'
+            isDragging
+              ? "border-DGXblue bg-blue-50"
+              : "border-gray-300 bg-gray-50"
           }`}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
@@ -179,8 +216,8 @@ const FileUploader = ({
           </div>
           <p className="mb-2 text-gray-700 font-medium">
             {isDragging
-              ? 'Drop your file here'
-              : 'Drag & drop your file here or click to browse'}
+              ? "Drop your file here"
+              : "Drag & drop your file here or click to browse"}
           </p>
           <p className="text-sm text-gray-500 mb-4">
             Supported formats: PDF, PPT, DOC, MP4 (Max 10MB)
@@ -191,8 +228,8 @@ const FileUploader = ({
             id="file-upload"
             onChange={handleFileChange}
           />
-          <label 
-            htmlFor="file-upload" 
+          <label
+            htmlFor="file-upload"
             className="btn btn-outline border-DGXblue text-DGXblue hover:bg-DGXblue hover:text-white"
           >
             Select File
@@ -200,9 +237,9 @@ const FileUploader = ({
         </div>
 
         {selectedFile && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
+            animate={{ opacity: 1, height: "auto" }}
             className="mt-6 overflow-hidden"
           >
             <h4 className="font-medium text-gray-800 mb-3">Selected File</h4>

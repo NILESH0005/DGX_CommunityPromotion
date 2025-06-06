@@ -5,6 +5,50 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
+// Load external libraries if not already loaded
+const loadExternalLibraries = () => {
+  return new Promise((resolve) => {
+    let scriptsToLoad = 0;
+    let scriptsLoaded = 0;
+
+    const checkComplete = () => {
+      scriptsLoaded++;
+      if (scriptsLoaded === scriptsToLoad) {
+        resolve();
+      }
+    };
+
+    // Load marked.js for markdown parsing
+    if (!window.marked) {
+      scriptsToLoad++;
+      const markedScript = document.createElement('script');
+      markedScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js';
+      markedScript.onload = checkComplete;
+      document.head.appendChild(markedScript);
+    }
+
+    // Load highlight.js for syntax highlighting
+    if (!window.hljs) {
+      scriptsToLoad++;
+      const hljsScript = document.createElement('script');
+      hljsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js';
+      hljsScript.onload = () => {
+        // Load CSS for highlight.js
+        const hljsCSS = document.createElement('link');
+        hljsCSS.rel = 'stylesheet';
+        hljsCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+        document.head.appendChild(hljsCSS); 
+        checkComplete();
+      };
+      document.head.appendChild(hljsScript);
+    }
+
+    if (scriptsToLoad === 0) {
+      resolve();
+    }
+  });
+};
+
 const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
   const [numPages, setNumPages] = useState(null);
   const [pdfError, setPdfError] = useState(null);
@@ -12,10 +56,18 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
   const [notebookContent, setNotebookContent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [librariesLoaded, setLibrariesLoaded] = useState(false);
 
   // Extract file extension and name safely
   const fileExtension = fileUrl?.split('.').pop()?.toLowerCase() || '';
   const fileName = filesName || fileUrl?.split('/').pop() || 'file';
+
+  // Load external libraries on component mount
+  useEffect(() => {
+    loadExternalLibraries().then(() => {
+      setLibrariesLoaded(true);
+    });
+  }, []);
 
   const handleDownload = () => {
     const link = document.createElement('a');
@@ -55,9 +107,95 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
     setPdfError('Failed to load PDF. The file may be corrupted or invalid.');
   };
 
+  const renderNotebook = (notebook) => {
+    return (
+      <div className="notebook-container p-4 bg-white rounded-lg shadow">
+        <h2 className="text-xl font-bold mb-4">{notebook.metadata?.name || 'Jupyter Notebook'}</h2>
+        {notebook.cells.map((cell, index) => (
+          <div 
+            key={index} 
+            className={`mb-4 p-3 rounded ${cell.cell_type === 'code' ? 'bg-gray-50' : 'bg-white'}`}
+          >
+            {cell.cell_type === 'code' ? (
+              <>
+                <div className="flex items-center bg-gray-200 px-2 py-1 rounded-t">
+                  <span className="text-xs font-mono text-gray-600">In [{cell.execution_count || ' '}]:</span>
+                </div>
+                <pre className="p-2 bg-gray-100 text-gray-800 rounded-b overflow-x-auto">
+                  <code 
+                    dangerouslySetInnerHTML={{ 
+                      __html: window.hljs ? window.hljs.highlight(cell.source.join(''), { language: 'python' }).value : cell.source.join('') 
+                    }}
+                  />
+                </pre>
+                {cell.outputs?.length > 0 && (
+                  <div className="mt-2 p-2 bg-white border rounded">
+                    <div className="text-xs font-mono text-gray-500 mb-1">Out [{cell.execution_count || ' '}]:</div>
+                    {cell.outputs.map((output, i) => (
+                      <div key={i} className="font-mono text-sm">
+                        {output.output_type === 'stream' ? (
+                          <pre className="whitespace-pre-wrap">
+                            {output.text ? (Array.isArray(output.text) ? output.text.join('') : output.text) : ''}
+                          </pre>
+                        ) : output.output_type === 'execute_result' || output.output_type === 'display_data' ? (
+                          output.data?.['text/html'] ? (
+                            <div dangerouslySetInnerHTML={{ 
+                              __html: Array.isArray(output.data['text/html']) 
+                                ? output.data['text/html'].join('') 
+                                : output.data['text/html'] 
+                            }} />
+                          ) : output.data?.['image/png'] ? (
+                            <img 
+                              src={`data:image/png;base64,${output.data['image/png']}`}
+                              alt="Output"
+                              className="max-w-full h-auto"
+                            />
+                          ) : (
+                            output.data?.['text/plain']?.join('\n') || ''
+                          )
+                        ) : output.output_type === 'error' ? (
+                          <div className="text-red-600">
+                            <div className="font-bold">{output.ename}: {output.evalue}</div>
+                            {output.traceback && (
+                              <pre className="text-xs mt-1 whitespace-pre-wrap">
+                                {output.traceback.join('\n')}
+                              </pre>
+                            )}
+                          </div>
+                        ) : (
+                          output.data?.['text/plain']?.join('\n') || output.text?.join('\n') || ''
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="prose max-w-none">
+                {cell.source.join('') ? (
+                  window.marked ? (
+                    <div dangerouslySetInnerHTML={{ 
+                      __html: window.marked.parse(cell.source.join(''))
+                    }} />
+                  ) : (
+                    cell.source.join('').split('\n').map((line, i) => (
+                      <p key={i}>{line}</p>
+                    ))
+                  )
+                ) : (
+                  <p className="text-gray-400 italic">Empty markdown cell</p>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Handle Jupyter Notebook files
   useEffect(() => {
-    if (fileExtension === 'ipynb') {
+    if (fileExtension === 'ipynb' && librariesLoaded) {
       const loadNotebook = async () => {
         setLoading(true);
         setError(null);
@@ -81,48 +219,7 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
 
       loadNotebook();
     }
-  }, [fileUrl, fileExtension]);
-
-  const renderNotebook = (notebook) => {
-    return (
-      <div className="notebook-container p-4 bg-white rounded-lg shadow">
-        <h2 className="text-xl font-bold mb-4">{notebook.metadata?.name || 'Jupyter Notebook'}</h2>
-        {notebook.cells.map((cell, index) => (
-          <div 
-            key={index} 
-            className={`mb-4 p-3 rounded ${cell.cell_type === 'code' ? 'bg-gray-50' : 'bg-white'}`}
-          >
-            {cell.cell_type === 'code' ? (
-              <>
-                <div className="flex items-center bg-gray-200 px-2 py-1 rounded-t">
-                  <span className="text-xs font-mono text-gray-600">In [{cell.execution_count || ' '}]:</span>
-                </div>
-                <pre className="p-2 bg-gray-800 text-gray-100 rounded-b overflow-x-auto">
-                  <code>{cell.source.join('')}</code>
-                </pre>
-                {cell.outputs?.length > 0 && (
-                  <div className="mt-2 p-2 bg-white border rounded">
-                    <div className="text-xs font-mono text-gray-500 mb-1">Out [{cell.execution_count || ' '}]:</div>
-                    {cell.outputs.map((output, i) => (
-                      <div key={i} className="font-mono text-sm">
-                        {output.data?.['text/plain']?.join('\n') || output.text?.join('\n') || ''}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="prose max-w-none">
-                {cell.source.join('').split('\n').map((line, i) => (
-                  <p key={i}>{line}</p>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  };
+  }, [fileUrl, fileExtension, librariesLoaded]);
 
   // Handle link file type
   if (fileType === 'link') {
@@ -243,6 +340,8 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
       </div>
     );
   }
+
+  // Handle Jupyter Notebook files (.ipynb)
   if (fileExtension === 'ipynb') {
     if (!fileUrl.startsWith('http://localhost') && !fileUrl.startsWith('file://')) {
       return (
@@ -264,7 +363,7 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
       );
     }
 
-    // Fallback for local files
+    // Enhanced local notebook rendering
     return (
       <div className="relative w-full h-full flex flex-col p-4 overflow-auto">
         {renderDownloadButton()}
