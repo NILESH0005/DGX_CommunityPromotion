@@ -41,19 +41,19 @@ const ParallaxSection = () => {
   };
   console.log("parallex content :", activeText);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const value = window.scrollY;
-      document.getElementById("circuit_board").style.left = value * 0.5 + "px";
-      document.getElementById("text").style.marginRight = value * 4 + "px";
-      document.getElementById("text").style.marginTop = value * 1.5 + "px";
-      document.getElementById("btn").style.marginTop = value * 1.5 + "px";
-      document.querySelector("header").style.top = value * 0.5 + "px";
-    };
+  // // useEffect(() => {
+  // //   const handleScroll = () => {
+  // //     const value = window.scrollY;
+  // //     document.getElementById("circuit_board").style.left = value * 0.5 + "px";
+  // //     document.getElementById("text").style.marginRight = value * 4 + "px";
+  // //     document.getElementById("text").style.marginTop = value * 1.5 + "px";
+  // //     document.getElementById("btn").style.marginTop = value * 1.5 + "px";
+  // //     document.querySelector("header").style.top = value * 0.5 + "px";
+  // //   };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  //   window.addEventListener("scroll", handleScroll);
+  //   return () => window.removeEventListener("scroll", handleScroll);
+  // }, []);
 
   return (
     <section className="relative w-full h-screen flex justify-center items-center overflow-hidden">

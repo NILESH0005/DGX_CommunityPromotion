@@ -38,7 +38,6 @@ const SubModuleCard = () => {
           return;
         }
 
-        // Then fetch progress data using the submodule IDs we just got
         const progressResponse = await fetchData(
           'progressTrack/getSubModulesProgress',
           'POST',
@@ -51,28 +50,22 @@ const SubModuleCard = () => {
             "auth-token": userToken
           }
         );
-
-        // Merge the data
+        console.log("hhjsd b",progressResponse)
         const subModulesWithProgress = subModulesResponse.data.map(subModule => ({
           ...subModule,
           progress: progressResponse?.data?.find(p => p.subModuleID === subModule.SubModuleID)?.progressPercentage || 0
         }));
-
+        
         setFilteredSubModules(subModulesWithProgress);
-
-        // Find module name (you might want to fetch this separately if needed)
         const currentModule = subModulesResponse.data.find(
           (module) => module.ModuleID?.toString() === moduleId
         );
         setModuleName(currentModule?.ModuleName || "");
-
-        // Initialize expanded states
         const initialExpandedState = {};
         subModulesResponse.data.forEach(subModule => {
           initialExpandedState[subModule.SubModuleID] = false;
         });
         setExpandedDescriptions(initialExpandedState);
-
       } catch (error) {
         console.error("Error fetching data:", error);
         setError("An error occurred while fetching data");
@@ -184,11 +177,10 @@ const SubModuleCard = () => {
             filteredSubModules.map((subModule) => (
               <div
                 key={subModule.SubModuleID}
-                className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer ${
-                  expandedDescriptions[subModule.SubModuleID]
+                className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer ${expandedDescriptions[subModule.SubModuleID]
                     ? 'h-auto'
                     : 'h-[400px]'
-                }`}
+                  }`}
                 onClick={() => handleSubModuleClick(subModule)}
               >
                 <div className="h-40 bg-gray-100 overflow-hidden flex-shrink-0">
@@ -210,11 +202,10 @@ const SubModuleCard = () => {
 
                   <div className="overflow-hidden">
                     <p
-                      className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${
-                        expandedDescriptions[subModule.SubModuleID]
+                      className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${expandedDescriptions[subModule.SubModuleID]
                           ? 'overflow-y-auto max-h-32'
                           : 'line-clamp-3'
-                      }`}
+                        }`}
                     >
                       {subModule.SubModuleDescription || "No description available"}
                     </p>

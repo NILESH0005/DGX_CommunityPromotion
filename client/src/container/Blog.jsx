@@ -58,7 +58,7 @@ const BlogPage = () => {
             .then((data) => {
               console.log(data);
               setBlogs(data);
-              setLoading(false); // ✅ Add this here
+              setLoading(false); 
 
             })
             .catch(error => {
