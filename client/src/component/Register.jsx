@@ -8,6 +8,8 @@ import { FaEyeLowVision } from "react-icons/fa6";
 import ApiContext from '../context/ApiContext.jsx';
 import { decrypt } from "../utils/decrypt.js";
 import LoadPage from "./LoadPage.jsx";
+import Swal from "sweetalert2";
+
 
 const Register = () => {
   const [loading, setLoading] = useState(false);
