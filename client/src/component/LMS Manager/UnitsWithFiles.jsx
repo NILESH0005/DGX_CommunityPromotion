@@ -161,7 +161,7 @@ const UnitsWithFiles = () => {
   };
 
   const handleFileSelect = (file, unit) => {
-    setSelectedQuiz(null); 
+    setSelectedQuiz(null);
     setSelectedFile({
       ...file,
       unitName: unit.UnitName,
@@ -241,15 +241,15 @@ const UnitsWithFiles = () => {
   }
 
   const handleQuizSelect = (quiz) => {
-     navigate(`/quiz/${quiz.QuizID}`, {
-            state: {
-                quiz: {
-                    ...quiz,
-                    group_id: 2,
-                    QuizID: quiz.QuizID
-                }
-            }
-        });
+    navigate(`/quiz/${quiz.QuizID}`, {
+      state: {
+        quiz: {
+          ...quiz,
+          group_id: 2,
+          QuizID: quiz.QuizID,
+        },
+      },
+    });
   };
 
   if (loading) {
@@ -310,7 +310,7 @@ const UnitsWithFiles = () => {
     <div className="flex h-screen bg-background text-foreground">
       <div
         className={`${
-          isSidebarCollapsed ? "w-16" : "w-64"
+          isSidebarCollapsed ? "w-20" : "w-80"
         } bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}
       >
         {/* Toggle Button - Made Bigger and More Visible */}
@@ -377,7 +377,7 @@ const UnitsWithFiles = () => {
               </div>
             </div>
           )}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {filteredUnits.map((unit) => {
               const needsReadMoreUnit = needsReadMore(unit.UnitDescription);
               const isExpanded = expandedDescriptions.has(
@@ -386,9 +386,9 @@ const UnitsWithFiles = () => {
               return (
                 <div
                   key={unit.UnitID}
-                  className={`${
-                    isSidebarCollapsed ? "p-3" : "p-4"
-                  } rounded-xl hover:bg-gray-700 hover:shadow-lg transition-all duration-200 cursor-pointer border border-gray-600 hover:border-gray-500 bg-gray-800/50 backdrop-blur-sm transform hover:scale-[1.02]`}
+                  className={`${isSidebarCollapsed ? "p-3" : "p-4"}  
+                  `}
+                  //  rounded-xl hover:bg-gray-700 hover:shadow-lg transition-all duration-200 cursor-pointer border border-gray-600 hover:border-gray-500 bg-gray-800/50 backdrop-blur-sm transform hover:scale-[1.02]
                   onClick={() => {
                     if (unit.files?.length > 0) {
                       setSelectedFile({
@@ -552,7 +552,7 @@ const UnitsWithFiles = () => {
 
         {selectedQuiz ? (
           // Render Quiz component when a quiz is selected
-          
+
           <div className="flex-1">
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-gray-800">
@@ -563,13 +563,12 @@ const UnitsWithFiles = () => {
                 {selectedQuiz.PassingPercentage}% id:{selectedQuiz.QuizID}
               </p>
             </div>
-         
+
             <Quiz
-            
               quizz={{
                 ...selectedQuiz,
                 QuizID: selectedQuiz.QuizID,
-                group_id: selectedQuiz.group_id || selectedQuiz.QuizGroupID, 
+                group_id: selectedQuiz.group_id || selectedQuiz.QuizGroupID,
                 title: selectedQuiz.QuizName,
                 duration: selectedQuiz.QuizDuration,
                 passingPercentage: selectedQuiz.PassingPercentage,
@@ -610,11 +609,11 @@ const UnitsWithFiles = () => {
                     </svg>
                   </div>
                   <h3 className="text-xl font-bold mb-4">
-                    External Content Link
+                    {selectedFile.FilesName || "External Content Link"}
                   </h3>
                   <p className="mb-6 text-gray-600">
-                    This content is hosted externally. Click the button below to
-                    view it.
+                    {selectedFile.Description ||
+                      "This content is hosted externally. Click the button below to view it."}
                   </p>
                   <a
                     href={selectedFile.FilePath}
@@ -629,7 +628,7 @@ const UnitsWithFiles = () => {
                     >
                       <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-2v6H5V5z" />
                     </svg>
-                    Open Link
+                    Open {selectedFile.FilesName || "Link"} Link
                   </a>
                 </div>
               </div>

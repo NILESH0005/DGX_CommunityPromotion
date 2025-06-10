@@ -449,8 +449,6 @@ export const getSubModules = async (req, res) => {
 
 
 
-
-
 export const getUnitsWithFiles = async (req, res) => {
     let success = false;
     const { subModuleId } = req.params; 
@@ -478,6 +476,7 @@ export const getUnitsWithFiles = async (req, res) => {
                         f.FilesName,
                         f.FilePath,
                         f.FileType,
+                        f.Description,
                         f.AuthAdd AS FileAuthAdd,
                         f.Percentage
                     FROM UnitsDetails u
@@ -508,6 +507,7 @@ export const getUnitsWithFiles = async (req, res) => {
                         unitsMap.get(row.UnitID).files.push({
                             FileID: row.FileID,
                             FilesName: row.FilesName,
+                            Description: row.Description,
                             FilePath: row.FilePath,
                             FileType: row.FileType,
                             AuthAdd: row.FileAuthAdd,

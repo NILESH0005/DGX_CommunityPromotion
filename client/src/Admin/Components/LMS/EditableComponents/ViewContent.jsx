@@ -31,14 +31,13 @@ const ViewContent = ({ submodule, onBack }) => {
   const fileInputRef = useRef(null);
   const [showAddUnitModal, setShowAddUnitModal] = useState(false);
   const [fileLink, setFileLink] = useState("");
+  const [linkName, setLinkName] = useState("");
+  const [linkDescription, setLinkDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
   const { fetchData, userToken } = useContext(ApiContext);
 
-
-
   useEffect(() => {
-
     // Trigger a refetch of units to ensure we have the latest data
     const fetchUnits = async () => {
       try {
@@ -46,19 +45,21 @@ const ViewContent = ({ submodule, onBack }) => {
         const response = await fetchData(
           `dropdown/getUnitsWithFiles/${submodule.SubModuleID}`,
           "GET",
-          { 'auth-token': userToken }
+          { "auth-token": userToken }
         );
 
         if (response?.success) {
-          const validUnits = response.data.filter(unit => unit);
+          const validUnits = response.data.filter((unit) => unit);
           setUnits(validUnits);
-          const filtered = validUnits.filter(unit =>
-            unit.SubModuleID === submodule.SubModuleID
+          const filtered = validUnits.filter(
+            (unit) => unit.SubModuleID === submodule.SubModuleID
           );
           setFilteredUnits(filtered);
 
           // Select the newly added unit if it exists in the response
-          const addedUnit = validUnits.find(unit => unit.UnitID === newUnit.UnitID);
+          const addedUnit = validUnits.find(
+            (unit) => unit.UnitID === newUnit.UnitID
+          );
           if (addedUnit) {
             setSelectedUnit(addedUnit);
           }
@@ -72,7 +73,6 @@ const ViewContent = ({ submodule, onBack }) => {
 
     fetchUnits();
     setShowAddUnitModal(false);
-
 
     fetchUnits();
   }, [submodule.SubModuleID, fetchData, userToken]);
@@ -145,29 +145,29 @@ const ViewContent = ({ submodule, onBack }) => {
 
       if (response?.success) {
         // Update both states using functional updates to ensure we have the latest state
-        setUnits(prevUnits =>
-          prevUnits.map(unit =>
-            unit.UnitID === editingUnit.UnitID ?
-              { ...unit, ...response.data } :
-              unit
+        setUnits((prevUnits) =>
+          prevUnits.map((unit) =>
+            unit.UnitID === editingUnit.UnitID
+              ? { ...unit, ...response.data }
+              : unit
           )
         );
 
-        setFilteredUnits(prevFilteredUnits =>
-          prevFilteredUnits.map(unit =>
-            unit.UnitID === editingUnit.UnitID ?
-              { ...unit, ...response.data } :
-              unit
+        setFilteredUnits((prevFilteredUnits) =>
+          prevFilteredUnits.map((unit) =>
+            unit.UnitID === editingUnit.UnitID
+              ? { ...unit, ...response.data }
+              : unit
           )
         );
 
         // Update selectedUnit if it's the one being edited
         if (selectedUnit?.UnitID === editingUnit.UnitID) {
-          setSelectedUnit(prev => ({ ...prev, ...response.data }));
+          setSelectedUnit((prev) => ({ ...prev, ...response.data }));
         }
 
         handleCancelEditUnit();
-        Swal.fire('Success!', 'Unit updated successfully', 'success');
+        Swal.fire("Success!", "Unit updated successfully", "success");
       } else {
         throw new Error(response?.message || "Failed to update unit");
       }
@@ -251,65 +251,183 @@ const ViewContent = ({ submodule, onBack }) => {
     setNewFile(e.target.files[0]);
   };
 
+  // const handleUploadFile = async () => {
+  //   if ((!newFile && !fileLink.trim()) || !selectedUnit) return;
+  //   console.log("new file", newFile);
+
+  //   setIsUploading(true);
+  //   try {
+  //     const uploadToast = Swal.fire({
+  //       title: "Uploading...",
+  //       allowOutsideClick: false,
+  //       didOpen: () => Swal.showLoading(),
+  //     });
+
+  //     const totalFilesAfterUpload = files.length + 1;
+  //     const equalPercentage = (100 / totalFilesAfterUpload).toFixed(2);
+  //     console.log("myfile", newFile);
+  //     if (newFile) {
+  //       const formData = new FormData();
+  //       formData.append("file", newFile);
+  //       console.log("Selected Unit ID:", selectedUnit.UnitID); // Debug log
+
+  //       formData.append("unitId", selectedUnit.UnitID);
+  //       formData.append("percentage", equalPercentage);
+  //       console.log("mydata", formData);
+  //       const response = await fetch(
+  //         `${import.meta.env.VITE_API_BASEURL}lms/files`,
+  //         {
+  //           method: "POST",
+  //           body: formData,
+  //           headers: {
+  //             "auth-token": userToken,
+  //           },
+  //         }
+  //       );
+  //       console.log("response", response);
+
+  //       if (!response.ok) {
+  //         const errorData = await response.json().catch(() => ({}));
+  //         throw new Error(errorData.message || "Upload failed");
+  //       }
+
+  //       const result = await response.json();
+  //       await uploadToast.close();
+
+  //       if (result.success) {
+  //         const updatedFiles = files.map((file) => ({
+  //           ...file,
+  //           Percentage: equalPercentage,
+  //         }));
+
+  //         setFiles([
+  //           ...updatedFiles,
+  //           {
+  //             ...result.data,
+  //             Percentage: equalPercentage,
+  //           },
+  //         ]);
+
+  //         setNewFile(null);
+  //         setFileLink("");
+  //         Swal.fire("Success!", "File uploaded successfully", "success");
+  //       } else {
+  //         throw new Error(result.message || "Failed to save");
+  //       }
+  //     } else if (fileLink.trim()) {
+  //       const response = await fetchData(
+  //         "lms/files",
+  //         "POST",
+  //         {
+  //           unitId: selectedUnit.UnitID,
+  //           link: fileLink,
+  //           percentage: equalPercentage,
+  //           fileName: fileLink.split("/").pop() || "Link",
+  //           fileType: "link",
+  //         },
+  //         {
+  //           "Content-Type": "application/json",
+  //           "auth-token": userToken,
+  //         }
+  //       );
+  //       console.log("response", response);
+
+  //       await uploadToast.close();
+
+  //       if (response?.success) {
+  //         const updatedFiles = files.map((file) => ({
+  //           ...file,
+  //           Percentage: equalPercentage,
+  //         }));
+
+  //         setFiles([
+  //           ...updatedFiles,
+  //           {
+  //             ...response.data,
+  //             Percentage: equalPercentage,
+  //           },
+  //         ]);
+
+  //         setNewFile(null);
+  //         setFileLink("");
+  //         Swal.fire("Success!", "Link saved successfully", "success");
+  //       } else {
+  //         throw new Error(response?.message || "Failed to save link");
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.error("Upload error:", err);
+  //     Swal.fire("Error!", err.message || "Failed to save", "error");
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
+
   const handleUploadFile = async () => {
+    // Validate inputs
     if ((!newFile && !fileLink.trim()) || !selectedUnit) return;
-    console.log("new file", newFile);
 
     setIsUploading(true);
     try {
       const uploadToast = Swal.fire({
-        title: 'Uploading...',
+        title: "Uploading...",
         allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
+        didOpen: () => Swal.showLoading(),
       });
 
       const totalFilesAfterUpload = files.length + 1;
       const equalPercentage = (100 / totalFilesAfterUpload).toFixed(2);
-      console.log("myfile", newFile);
+
+      // Handle file upload
       if (newFile) {
         const formData = new FormData();
-        formData.append('file', newFile);
-        console.log("Selected Unit ID:", selectedUnit.UnitID); // Debug log
+        formData.append("file", newFile);
+        formData.append("unitId", selectedUnit.UnitID);
+        formData.append("percentage", equalPercentage);
+        formData.append("fileName", linkName || newFile.name);
+        formData.append("description", linkDescription || "");
 
-        formData.append('unitId', selectedUnit.UnitID);
-        formData.append('percentage', equalPercentage);
-        console.log("mydata", formData);
-        const response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/files`, {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'auth-token': userToken
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASEURL}lms/files`,
+          {
+            method: "POST",
+            body: formData,
+            headers: {
+              "auth-token": userToken,
+            },
           }
-        });
-        console.log("response", response);
+        );
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Upload failed');
+          throw new Error(errorData.message || "Upload failed");
         }
 
         const result = await response.json();
         await uploadToast.close();
 
         if (result.success) {
-          const updatedFiles = files.map(file => ({
+          const updatedFiles = files.map((file) => ({
             ...file,
-            Percentage: equalPercentage
+            Percentage: equalPercentage,
           }));
 
-          // Add the new file with the same percentage
-          setFiles([...updatedFiles, {
-            ...result.data,
-            Percentage: equalPercentage
-          }]);
+          setFiles([
+            ...updatedFiles,
+            {
+              ...result.data,
+              Percentage: equalPercentage,
+            },
+          ]);
 
-          setNewFile(null);
-          setFileLink('');
-          Swal.fire('Success!', 'File uploaded successfully', 'success');
+          resetForm();
+          Swal.fire("Success!", "File uploaded successfully", "success");
         } else {
           throw new Error(result.message || "Failed to save");
         }
-      } else if (fileLink.trim()) {
+      }
+      // Handle link submission
+      else if (fileLink.trim()) {
         const response = await fetchData(
           "lms/files",
           "POST",
@@ -317,46 +435,53 @@ const ViewContent = ({ submodule, onBack }) => {
             unitId: selectedUnit.UnitID,
             link: fileLink,
             percentage: equalPercentage,
-            fileName: fileLink.split('/').pop() || 'Link',
-            fileType: 'link'
+            fileName: linkName || "Link",
+            description: linkDescription || "",
+            fileType: "link",
           },
           {
-            'Content-Type': 'application/json',
-            'auth-token': userToken
+            "Content-Type": "application/json",
+            "auth-token": userToken,
           }
         );
-        console.log("response", response);
-
 
         await uploadToast.close();
 
         if (response?.success) {
-          const updatedFiles = files.map(file => ({
+          const updatedFiles = files.map((file) => ({
             ...file,
-            Percentage: equalPercentage
+            Percentage: equalPercentage,
           }));
 
-          // Add the new link with the same percentage
-          setFiles([...updatedFiles, {
-            ...response.data,
-            Percentage: equalPercentage
-          }]);
+          setFiles([
+            ...updatedFiles,
+            {
+              ...response.data,
+              Percentage: equalPercentage,
+            },
+          ]);
 
-          setNewFile(null);
-          setFileLink('');
-          Swal.fire('Success!', 'Link saved successfully', 'success');
+          resetForm();
+          Swal.fire("Success!", "Link saved successfully", "success");
         } else {
           throw new Error(response?.message || "Failed to save link");
         }
       }
     } catch (err) {
       console.error("Upload error:", err);
-      Swal.fire('Error!', err.message || 'Failed to save', 'error');
+      Swal.fire("Error!", err.message || "Failed to save", "error");
     } finally {
       setIsUploading(false);
     }
   };
 
+  // Helper function to reset form fields
+  const resetForm = () => {
+    setNewFile(null);
+    setFileLink("");
+    setLinkName("");
+    setLinkDescription("");
+  };
   const handleDeleteFile = async (fileId) => {
     const result = await Swal.fire({
       title: "Are you sure?",
@@ -371,26 +496,24 @@ const ViewContent = ({ submodule, onBack }) => {
     if (!result.isConfirmed) return;
 
     try {
-      setFiles(prev => prev.filter(file => file.FileID !== fileId));
+      setFiles((prev) => prev.filter((file) => file.FileID !== fileId));
       const response = await fetchData(
         "lmsEdit/deleteFile",
         "POST",
         { fileId },
         {
           "Content-Type": "application/json",
-          "auth-token": userToken
+          "auth-token": userToken,
         }
       );
 
       if (response?.success) {
-
-
-        setFiles(prev => prev.filter(file => file.FileID !== fileId));
-        Swal.fire('Deleted!', 'File has been deleted.', 'success');
+        setFiles((prev) => prev.filter((file) => file.FileID !== fileId));
+        Swal.fire("Deleted!", "File has been deleted.", "success");
       }
     } catch (err) {
       console.error("Delete error:", err);
-      Swal.fire('Error!', 'Failed to delete file', 'error');
+      Swal.fire("Error!", "Failed to delete file", "error");
     }
   };
 
@@ -461,9 +584,6 @@ const ViewContent = ({ submodule, onBack }) => {
 
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
-
-
-
           <button
             onClick={handleAddUnitClick}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
@@ -495,10 +615,11 @@ const ViewContent = ({ submodule, onBack }) => {
                     .map((unit) => (
                       <div
                         key={unit.UnitID}
-                        className={`p-4 cursor-pointer transition-colors duration-200 ${selectedUnit?.UnitID === unit.UnitID
-                          ? "bg-blue-50 dark:bg-gray-700"
-                          : "hover:bg-gray-50 dark:hover:bg-gray-700"
-                          }`}
+                        className={`p-4 cursor-pointer transition-colors duration-200 ${
+                          selectedUnit?.UnitID === unit.UnitID
+                            ? "bg-blue-50 dark:bg-gray-700"
+                            : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                        }`}
                         onClick={() => setSelectedUnit(unit)}
                       >
                         <div className="flex justify-between items-start">
@@ -665,36 +786,68 @@ const ViewContent = ({ submodule, onBack }) => {
                         </h3>
                       </div>
 
-                      {/* File Upload Section */}
                       <div className="mb-6 p-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
                         <div className="space-y-4">
-                          <div className="flex gap-2">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Upload File
+                            </label>
+                            <div
+                              onClick={() => fileInputRef.current.click()}
+                              className="p-8 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors duration-200 flex flex-col items-center justify-center"
+                            >
+                              <FaUpload className="text-3xl text-gray-400 dark:text-gray-500 mb-2" />
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Click to browse or drag and drop files here
+                              </p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                Supported formats: PDF, DOCX, JPG, PNG, etc.
+                              </p>
+                            </div>
                             <input
                               type="file"
                               ref={fileInputRef}
                               onChange={handleFileChange}
                               className="hidden"
                             />
-                            <button
-                              onClick={() => fileInputRef.current.click()}
-                              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200 flex items-center"
-                            >
-                              <FaUpload className="mr-2" />
-                              Select File
-                            </button>
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <FaLink className="text-gray-500 dark:text-gray-400" />
-                            <input
-                              type="text"
-                              value={fileLink}
-                              onChange={(e) => setFileLink(e.target.value)}
-                              placeholder="Enter a file URL/link"
-                              className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
-                            />
+                          {/* Link Input Section */}
+                          <div className="space-y-3">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Or Add Link
+                            </label>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <FaLink className="text-gray-500 dark:text-gray-400" />
+                                <input
+                                  type="text"
+                                  value={fileLink}
+                                  onChange={(e) => setFileLink(e.target.value)}
+                                  placeholder="Enter URL/link"
+                                  className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                                />
+                              </div>
+                              <input
+                                type="text"
+                                value={linkName}
+                                onChange={(e) => setLinkName(e.target.value)}
+                                placeholder="Link name/title"
+                                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                              />
+                              <textarea
+                                value={linkDescription}
+                                onChange={(e) =>
+                                  setLinkDescription(e.target.value)
+                                }
+                                placeholder="Link description"
+                                rows={3}
+                                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                              />
+                            </div>
                           </div>
 
+                          {/* Selected File Preview */}
                           {newFile && (
                             <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
                               <span className="text-sm text-gray-800 dark:text-gray-200 flex items-center">
@@ -710,12 +863,13 @@ const ViewContent = ({ submodule, onBack }) => {
                             </div>
                           )}
 
+                          {/* Save Button */}
                           <button
                             onClick={handleUploadFile}
                             disabled={
                               (!newFile && !fileLink.trim()) || isUploading
                             }
-                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors duration-200 flex items-center justify-center disabled:opacity-50"
+                            className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors duration-200 flex items-center justify-center disabled:opacity-50"
                           >
                             {isUploading ? (
                               <>
