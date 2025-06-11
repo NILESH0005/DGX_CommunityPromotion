@@ -184,101 +184,6 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
         });
     };
 
-    // const handleUploadFile = async (subModuleId, unitId, file) => {
-    //     if (!file) {
-    //         Swal.fire('Error', 'No file selected', 'error');
-    //         return false;
-    //     }
-
-    //     // Client-side validation
-    //     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf',
-    //         '.doc', '.docx', '.ppt', '.pptx', '.mp4',
-    //         '.mov', '.ipynb'];
-    //     const fileExt = file.name.split('.').pop().toLowerCase();
-
-    //     if (!allowedExtensions.includes(`.${fileExt}`)) {
-    //         Swal.fire('Error', 'File type not allowed. Please upload a valid file type.', 'error');
-    //         return false;
-    //     }
-
-    //     try {
-    //         const uploadToast = Swal.fire({
-    //             title: 'Uploading file...',
-    //             allowOutsideClick: false,
-    //             didOpen: () => Swal.showLoading()
-    //         });
-
-    //         const formData = new FormData();
-    //         formData.append('file', file);
-    //         formData.append('moduleId', module.id);
-    //         formData.append('subModuleId', subModuleId);
-    //         formData.append('unitId', unitId);
-
-    //         if (!userToken) {
-    //             throw new Error('Authentication token missing');
-    //         }
-
-    //         const response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/upload-learning-material`, {
-    //             method: 'POST',
-    //             body: formData,
-    //             headers: {
-    //                 'auth-token': userToken
-    //             }
-    //         });
-
-    //         if (!response.ok) {
-    //             const errorData = await response.json().catch(() => ({}));
-    //             throw new Error(errorData.message || 'Upload failed');
-    //         }
-
-    //         const result = await response.json();
-    //         await uploadToast.close();
-
-    //         // Update state
-    //         setSubModules(prev => prev.map(subModule => {
-    //             if (subModule.id === subModuleId) {
-    //                 const updatedUnits = subModule.units.map(unit => {
-    //                     if (unit.id === unitId) {
-    //                         const newFile = {
-    //                             id: uuidv4(),
-    //                             originalName: result.file?.name || file.name,
-    //                             filePath: result.file?.path || URL.createObjectURL(file),
-    //                             fileType: result.file?.type || file.type,
-    //                             uploadedAt: new Date().toISOString(),
-    //                             percentage: 0
-    //                         };
-    //                         const newFiles = [...(unit.files || []), newFile];
-
-    //                         // Calculate equal percentage for all files
-    //                         const equalPercentage = 100 / newFiles.length;
-    //                         const filesWithPercentage = newFiles.map(f => ({
-    //                             ...f,
-    //                             percentage: equalPercentage
-    //                         }));
-
-    //                         return {
-    //                             ...unit,
-    //                             files: filesWithPercentage
-
-    //                         };
-    //                     }
-    //                     return unit;
-    //                 });
-    //                 return { ...subModule, units: updatedUnits };
-    //             }
-    //             return subModule;
-    //         }));
-
-    //         Swal.fire('Success', 'File uploaded successfully', 'success');
-    //         return true;
-    //     } catch (error) {
-    //         console.error('Upload error:', error);
-    //         Swal.fire('Error', error.message || 'Upload failed', 'error');
-    //         return false;
-    //     }
-    //     // setSubModules(updatedSubModules);
-    // };
-
     const handleUploadFile = async (subModuleId, unitId, file) => {
         if (!file) {
             Swal.fire('Error', 'No file selected', 'error');
@@ -383,9 +288,6 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             return false;
         }
     };
-
-
-
 
     const handleSaveAll = () => {
         if (subModules.length === 0) {
