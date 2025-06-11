@@ -125,242 +125,242 @@ function App() {
       <ToastContainer
         style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
       />
-      
-        <div className="min-h-screen flex flex-col">
-          <Navbar />
-          <div className="flex-grow ">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route exact path="/VerifyEmail" element={<VerifyEmail />} />
-              <Route exact path="/Register" element={<Register />} />
-              <Route path="/SignInn" element={<SignInn />} />
-              <Route path="/ForgotPassword" element={<ForgotPassword />} />
-              <Route path="/ChangePassword" element={<ChangePassword />} />
 
-              {/* User Profile  */}
-              <Route
-                path="/UserProfile"
-                element={
-                  <UserProfile
-                    blogs={blogs}
-                    setBlogs={setBlogs}
-                    events={events}
-                    setEvents={setEvents}
-                  />
-                }
-              />
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-grow ">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route exact path="/VerifyEmail" element={<VerifyEmail />} />
+            <Route exact path="/Register" element={<Register />} />
+            <Route path="/SignInn" element={<SignInn />} />
+            <Route path="/ForgotPassword" element={<ForgotPassword />} />
+            <Route path="/ChangePassword" element={<ChangePassword />} />
 
-              <Route path="/Discussion" element={<Discussion />} />
-              <Route path="/ContactUs" element={<ContactUs />} />
-              <Route path="/Blog" element={<Blog />} />
-              {/* <Route path='/DiscussionModal' element={<DiscussionModal />} /> */}
-              <Route path="/ResetPassword" element={<ResetPassword />} />
-              <Route
-                path="/CommunityGuidelines"
-                element={<CommunityGuidelines />}
-              />
-              <Route path="/Resources" element={<Resources />} />
-              <Route path="/404" element={<Notfound />} />
-              {/* <Route path='/Quiz' element={<Quiz />} /> */}
-              <Route path="/Survey" element={<Survey />} />
-              <Route
-                path="/ConfirmationModal"
-                element={<ConfirmationModal />}
-              />
-              {/* <Route path='/MyStoryboard' element={<MyStoryboard />} /> */}
-              <Route
-                path="/EventWorkshopPage"
-                element={<EventWorkshopPage />}
-              />
-              <Route
-                path="/EventRegistrationPage"
-                element={<EventRegistrationPage />}
-              />
-              <Route
-                path="/HomeAfterLoginComponent"
-                element={<HomeAfterLoginComponent />}
-              />
-              {/* <Route path='/PostCode' element={<PostCode />} /> */}
-              <Route path="/CreateICSFile" element={<CreateICSFile />} />
-              <Route path="/AddUserEvent" element={<AddUserEvent />} />
+            {/* User Profile  */}
+            <Route
+              path="/UserProfile"
+              element={
+                <UserProfile
+                  blogs={blogs}
+                  setBlogs={setBlogs}
+                  events={events}
+                  setEvents={setEvents}
+                />
+              }
+            />
 
-              {/* //add path for dynamic  homepage */}
-              <Route path="/ParallaxSection" element={<ParallaxSection />} />
-              <Route path="/ContentSection" element={<ContentSection />} />
-              <Route path="/NewsSection" element={<NewsSection />} />
-              <Route path="/ProjectShowcase" element={<ProjectShowcase />} />
-              <Route
-                path="/CommunityHighlights"
-                element={<CommunityHighlights />}
-              />
+            <Route path="/Discussion" element={<Discussion />} />
+            <Route path="/ContactUs" element={<ContactUs />} />
+            <Route path="/Blog" element={<Blog />} />
+            {/* <Route path='/DiscussionModal' element={<DiscussionModal />} /> */}
+            <Route path="/ResetPassword" element={<ResetPassword />} />
+            <Route
+              path="/CommunityGuidelines"
+              element={<CommunityGuidelines />}
+            />
+            <Route path="/Resources" element={<Resources />} />
+            <Route path="/404" element={<Notfound />} />
+            {/* <Route path='/Quiz' element={<Quiz />} /> */}
+            <Route path="/Survey" element={<Survey />} />
+            <Route path="/ConfirmationModal" element={<ConfirmationModal />} />
+            {/* <Route path='/MyStoryboard' element={<MyStoryboard />} /> */}
+            <Route path="/EventWorkshopPage" element={<EventWorkshopPage />} />
+            <Route
+              path="/EventRegistrationPage"
+              element={<EventRegistrationPage />}
+            />
+            <Route
+              path="/HomeAfterLoginComponent"
+              element={<HomeAfterLoginComponent />}
+            />
+            {/* <Route path='/PostCode' element={<PostCode />} /> */}
+            <Route path="/CreateICSFile" element={<CreateICSFile />} />
+            <Route path="/AddUserEvent" element={<AddUserEvent />} />
 
-              {/* Added Quiz in Navbar */}
-              <Route path="/QuizInterface" element={<QuizInterface />} />
-              <Route
-                path="../Admin/Components/Quiz/QuizPanel"
-                element={<QuizPanel />}
-              />
-              <Route path="/QuizList" element={<QuizList />} />
-              <Route path="/quiz/:quizId" element={<Quiz />} />
-              <Route path="/QuizQuestions" element={<QuizQuestions />} />
-              <Route path="/quiz-result" element={<QuizResult />} />
+            {/* //add path for dynamic  homepage */}
+            <Route path="/ParallaxSection" element={<ParallaxSection />} />
+            <Route path="/ContentSection" element={<ContentSection />} />
+            <Route path="/NewsSection" element={<NewsSection />} />
+            <Route path="/ProjectShowcase" element={<ProjectShowcase />} />
+            <Route
+              path="/CommunityHighlights"
+              element={<CommunityHighlights />}
+            />
 
-              <Route path="/CreateQuiz" element={<CreateQuiz />} />
-              <Route path="/QuestionBank" element={<QuestionBank />} />
-              {/*-----------ADMIN----------- */}
+            {/* Added Quiz in Navbar */}
+            <Route path="/QuizInterface" element={<QuizInterface />} />
+            <Route
+              path="../Admin/Components/Quiz/QuizPanel"
+              element={<QuizPanel />}
+            />
+            <Route path="/QuizList" element={<QuizList />} />
+            <Route path="/quiz/:quizId" element={<Quiz />} />
+            <Route path="/QuizQuestions" element={<QuizQuestions />} />
+            <Route path="/quiz-result" element={<QuizResult />} />
 
-              <Route
-                path="/AdminDashboard"
-                element={
-                  <AdminDashboard
-                    blogs={blogs}
-                    setBlogs={setBlogs}
-                    events={events}
-                    setEvents={setEvents}
-                  />
-                }
-              />
-              {/* <Route path='/Admin/Sidebar' element={<Sidebar />} /> */}
-              <Route path="/LoadPage" element={<LoadPage />} />
-              {/* <Route path='/Calendar' element={<Calendar />} /> */}
-              <Route
-                path="/GeneralUserCalendar"
-                element={<GeneralUserCalendar />}
-              />
-              {/* <Route path='/BlogManager' element={<BlogManager/>}/> */}
+            <Route path="/CreateQuiz" element={<CreateQuiz />} />
+            <Route path="/QuestionBank" element={<QuestionBank />} />
+            {/*-----------ADMIN----------- */}
 
-              {/* LMS */}
-              <Route path="/Lms" element={<Lms />} />
-              <Route path="/teaching-modules" element={<TeachingModules />} />
-              <Route path="/edge-ai-robotics-kit" element={<AiRoboticsKit />} />
-              <Route path="/deep-learning-kit" element={<DeepLearningKit />} />
-              <Route path="/generative-ai-kit" element={<GenAiKit />} />
-              <Route
-                path="/industrial-metaverse-kit"
-                element={<IndustrialMetaverseKit />}
-              />
-              <Route path="/nvidia-intro" element={<NvidiaIntro />} />
+            <Route
+              path="/AdminDashboard"
+              element={
+                <AdminDashboard
+                  blogs={blogs}
+                  setBlogs={setBlogs}
+                  events={events}
+                  setEvents={setEvents}
+                />
+              }
+            />
+            {/* <Route path='/Admin/Sidebar' element={<Sidebar />} /> */}
+            <Route path="/LoadPage" element={<LoadPage />} />
+            {/* <Route path='/Calendar' element={<Calendar />} /> */}
+            <Route
+              path="/GeneralUserCalendar"
+              element={<GeneralUserCalendar />}
+            />
+            {/* <Route path='/BlogManager' element={<BlogManager/>}/> */}
 
-              <Route path="/data-modules" element={<DatasetModules />} />
-              <Route path="/regression-modules" element={<Regression />} />
-              <Route path="/pretrained-modules" element={<Pretrained />} />
-              <Route
-                path="/object-classification-modules"
-                element={<ObjectClassification />}
-              />
-              <Route path="/generative-ai-modules" element={<Generative />} />
-              <Route
-                path="/digital-learning-modules"
-                element={<DigitalLearning />}
-              />
-              <Route
-                path="/computer-vision-modules"
-                element={<ComputerVision />}
-              />
-              <Route path="/annotation-modules" element={<Annotation />} />
-              <Route path="/algorithms-modules" element={<Algorithms />} />
+            {/* LMS */}
+            <Route path="/Lms" element={<Lms />} />
+            <Route path="/teaching-modules" element={<TeachingModules />} />
+            <Route path="/edge-ai-robotics-kit" element={<AiRoboticsKit />} />
+            <Route path="/deep-learning-kit" element={<DeepLearningKit />} />
+            <Route path="/generative-ai-kit" element={<GenAiKit />} />
+            <Route
+              path="/industrial-metaverse-kit"
+              element={<IndustrialMetaverseKit />}
+            />
+            <Route path="/nvidia-intro" element={<NvidiaIntro />} />
 
-              {/* LeaderBoard and Chatabot */}
-              <Route path="/leaderboard" element={<LeaderBoard />} />
-              <Route path="/chatbot" element={<Chatbot />} />
+            <Route path="/data-modules" element={<DatasetModules />} />
+            <Route path="/regression-modules" element={<Regression />} />
+            <Route path="/pretrained-modules" element={<Pretrained />} />
+            <Route
+              path="/object-classification-modules"
+              element={<ObjectClassification />}
+            />
+            <Route path="/generative-ai-modules" element={<Generative />} />
+            <Route
+              path="/digital-learning-modules"
+              element={<DigitalLearning />}
+            />
+            <Route
+              path="/computer-vision-modules"
+              element={<ComputerVision />}
+            />
+            <Route path="/annotation-modules" element={<Annotation />} />
+            <Route path="/algorithms-modules" element={<Algorithms />} />
 
-              {/* <Route path="/LmsManager" element={<LearningPath />} /> */}
-              {/* LMS */}
-              <Route path="/Lms" element={<Lms />} />
-              <Route path="/teaching-modules" element={<TeachingModules />} />
-              <Route path="/edge-ai-robotics-kit" element={<AiRoboticsKit />} />
-              <Route path="/deep-learning-kit" element={<DeepLearningKit />} />
-              <Route path="/generative-ai-kit" element={<GenAiKit />} />
-              <Route
-                path="/industrial-metaverse-kit"
-                element={<IndustrialMetaverseKit />}
-              />
-              <Route path="/nvidia-intro" element={<NvidiaIntro />} />
+            {/* LeaderBoard and Chatabot */}
+            <Route path="/leaderboard" element={<LeaderBoard />} />
+            <Route path="/chatbot" element={<Chatbot />} />
 
-              <Route path="/data-modules" element={<DatasetModules />} />
-              <Route path="/regression-modules" element={<Regression />} />
-              <Route path="/pretrained-modules" element={<Pretrained />} />
-              <Route
-                path="/object-classification-modules"
-                element={<ObjectClassification />}
-              />
-              <Route path="/generative-ai-modules" element={<Generative />} />
-              <Route
-                path="/digital-learning-modules"
-                element={<DigitalLearning />}
-              />
-              <Route
-                path="/computer-vision-modules"
-                element={<ComputerVision />}
-              />
-              <Route path="/annotation-modules" element={<Annotation />} />
-              <Route path="/algorithms-modules" element={<Algorithms />} />
+            {/* <Route path="/LmsManager" element={<LearningPath />} /> */}
+            {/* LMS */}
+            <Route path="/Lms" element={<Lms />} />
+            <Route path="/teaching-modules" element={<TeachingModules />} />
+            <Route path="/edge-ai-robotics-kit" element={<AiRoboticsKit />} />
+            <Route path="/deep-learning-kit" element={<DeepLearningKit />} />
+            <Route path="/generative-ai-kit" element={<GenAiKit />} />
+            <Route
+              path="/industrial-metaverse-kit"
+              element={<IndustrialMetaverseKit />}
+            />
+            <Route path="/nvidia-intro" element={<NvidiaIntro />} />
 
-              {/* Object Classification */}
-              <Route path="/ObjectGuide" element={<Guide />} />
-              <Route path="/ObjectClass" element={<Hands />} />
+            <Route path="/data-modules" element={<DatasetModules />} />
+            <Route path="/regression-modules" element={<Regression />} />
+            <Route path="/pretrained-modules" element={<Pretrained />} />
+            <Route
+              path="/object-classification-modules"
+              element={<ObjectClassification />}
+            />
+            <Route path="/generative-ai-modules" element={<Generative />} />
+            <Route
+              path="/digital-learning-modules"
+              element={<DigitalLearning />}
+            />
+            <Route
+              path="/computer-vision-modules"
+              element={<ComputerVision />}
+            />
+            <Route path="/annotation-modules" element={<Annotation />} />
+            <Route path="/algorithms-modules" element={<Algorithms />} />
 
-              {/* Annotation tools */}
-              <Route path="/Annsage" element={<Aws />} />
-              <Route path="/Anncvat" element={<Cvat />} />
-              <Route path="/Annvtt" element={<Vtt />} />
-              <Route path="/annvgg" element={<Vgg />} />
-              <Route path="/annlimg" element={<Labelimg />} />
-              <Route path="/annlme" element={<Labelme />} />
+            {/* Object Classification */}
+            <Route path="/ObjectGuide" element={<Guide />} />
+            <Route path="/ObjectClass" element={<Hands />} />
 
-              {/* LeaderBoard and Chatabot */}
-              <Route path="/leaderboard" element={<LeaderBoard />} />
-              <Route path="/chatbot" element={<Chatbot />} />
+            {/* Annotation tools */}
+            <Route path="/Annsage" element={<Aws />} />
+            <Route path="/Anncvat" element={<Cvat />} />
+            <Route path="/Annvtt" element={<Vtt />} />
+            <Route path="/annvgg" element={<Vgg />} />
+            <Route path="/annlimg" element={<Labelimg />} />
+            <Route path="/annlme" element={<Labelme />} />
 
-              {/* Algorithm Module */}
-              <Route path="/deepspeech" element={<DeepSpeech />} />
-              <Route path="/detr" element={<Detr />} />
-              <Route path="/lstm" element={<Lstm />} />
-              <Route path="/resnet" element={<Resnet50 />} />
+            {/* LeaderBoard and Chatabot */}
+            <Route path="/leaderboard" element={<LeaderBoard />} />
+            <Route path="/chatbot" element={<Chatbot />} />
 
-              {/* Regression Module */}
-              <Route path="/reg_guide" element={<Guidereg />} />
-              <Route path="/reg_handson" element={<Handson />} />
+            {/* Algorithm Module */}
+            <Route path="/deepspeech" element={<DeepSpeech />} />
+            <Route path="/detr" element={<Detr />} />
+            <Route path="/lstm" element={<Lstm />} />
+            <Route path="/resnet" element={<Resnet50 />} />
 
-              {/* Computer Vision Modules */}
-              <Route path="/fasterrcnn" element={<Faster_rcnn />} />
-              <Route path="/maskrcnn" element={<Mask_Rcnn />} />
-              <Route path="/ssd" element={<SSD />} />
-              <Route path="/visiontran" element={<Vision_trans />} />
+            {/* Regression Module */}
+            <Route path="/reg_guide" element={<Guidereg />} />
+            <Route path="/reg_handson" element={<Handson />} />
 
-              {/* Dataset Module */}
-              <Route path="/mnist-dataset" element={<Mnist />} />
-              <Route path="/makeblobs" element={<Make_Blobs />} />
-              <Route path="/iris" element={<Iris />} />
-              <Route path="/imageclass" element={<Imageclass />} />
-              <Route path="/humanevol" element={<Humanevol />} />
-              <Route path="/housepred" element={<Housepred />} />
-              <Route path="/cifar" element={<Cifar />} />
+            {/* Computer Vision Modules */}
+            <Route path="/fasterrcnn" element={<Faster_rcnn />} />
+            <Route path="/maskrcnn" element={<Mask_Rcnn />} />
+            <Route path="/ssd" element={<SSD />} />
+            <Route path="/visiontran" element={<Vision_trans />} />
 
-              {/* Pretrained Models */}
-              <Route path="/predeepspeech" element={<Pre_deepspeech />} />
-              <Route path="/predetr" element={<Pre_detr />} />
-              <Route path="/prelstm" element={<Pre_lstm />} />
-              <Route path="/preresnet" element={<Pre_resnet />} />
+            {/* Dataset Module */}
+            <Route path="/mnist-dataset" element={<Mnist />} />
+            <Route path="/makeblobs" element={<Make_Blobs />} />
+            <Route path="/iris" element={<Iris />} />
+            <Route path="/imageclass" element={<Imageclass />} />
+            <Route path="/humanevol" element={<Humanevol />} />
+            <Route path="/housepred" element={<Housepred />} />
+            <Route path="/cifar" element={<Cifar />} />
 
-              {/* Generative AI Models */}
-              <Route path="/genaiguide" element={<Genaiguide />} />
-              <Route path="/genaimodel" element={<Genaimodels />} />
-              {/* Digital Learning Models */}
-              <Route path="/tutorials" element={<Tutorials />} />
-              <Route path="/resources" element={<Resource />} />
+            {/* Pretrained Models */}
+            <Route path="/predeepspeech" element={<Pre_deepspeech />} />
+            <Route path="/predetr" element={<Pre_detr />} />
+            <Route path="/prelstm" element={<Pre_lstm />} />
+            <Route path="/preresnet" element={<Pre_resnet />} />
 
-              <Route path="/LearningPath" element={<LearningPath />} />
-              <Route path="/modules" element={<ModuleCard />} />
-              <Route path="/module/:moduleId" element={<SubModuleCard />} />
-              <Route
-                path="/submodule/:subModuleId"
-                element={<UnitsWithFiles />}
-              />
-            </Routes>
-          </div>
-          <Footer />
+            {/* Generative AI Models */}
+            <Route path="/genaiguide" element={<Genaiguide />} />
+            <Route path="/genaimodel" element={<Genaimodels />} />
+            {/* Digital Learning Models */}
+            <Route path="/tutorials" element={<Tutorials />} />
+            <Route path="/resources" element={<Resource />} />
+
+            <Route path="/LearningPath" element={<LearningPath />} />
+            <Route path="/modules" element={<ModuleCard />} />
+            <Route path="/module/:moduleId" element={<SubModuleCard />} />
+            <Route
+              path="/submodule/:subModuleId"
+              element={<UnitsWithFiles />}
+            />
+
+            <Route path="/module/:moduleId" element={<SubModuleCard />} />
+            <Route
+              path="/submodule/:subModuleId"
+              element={<UnitsWithFiles />}
+            />
+          </Routes>
         </div>
+        <Footer />
+      </div>
     </>
   );
 }

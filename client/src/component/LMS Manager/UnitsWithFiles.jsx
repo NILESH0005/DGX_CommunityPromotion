@@ -29,14 +29,40 @@ const UnitsWithFiles = () => {
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
 
   // Get module and submodule names from location state if available
+  // useEffect(() => {
+  //   if (location.state?.moduleName) {
+  //     setModuleName(location.state.moduleName);
+  //   }
+  //   if (location.state?.submoduleName) {
+  //     setSubModuleName(location.state.submoduleName);
+  //   }
+  // }, [location.state]);
+  // In your useEffect for getting module/submodule names
   useEffect(() => {
-    if (location.state?.moduleName) {
-      setModuleName(location.state.moduleName);
+    // Set names from location state or localStorage
+    const moduleName =
+      location.state?.moduleName || localStorage.getItem("moduleName");
+    const submoduleName =
+      location.state?.submoduleName || localStorage.getItem("submoduleName");
+
+    if (moduleName) setModuleName(moduleName);
+    if (submoduleName) setSubModuleName(submoduleName);
+
+    // Handle missing subModuleId
+    if (!subModuleId) {
+      const storedSubModuleId = localStorage.getItem("subModuleId");
+      if (storedSubModuleId) {
+        navigate(`/submodule/${storedSubModuleId}`, {
+          replace: true,
+          state: {
+            moduleName,
+            submoduleName,
+            moduleId: localStorage.getItem("moduleId"),
+          },
+        });
+      }
     }
-    if (location.state?.submoduleName) {
-      setSubModuleName(location.state.submoduleName);
-    }
-  }, [location.state]);
+  }, [location.state, subModuleId, navigate]);
 
   useEffect(() => {
     const fetchUserFileIds = async () => {
@@ -377,7 +403,7 @@ const UnitsWithFiles = () => {
               </div>
             </div>
           )}
-          <div className="space-y-6">
+          <div className="space-y-2">
             {filteredUnits.map((unit) => {
               const needsReadMoreUnit = needsReadMore(unit.UnitDescription);
               const isExpanded = expandedDescriptions.has(
@@ -386,7 +412,7 @@ const UnitsWithFiles = () => {
               return (
                 <div
                   key={unit.UnitID}
-                  className={`${isSidebarCollapsed ? "p-3" : "p-4"}  
+                  className={`${isSidebarCollapsed ? "p-3" : "p-2"}  
                   `}
                   //  rounded-xl hover:bg-gray-700 hover:shadow-lg transition-all duration-200 cursor-pointer border border-gray-600 hover:border-gray-500 bg-gray-800/50 backdrop-blur-sm transform hover:scale-[1.02]
                   onClick={() => {
