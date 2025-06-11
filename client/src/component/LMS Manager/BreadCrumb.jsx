@@ -16,103 +16,53 @@ const BreadCrumb = ({ customPaths = [] }) => {
 
   // Generate breadcrumb items based on route
   const getBreadcrumbItems = () => {
-    const pathnames = location.pathname.split('/').filter(x => x);
-    const items = [];
-    
-    // Always start with Modules
+  const pathnames = location.pathname.split('/').filter(x => x);
+  const items = [];
+  
+  // Always start with Modules
+  items.push({
+    label: 'Modules',
+    path: '/LearningPath',
+    isActive: false,
+    state: null
+  });
+
+  // Module level
+  const moduleName = state?.moduleName || localStorage.getItem('moduleName');
+  const moduleId = params.moduleId || localStorage.getItem('moduleId');
+  
+  if (moduleName && moduleId) {
     items.push({
-      label: 'Modules',
-      path: '/LearningPath',
-      isActive: false,
-      state: null
+      label: moduleName,
+      path: `/module/${moduleId}`,
+      isActive: pathnames.includes('module') && !pathnames.includes('submodule'),
+      state: { moduleName }
     });
+  }
 
-    // Module level
-    if (pathnames.includes('module') && (state?.moduleName || params.moduleId)) {
-      items.push({
-        label: state?.moduleName || `Module ${params.moduleId}`,
-        path: `/module/${params.moduleId}`,
-        isActive: pathnames.length === 2 && !pathnames.includes('submodule'), // Active if we're at module level
-        state: { moduleName: state?.moduleName }
-      });
-    }
+  // Submodule level
+  const submoduleName = state?.submoduleName || localStorage.getItem('submoduleName');
+  const subModuleId = params.subModuleId || localStorage.getItem('subModuleId');
+  
+  if (submoduleName && subModuleId) {
+    items.push({
+      label: submoduleName,
+      path: null, // Make non-clickable
+      isActive: pathnames.includes('submodule'),
+    });
+  }
 
-    // Submodule level
-    if (pathnames.includes('submodule') && (state?.submoduleName || params.subModuleId)) {
-      const isSubmoduleActive = pathnames.length === 2 && pathnames.includes('submodule');
-      
-      items.push({
-        label: state?.submoduleName || `Submodule ${params.subModuleId}`,
-        path: `/submodule/${params.subModuleId}`,
-        isActive: isSubmoduleActive,
-        state: {
-          moduleName: state?.moduleName,
-          submoduleName: state?.submoduleName,
-          moduleId: state?.moduleId
-        }
-      });
-    }
+  // Unit level
+  if (state?.unitName) {
+    items.push({
+      label: state.unitName,
+      path: null,
+      isActive: true
+    });
+  }
 
-    // Unit File level - Check if we're in a unit file view
-    // This handles cases where we're viewing files within a submodule
-    if (params.subModuleId && state?.unitName && !pathnames.includes('submodule')) {
-      // Add submodule breadcrumb if we're in unit file view but coming from submodule
-      if (state?.submoduleName) {
-        items.push({
-          label: state.submoduleName,
-          path: `/submodule/${params.subModuleId}`,
-          isActive: false,
-          state: {
-            moduleName: state?.moduleName,
-            submoduleName: state?.submoduleName,
-            moduleId: state?.moduleId
-          }
-        });
-      }
-      
-      // Add unit file name as the last breadcrumb (non-clickable)
-      items.push({
-        label: state.unitName,
-        path: null, // Current page, not clickable
-        isActive: true
-      });
-    }
-
-    // File level (from state) - for individual file views
-    if (state?.fileName && !state?.unitName) {
-      items.push({
-        label: removeExtension(state.fileName),
-        path: null, // Current page, not clickable
-        isActive: true
-      });
-    }
-
-    // Handle file-viewer route specifically
-    if (pathnames.includes('file-viewer') && state) {
-      // Ensure we have submodule in breadcrumb if not already added
-      if (state?.submoduleName && !items.some(item => item.label === state.submoduleName)) {
-        items.push({
-          label: state.submoduleName,
-          path: `/submodule/${state.submoduleId}`,
-          isActive: false,
-          state: {
-            moduleName: state?.moduleName,
-            submoduleName: state?.submoduleName,
-            moduleId: state?.moduleId
-          }
-        });
-      }
-            if (state?.fileName) {
-        items.push({
-          label: removeExtension(state.fileName),
-          path: null, // Current page, not clickable
-          isActive: true
-        });
-      }
-    }
-
-    return [...items, ...customPaths];
-  };
+  return [...items, ...customPaths];
+};
 
   const breadcrumbItems = getBreadcrumbItems();
 

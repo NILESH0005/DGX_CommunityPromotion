@@ -90,15 +90,21 @@ const SubModuleCard = () => {
     }));
   };
 
-  const handleSubModuleClick = (subModule) => {
-    navigate(`/submodule/${subModule.SubModuleID}`, {
-      state: {
-        moduleName: moduleName,
-        submoduleName: subModule.SubModuleName,
-        moduleId: moduleId
-      }
-    });
-  };
+const handleSubModuleClick = (subModule) => {
+  // Store all necessary data in localStorage
+  localStorage.setItem('moduleName', moduleName);
+  localStorage.setItem('moduleId', moduleId);
+  localStorage.setItem('submoduleName', subModule.SubModuleName);
+  localStorage.setItem('subModuleId', subModule.SubModuleID);
+
+  navigate(`/submodule/${subModule.SubModuleID}`, {
+    state: {
+      moduleName,
+      submoduleName: subModule.SubModuleName,
+      moduleId
+    }
+  });
+};
 
   const handleFileClick = (file, subModule) => {
     navigate('/file-viewer', {

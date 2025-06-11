@@ -288,6 +288,7 @@ const ApiProvider = ({ children }) => {
     const body = {};
     try {
       const data = await fetchData(endpoint, method, body, headers);
+      console.log(data);
       if (!data.success) {
         console.log(data.message);
       } else if (data.success) {
