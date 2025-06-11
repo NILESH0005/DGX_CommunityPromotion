@@ -22,7 +22,7 @@ const BreadCrumb = ({ customPaths = [] }) => {
     // Always start with Modules
     items.push({
       label: 'Modules',
-      path: '/modules',
+      path: '/LearningPath',
       isActive: false,
       state: null
     });
@@ -102,9 +102,7 @@ const BreadCrumb = ({ customPaths = [] }) => {
           }
         });
       }
-      
-      // Add file name as final breadcrumb
-      if (state?.fileName) {
+            if (state?.fileName) {
         items.push({
           label: removeExtension(state.fileName),
           path: null, // Current page, not clickable
@@ -113,7 +111,6 @@ const BreadCrumb = ({ customPaths = [] }) => {
       }
     }
 
-    // Merge with any custom paths passed as props
     return [...items, ...customPaths];
   };
 
