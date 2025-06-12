@@ -17,7 +17,6 @@ const SubModuleCard = () => {
   const location = useLocation();
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
 
-  // Get module name from location state if available
   useEffect(() => {
     if (location.state?.moduleName) {
       setModuleName(location.state.moduleName);

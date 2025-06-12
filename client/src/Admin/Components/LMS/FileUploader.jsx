@@ -68,7 +68,6 @@ const FileUploader = ({
       const newFile = validFiles[0]; // Only take the first file
       onFileSelect(newFile);
 
-      // Store in localStorage
       const uploadData = {
         file: {
           name: newFile.name,

@@ -18,7 +18,6 @@ const ModuleCard = () => {
         const response = await fetchData("dropdown/getModules", "GET");
         if (response?.success) {
           setModules(response.data);
-          // Initialize all descriptions as not expanded
           const initialExpandedState = {};
           response.data.forEach(module => {
             initialExpandedState[module.ModuleID] = false;

@@ -3,6 +3,7 @@ import { images } from '../../public/index.js';
 import { FaCamera, FaCheck, FaTimes, FaSpinner } from 'react-icons/fa';
 import ApiContext from '../context/ApiContext.jsx';
 import Swal from 'sweetalert2';
+import { compressImage } from '../utils/compressImage.js';
 
 const UserAvatar = ({ user, onImageUpdate }) => {
   const { userToken, fetchData, setUser } = useContext(ApiContext);
@@ -11,17 +12,13 @@ const UserAvatar = ({ user, onImageUpdate }) => {
   const fileInputRef = useRef(null);
 
   const getProfileImageUrl = () => {
-    // First priority: Show the preview image if it exists
     if (previewImage) return previewImage;
-    
-    // Second priority: Show the current user's profile picture
     return user?.ProfilePicture || images.defaultProfile;
   };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       Swal.fire({
@@ -44,11 +41,8 @@ const UserAvatar = ({ user, onImageUpdate }) => {
     setIsLoading(true);
 
     try {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setPreviewImage(event.target.result);
-      };
-      reader.readAsDataURL(file);
+      const compressedDataURL = await compressImage(file);
+      setPreviewImage(compressedDataURL);
     } catch (error) {
       console.error('Error processing image:', error);
       Swal.fire({
@@ -63,12 +57,16 @@ const UserAvatar = ({ user, onImageUpdate }) => {
 
   const saveAvatar = async () => {
     if (isLoading || !previewImage) return;
-    
+
     setIsLoading(true);
-    
+
     try {
-      const formData = new FormData();
-      formData.append('profileImage', previewImage);
+      if (setUser) {
+        setUser(prev => ({
+          ...prev,
+          ProfilePicture: previewImage // Use the compressed preview image
+        }));
+      }
 
       const response = await fetchData('userprofile/updateProfilePicture', 'POST', {
         profileImage: previewImage
@@ -80,22 +78,21 @@ const UserAvatar = ({ user, onImageUpdate }) => {
       if (!response) {
         throw new Error('No response from server');
       }
-  
+
       if (response.success) {
-        // Update the user context - this will automatically update all components
         if (setUser) {
           setUser(prev => ({
             ...prev,
             ProfilePicture: response.data.imageUrl
           }));
         }
-        
+
         setPreviewImage(null);
-        
+
         if (onImageUpdate) {
           onImageUpdate(response.data.imageUrl);
         }
-        
+
         Swal.fire({
           icon: 'success',
           title: 'Success!',
@@ -125,27 +122,27 @@ const UserAvatar = ({ user, onImageUpdate }) => {
   return (
     <div className="bg-DGXwhite w-full rounded-lg shadow-xl pb-6 border border-DGXgreen transition-all duration-300 hover:shadow-lg">
       <div className="w-full h-[250px] rounded-t-lg overflow-hidden relative">
-        <img 
-          src={images.NvidiaBackground} 
+        <img
+          src={images.NvidiaBackground}
           className="w-full h-full object-cover"
-          alt="Profile background" 
+          alt="Profile background"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
       </div>
-      
+
       <div className="flex flex-col items-center -mt-20 px-4">
         <div className="relative group mb-4">
           <div className="w-40 h-40 border-4 border-white rounded-full overflow-hidden bg-gray-100 shadow-lg relative">
-            <img 
-              src={getProfileImageUrl()} 
+            <img
+              src={getProfileImageUrl()}
               className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
               alt="User profile"
               onError={(e) => {
                 e.target.src = images.defaultProfile;
               }}
             />
-            
-            <div 
+
+            <div
               className={`absolute inset-0 flex flex-col items-center justify-center bg-black/50 rounded-full transition-all duration-300 ${previewImage ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} cursor-pointer`}
               onClick={triggerFileInput}
             >
@@ -155,7 +152,7 @@ const UserAvatar = ({ user, onImageUpdate }) => {
               </span>
             </div>
           </div>
-          
+
           <input
             ref={fileInputRef}
             type="file"
@@ -175,7 +172,7 @@ const UserAvatar = ({ user, onImageUpdate }) => {
         <div className="w-full max-w-md space-y-4">
           {previewImage && (
             <div className="flex justify-center space-x-4">
-              <button 
+              <button
                 onClick={() => setPreviewImage(null)}
                 disabled={isLoading}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 flex items-center disabled:opacity-50 transition-colors"
@@ -183,7 +180,7 @@ const UserAvatar = ({ user, onImageUpdate }) => {
                 <FaTimes className="mr-2" />
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={saveAvatar}
                 disabled={isLoading}
                 className="px-6 py-2 bg-DGXgreen text-white rounded-full hover:bg-DGXdarkgreen flex items-center disabled:opacity-50 transition-colors shadow-md"
