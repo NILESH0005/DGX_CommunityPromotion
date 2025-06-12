@@ -82,7 +82,7 @@ connectToDatabase((err) => {
     process.exit(1);
   } else {
     console.log('Database connection successful.');
-    app.listen(port, () => {
+    app.listen(port, () => { 
       console.log(`Server is running at http://localhost:${port}`);
     });
   }

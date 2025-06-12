@@ -356,7 +356,7 @@ const ViewContent = ({ submodule, onBack }) => {
       setIsUploading(false);
     }
   };
-  // Helper function to reset form fields
+
   const resetForm = () => {
     setNewFiles([]);
     setFileLinks([]);
