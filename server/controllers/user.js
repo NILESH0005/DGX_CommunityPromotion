@@ -229,7 +229,7 @@ export const databaseUserVerification = async (req, res) => {
 
 //Route 1) create a User using : POST '/api/auth/createuser'. Doesn't require Auth
 
-export const registration = async (req, res) => { 
+export const registration = async (req, res) => {
   let success = false;
 
   // Validate request body
@@ -389,19 +389,14 @@ export const registration = async (req, res) => {
   }
 };
 
-//Route 2) Authenticate a user using POST '/api/auth/login' - no login required
-
 export const login = async (req, res) => {
   let success = false;
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const warningMessage = "The data format is incorrect. Please ensure it meets the required format and try again.";
-
-    logWarning(warningMessage); // Log the warning
-    return res
-      .status(400)
-      .json({ success, data: errors.array(), message: warningMessage });
+    logWarning(warningMessage);
+    return res.status(400).json({ success, data: errors.array(), message: warningMessage });
   }
 
   const { email, password } = req.body;
@@ -418,7 +413,17 @@ export const login = async (req, res) => {
       }
 
       try {
-        const query = "SELECT EmailId, Password, FlagPasswordChange, isAdmin FROM Community_User WHERE isnull(delStatus,0) = 0 AND EmailId = ?";
+        // Updated query to check for profile image
+        const query = `
+          SELECT 
+            EmailId, 
+            Password, 
+            FlagPasswordChange, 
+            isAdmin,
+            CASE WHEN ProfilePicture IS NOT NULL THEN 1 ELSE 0 END AS isProfileImage
+          FROM Community_User 
+          WHERE isnull(delStatus,0) = 0 AND EmailId = ?
+        `;
 
         const result = await queryAsync(conn, query, [email]);
 
@@ -426,10 +431,9 @@ export const login = async (req, res) => {
           const warningMessage = "Please try to login with correct credentials";
           logWarning(warningMessage);
           closeConnection();
-          return res
-            .status(200)
-            .json({ success: false, data: {}, message: warningMessage });
+          return res.status(200).json({ success: false, data: {}, message: warningMessage });
         }
+
         const passwordCompare = await bcrypt.compare(password, result[0].Password);
         if (!passwordCompare) {
           const warningMessage = "Please try to login with correct credentials";
@@ -447,7 +451,7 @@ export const login = async (req, res) => {
         };
         const authtoken = jwt.sign(data, JWT_SECRET);
         success = true;
-        const infoMessage = "You login successfully";
+        const infoMessage = "You logged in successfully";
         logInfo(infoMessage);
         closeConnection();
         return res.status(200).json({
@@ -456,6 +460,7 @@ export const login = async (req, res) => {
             authtoken,
             flag: result[0].FlagPasswordChange,
             isAdmin: result[0].isAdmin,
+            isProfileImage: result[0].isProfileImage === 1, // Convert to boolean
           },
           message: infoMessage,
         });
@@ -465,7 +470,7 @@ export const login = async (req, res) => {
         return res.status(500).json({
           success: false,
           data: queryErr,
-          message: "Something went wrong please try again",
+          message: "Something went wrong, please try again",
         });
       }
     });
@@ -475,7 +480,7 @@ export const login = async (req, res) => {
     return res.status(500).json({
       success: false,
       data: {},
-      message: "Something went wrong please try again",
+      message: "Something went wrong, please try again",
     });
   }
 };
@@ -593,7 +598,6 @@ export const getuser = async (req, res) => {
 
   try {
     const userId = req.user.id;
-    // console.log(userId);
 
     connectToDatabase(async (err, conn) => {
       if (err) {
@@ -652,10 +656,7 @@ export const getuser = async (req, res) => {
 export const getAllUser = async (req, res) => {
   let success = false;
 
-  // Get the HTTP method (GET for fetching users, DELETE for deleting a user)
   const method = req.method;
-
-  // DELETE method to handle user deletion
   if (method === "DELETE") {
     const { userId } = req.body;
 

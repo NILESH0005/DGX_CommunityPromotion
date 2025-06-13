@@ -16,7 +16,6 @@ dotenv.config();
 export const updateModule = async (req, res) => {
     let success = false;
 
-    // 1. Authentication and validation - handle both numeric ID and email
     const userId = req.user?.UserID || req.user?.id;
     if (!userId) {
         return res.status(401).json({ success, message: "User not authenticated" });
@@ -31,22 +30,16 @@ export const updateModule = async (req, res) => {
             message: "Data is not in the right format",
         });
     }
-
-    // 2. Parameter extraction
     const moduleId = parseInt(req.params.id, 10);
     if (isNaN(moduleId)) {
         return res.status(400).json({ success, message: "Invalid module ID" });
     }
-
-    // 3. Extract/update body fields with proper image handling
     let { ModuleName, ModuleDescription, ModuleImage } = req.body;
     let imageBuffer = null;
 
     if (req.is("multipart/form-data")) {
-        // Handle file upload from form-data
         imageBuffer = req.file ? req.file.buffer : null;
     } else if (req.body.ModuleImage?.data) {
-        // Handle base64 image string
         try {
             imageBuffer = Buffer.from(req.body.ModuleImage.data, 'base64');
         } catch (e) {
@@ -531,12 +524,152 @@ export const updateSubModule = async (req, res) => {
     }
 };
 
+// export const addSubmodule = async (req, res) => {
+//     console.log("Incoming request body", req.body);
+//     let success = false;
+//     const userId = req.user.id;
+//     console.log("User ID:", userId);
+
+
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//         const warningMessage = "Data is not in the right format";
+//         logWarning(warningMessage);
+//         return res.status(400).json({
+//             success,
+//             data: errors.array(),
+//             message: warningMessage
+//         });
+//     }
+
+//     try {
+//         const {
+//             SubModuleName,
+//             SubModuleDescription,
+//             SubModuleImage,
+//             ModuleID 
+//         } = req.body;
+
+//         if (!ModuleID) {
+//             const warningMessage = "ModuleID is required";
+//             logWarning(warningMessage);
+//             return res.status(400).json({
+//                 success: false,
+//                 data: {},
+//                 message: warningMessage
+//             });
+//         }
+//         connectToDatabase(async (err, conn) => {
+//             if (err) {
+//                 const errorMessage = "Failed to connect to database";
+//                 logError(errorMessage);
+//                 return res.status(500).json({
+//                     success: false,
+//                     data: err,
+//                     message: errorMessage
+//                 });
+//             }
+
+//             try {
+//                 const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
+//                 const userRows = await queryAsync(conn, userQuery, [userId]);
+
+//                 if (userRows.length === 0) {
+//                     closeConnection();
+//                     const warningMessage = "User not found";
+//                     logWarning(warningMessage);
+//                     return res.status(404).json({
+//                         success: false,
+//                         data: {},
+//                         message: warningMessage
+//                     });
+//                 }
+
+//                 let imageBuffer = null;
+//                 if (SubModuleImage) {
+//                     if (SubModuleImage.startsWith('data:image')) {
+//                         const base64Data = SubModuleImage.replace(/^data:image\/\w+;base64,/, '');
+//                         imageBuffer = Buffer.from(base64Data, 'base64');
+//                     } else {
+//                         imageBuffer = Buffer.from(SubModuleImage, 'binary');
+//                     }
+//                 }
+
+//                 // Insert new submodule with ModuleID
+//                 const insertQuery = `
+//                     INSERT INTO SubModulesDetails 
+//                     (
+//                         SubModuleName, 
+//                         SubModuleImage, 
+//                         SubModuleDescription,
+//                         ModuleID,
+//                         AuthAdd,
+//                         AddOnDt,
+//                         delStatus
+//                     ) 
+//                     VALUES (?, CONVERT(IMAGE, ?), ?, ?, ?, GETDATE(), 0);
+//                 `;
+
+//                 const insertResult = await queryAsync(
+//                     conn,
+//                     insertQuery,
+//                     [
+//                         SubModuleName,
+//                         imageBuffer,
+//                         SubModuleDescription,
+//                         ModuleID, // Added ModuleID parameter
+//                         userRows[0].Name
+//                     ]
+//                 );
+
+//                 // Get the newly created submodule
+//                 const newSubmoduleQuery = `
+//                     SELECT * FROM SubModulesDetails 
+//                     WHERE SubModuleID = SCOPE_IDENTITY() 
+//                     AND ISNULL(delStatus,0) = 0;
+//                 `;
+//                 const newSubmodule = await queryAsync(conn, newSubmoduleQuery);
+
+//                 success = true;
+//                 closeConnection();
+
+//                 const infoMessage = "Submodule added successfully";
+//                 logInfo(infoMessage);
+
+//                 return res.status(200).json({
+//                     success,
+//                     data: newSubmodule[0],
+//                     message: infoMessage
+//                 });
+
+//             } catch (queryErr) {
+//                 closeConnection();
+//                 console.error("Database Query Error:", queryErr);
+//                 logError(queryErr);
+//                 return res.status(500).json({
+//                     success: false,
+//                     data: queryErr,
+//                     message: 'Failed to add submodule. Please check your input data.'
+//                 });
+//             }
+//         });
+//     } catch (error) {
+//         logError(error);
+//         return res.status(500).json({
+//             success: false,
+//             data: {},
+//             message: 'Internal server error'
+//         });
+//     }
+// };
+
+
+
 export const addSubmodule = async (req, res) => {
     console.log("Incoming request body", req.body);
     let success = false;
     const userId = req.user.id;
     console.log("User ID:", userId);
-
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -554,10 +687,9 @@ export const addSubmodule = async (req, res) => {
             SubModuleName,
             SubModuleDescription,
             SubModuleImage,
-            ModuleID // Added ModuleID from request body
+            ModuleID
         } = req.body;
 
-        // Validate required ModuleID
         if (!ModuleID) {
             const warningMessage = "ModuleID is required";
             logWarning(warningMessage);
@@ -568,7 +700,6 @@ export const addSubmodule = async (req, res) => {
             });
         }
 
-        // Connect to database
         connectToDatabase(async (err, conn) => {
             if (err) {
                 const errorMessage = "Failed to connect to database";
@@ -605,61 +736,114 @@ export const addSubmodule = async (req, res) => {
                     }
                 }
 
-                // Insert new submodule with ModuleID
-                const insertQuery = `
-                    INSERT INTO SubModulesDetails 
+                // Start a transaction
+                await queryAsync(conn, "BEGIN TRANSACTION");
+
+                try {
+                    // Insert new submodule with ModuleID and get the ID back
+                    const insertQuery = `
+                        INSERT INTO SubModulesDetails 
+                        (
+                            SubModuleName, 
+                            SubModuleImage, 
+                            SubModuleDescription,
+                            ModuleID,
+                            AuthAdd,
+                            AddOnDt,
+                            delStatus
+                        ) 
+                        OUTPUT INSERTED.SubModuleID
+                        VALUES (?, CONVERT(IMAGE, ?), ?, ?, ?, GETDATE(), 0);
+                    `;
+
+                    const insertResult = await queryAsync(
+                        conn,
+                        insertQuery,
+                        [
+                            SubModuleName,
+                            imageBuffer,
+                            SubModuleDescription,
+                            ModuleID,
+                            userRows[0].Name
+                        ]
+                    );
+
+                    // Get the newly created SubModuleID
+                    const newSubmoduleId = insertResult[0].SubModuleID;
+
+                    // Get module name for the group name
+                    const moduleQuery = `SELECT ModuleName FROM ModulesDetails WHERE ModuleID = ?`;
+                    const moduleRows = await queryAsync(conn, moduleQuery, [ModuleID]);
+                    const moduleName = moduleRows.length > 0 ? moduleRows[0].ModuleName : '';
+
+                    // Insert into group table
+                    // Insert into group table
+                    const groupName = `${SubModuleName} (${moduleName})`;
+                    const groupInsertQuery = `
+                    INSERT INTO GroupMaster 
                     (
-                        SubModuleName, 
-                        SubModuleImage, 
-                        SubModuleDescription,
-                        ModuleID,
+                        group_name,
+                        group_category,
+                        SubModuleID,  
                         AuthAdd,
                         AddOnDt,
                         delStatus
-                    ) 
-                    VALUES (?, CONVERT(IMAGE, ?), ?, ?, ?, GETDATE(), 0);
-                `;
+                    )
+                    VALUES (?, 'submodule', ?, ?, GETDATE(), 0);`;
 
-                const insertResult = await queryAsync(
-                    conn,
-                    insertQuery,
-                    [
-                        SubModuleName,
-                        imageBuffer,
-                        SubModuleDescription,
-                        ModuleID, // Added ModuleID parameter
-                        userRows[0].Name
-                    ]
-                );
+                    await queryAsync(
+                        conn,
+                        groupInsertQuery,
+                        [
+                            groupName,
+                            newSubmoduleId,             // Use the newly created SubModuleID
+                            userRows[0].Name
+                        ]
+                    );
 
-                // Get the newly created submodule
-                const newSubmoduleQuery = `
-                    SELECT * FROM SubModulesDetails 
-                    WHERE SubModuleID = SCOPE_IDENTITY() 
-                    AND ISNULL(delStatus,0) = 0;
-                `;
-                const newSubmodule = await queryAsync(conn, newSubmoduleQuery);
 
-                success = true;
+                    // Commit the transaction
+                    await queryAsync(conn, "COMMIT TRANSACTION");
+
+                    // Get the newly created submodule with all details
+                    const newSubmoduleQuery = `
+                        SELECT * FROM SubModulesDetails 
+                        WHERE SubModuleID = ?
+                        AND ISNULL(delStatus,0) = 0;
+                    `;
+                    const newSubmodule = await queryAsync(conn, newSubmoduleQuery, [newSubmoduleId]);
+
+                    success = true;
+                    closeConnection();
+
+                    const infoMessage = "Submodule and corresponding group added successfully";
+                    logInfo(infoMessage);
+
+                    return res.status(200).json({
+                        success,
+                        data: newSubmodule[0],
+                        message: infoMessage
+                    });
+
+                } catch (queryErr) {
+                    // Rollback transaction if any error occurs
+                    await queryAsync(conn, "ROLLBACK TRANSACTION");
+                    closeConnection();
+                    console.error("Database Query Error:", queryErr);
+                    logError(queryErr);
+                    return res.status(500).json({
+                        success: false,
+                        data: queryErr,
+                        message: 'Failed to add submodule. Please check your input data.'
+                    });
+                }
+            } catch (error) {
                 closeConnection();
-
-                const infoMessage = "Submodule added successfully";
-                logInfo(infoMessage);
-
-                return res.status(200).json({
-                    success,
-                    data: newSubmodule[0],
-                    message: infoMessage
-                });
-
-            } catch (queryErr) {
-                closeConnection();
-                console.error("Database Query Error:", queryErr);
-                logError(queryErr);
+                logError(error);
                 return res.status(500).json({
                     success: false,
-                    data: queryErr,
-                    message: 'Failed to add submodule. Please check your input data.'
+                    data: {},
+                    message: 'Internal server error'
                 });
             }
         });

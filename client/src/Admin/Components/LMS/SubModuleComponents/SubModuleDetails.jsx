@@ -7,17 +7,17 @@ import UnitDetails from './UnitDetails';
 import FilesTable from './FilesTable';
 import FileUploadModal from './FileUploadModal';
 
-const SubModuleDetails = ({ 
-    subModule, 
-    onAddUnit, 
-    onRemoveUnit, 
+const SubModuleDetails = ({
+    subModule,
+    onAddUnit,
+    onRemoveUnit,
     onUploadFile,
     errors,
     setErrors
 }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [currentUnit, setCurrentUnit] = useState(null);
-    const [uploadedFile, setUploadedFile] = useState(null);
+    const [uploadedFile, setUploadedFile] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [imagePreview, setImagePreview] = useState(null);
 
@@ -62,8 +62,8 @@ const SubModuleDetails = ({
 
         try {
             const success = await onUploadFile(
-                subModule.id, 
-                currentUnit.id, 
+                subModule.id,
+                currentUnit.id,
                 uploadedFile
             );
 
@@ -105,13 +105,13 @@ const SubModuleDetails = ({
     return (
         <>
             {/* Unit Details */}
-            <UnitDetails 
-                subModule={subModule} 
+            <UnitDetails
+                subModule={subModule}
                 onImageClick={showImagePreview}
             />
-            
+
             {/* Add Unit Form */}
-            <AddUnitForm 
+            <AddUnitForm
                 onAddUnit={onAddUnit}
                 errors={errors}
                 setErrors={setErrors}
@@ -177,8 +177,8 @@ const SubModuleDetails = ({
                                             </motion.button>
                                         </div>
                                     </div>
-                                    <FilesTable 
-                                        files={unit.files} 
+                                    <FilesTable
+                                        files={unit.files}
                                         onImageClick={showImagePreview}
                                     />
                                 </motion.div>

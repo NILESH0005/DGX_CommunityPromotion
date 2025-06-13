@@ -19,7 +19,7 @@ export const compressImage = (file) => {
                     
                 };
                 reader.onerror = (error) => reject(error);
-                reader.readAsDataURL(compressedFile); // Read as Data URL to get Base64
+                reader.readAsDataURL(compressedFile);
             })
             .catch((error) => {
                 console.error('Error compressing image:', error);

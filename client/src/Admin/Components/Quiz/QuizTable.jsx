@@ -245,20 +245,20 @@ const QuizTable = () => {
     if (result.isConfirmed) {
       try {
         const endpoint = `quiz/deleteQuiz/${quizId}`;
-        const method = "DELETE";
+        const method = "POST";
         const headers = {
           'Content-Type': 'application/json',
           'auth-token': userToken
         };
+        const body = {}
 
-        const response = await fetchData(endpoint, method, null, headers);
+        const response = await fetchData(endpoint, method, body, headers);
         if (response.success) {
           Swal.fire(
             'Deleted!',
             'Quiz has been deleted.',
             'success'
           );
-          // Update local state to remove the deleted quiz
           setQuizzes(prevQuizzes => prevQuizzes.filter(quiz => quiz.QuizID !== quizId));
         } else {
           throw new Error(response.message || "Failed to delete quiz");

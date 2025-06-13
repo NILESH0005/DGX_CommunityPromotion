@@ -17,12 +17,16 @@ const SubModuleCard = () => {
   const location = useLocation();
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
 
-  // Get module name from location state if available
   useEffect(() => {
     if (location.state?.moduleName) {
       setModuleName(location.state.moduleName);
+      localStorage.setItem("moduleName", location.state.moduleName);
+    } else {
+      const storedName = localStorage.getItem("moduleName");
+      if (storedName) setModuleName(storedName);
     }
   }, [location.state]);
+
 
   useEffect(() => {
     const fetchAllSubModules = async () => {
@@ -50,12 +54,12 @@ const SubModuleCard = () => {
             "auth-token": userToken
           }
         );
-        console.log("hhjsd b",progressResponse)
+        console.log("hhjsd b", progressResponse)
         const subModulesWithProgress = subModulesResponse.data.map(subModule => ({
           ...subModule,
           progress: progressResponse?.data?.find(p => p.subModuleID === subModule.SubModuleID)?.progressPercentage || 0
         }));
-        
+
         setFilteredSubModules(subModulesWithProgress);
         const currentModule = subModulesResponse.data.find(
           (module) => module.ModuleID?.toString() === moduleId
@@ -184,8 +188,8 @@ const handleSubModuleClick = (subModule) => {
               <div
                 key={subModule.SubModuleID}
                 className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer ${expandedDescriptions[subModule.SubModuleID]
-                    ? 'h-auto'
-                    : 'h-[400px]'
+                  ? 'h-auto'
+                  : 'h-[400px]'
                   }`}
                 onClick={() => handleSubModuleClick(subModule)}
               >
@@ -209,8 +213,8 @@ const handleSubModuleClick = (subModule) => {
                   <div className="overflow-hidden">
                     <p
                       className={`text-gray-600 text-base mb-1 hover:text-gray-800 transition-colors duration-200 break-words ${expandedDescriptions[subModule.SubModuleID]
-                          ? 'overflow-y-auto max-h-32'
-                          : 'line-clamp-3'
+                        ? 'overflow-y-auto max-h-32'
+                        : 'line-clamp-3'
                         }`}
                     >
                       {subModule.SubModuleDescription || "No description available"}
