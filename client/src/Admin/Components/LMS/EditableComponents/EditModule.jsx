@@ -210,7 +210,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules, onCreateQuiz
                     : module.ModuleImage.data
                 }`
                 : null
-        );
+        ); 
         setError(null);
         setShowFullDescription(false);
     };
