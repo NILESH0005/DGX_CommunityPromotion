@@ -245,7 +245,7 @@ const QuizTable = () => {
     if (result.isConfirmed) {
       try {
         const endpoint = `quiz/deleteQuiz/${quizId}`;
-        const method = "DELETE";
+        const method = "POST";
         const headers = {
           'Content-Type': 'application/json',
           'auth-token': userToken
