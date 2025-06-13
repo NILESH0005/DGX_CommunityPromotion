@@ -186,7 +186,6 @@ const Quiz = () => {
           QuizID: quizData.QuizID
         };
       } else if (quizData.QuizID) {
-        // LMS module flow with only QuizID
         endpoint = "quiz/getQuizQuestionsByQuizId"; // You'll need to create this endpoint
         requestBody = {
           QuizID: quizData.QuizID
@@ -251,7 +250,6 @@ const Quiz = () => {
 
   const transformQuestions = (apiQuestions) => {
     return apiQuestions.map((item) => {
-      // First ensure options have proper IDs
       const optionsWithIds = item.options.map((option, index) => ({
         ...option,
         id: option.id ? Number(option.id) : index + 1, // Fallback to index if ID is missing

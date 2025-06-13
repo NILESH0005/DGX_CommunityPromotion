@@ -32,21 +32,15 @@ const SubModuleCard = () => {
       try {
         setLoading(true);
         setError(null);
-
-        // Step 1: Fetch submodules
         const subModulesResponse = await fetchData(
           `dropdown/getSubModules?moduleId=${moduleId}`,
           "GET"
         );
-
         if (!subModulesResponse?.success) {
           setError(subModulesResponse?.message || "Failed to fetch submodules");
           return;
         }
-
         const subModuleIds = subModulesResponse.data.map(sm => sm.SubModuleID);
-
-        // Step 2: Fetch progress
         const progressResponse = await fetchData(
           'progressTrack/getSubModulesProgress',
           'POST',
@@ -56,8 +50,6 @@ const SubModuleCard = () => {
             "auth-token": userToken
           }
         );
-
-        // Step 3: Merge progress data into submodules
         const subModulesWithProgress = subModulesResponse.data.map(subModule => ({
           ...subModule,
           progress: progressResponse?.data?.find(p => p.subModuleID === subModule.SubModuleID)?.progressPercentage || 0
@@ -66,16 +58,26 @@ const SubModuleCard = () => {
         setFilteredSubModules(subModulesWithProgress);
 
         // Step 4: Set module name and expanded state
-        const currentModule = subModulesResponse.data.find(
-          module => module.ModuleID?.toString() === moduleId
-        );
-        setModuleName(currentModule?.ModuleName || "");
+        // const currentModule = subModulesResponse.data.find(
+        //   module => module.ModuleID?.toString() === moduleId
+        // );
+        // setModuleName(currentModule?.ModuleName || "");
 
         const initialExpandedState = {};
         subModulesResponse.data.forEach(subModule => {
           initialExpandedState[subModule.SubModuleID] = false;
         });
         setExpandedDescriptions(initialExpandedState);
+        if (!moduleName) {
+          const currentModule = subModulesResponse.data[0]?.ModuleName;
+          if (currentModule) {
+            setModuleName(currentModule);
+            // Update URL to include moduleName if it wasn't there
+            if (!searchParams.get('moduleName')) {
+              navigate(`?moduleName=${encodeURIComponent(currentModule)}`, { replace: true });
+            }
+          }
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
         setError("An error occurred while fetching data");
@@ -97,9 +99,14 @@ const SubModuleCard = () => {
   };
 
   const handleSubModuleClick = (subModule) => {
-    navigate(`/submodule/${subModule.SubModuleID}?moduleId=${moduleId}&moduleName=${encodeURIComponent(moduleName)}&submoduleName=${encodeURIComponent(subModule.SubModuleName)}`);
+    navigate(`/submodule/${subModule.SubModuleID}`, {
+      state: {
+        moduleId,
+        moduleName,
+        submoduleName: subModule.SubModuleName
+      }
+    });
   };
-
 
   const handleFileClick = (file, subModule) => {
     navigate('/file-viewer', {
