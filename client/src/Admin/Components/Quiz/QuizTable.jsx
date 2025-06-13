@@ -250,8 +250,9 @@ const QuizTable = () => {
           'Content-Type': 'application/json',
           'auth-token': userToken
         };
+        const body = {}
 
-        const response = await fetchData(endpoint, method, headers);
+        const response = await fetchData(endpoint, method, body, headers);
         if (response.success) {
           Swal.fire(
             'Deleted!',
