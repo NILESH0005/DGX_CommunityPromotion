@@ -110,7 +110,7 @@ const CreateQuiz = ({ onBack }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-700 font-medium mb-2 flex items-center gap-2">
+              <label className=" text-gray-700 font-medium mb-2 flex items-center gap-2">
                 <FaCalendarAlt /> Start Date
               </label>
               <input
@@ -124,7 +124,7 @@ const CreateQuiz = ({ onBack }) => {
             </div>
 
             <div>
-              <label className="block text-gray-700 font-medium mb-2 flex items-center gap-2">
+              <label className=" text-gray-700 font-medium mb-2 flex items-center gap-2">
                 <FaCalendarAlt /> End Date
               </label>
               <input

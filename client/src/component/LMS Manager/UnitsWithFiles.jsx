@@ -529,8 +529,18 @@ const UnitsWithFiles = () => {
                                 <div className="mr-3 flex-shrink-0 transition-transform group-hover:scale-110">
                                   {getFileIcon(file.fileType)}
                                 </div>
-                                <div className="flex-1 min-w-0">
+                                {/* <div className="flex-1 min-w-0">
                                   <span className="block truncate font-medium text-sm">
+                                    {removeFileExtension(file.FilesName)}
+                                  </span>
+                                  {isViewed && !isSelected && (
+                                    <span className="text-xs text-green-300 mt-1 block">
+                                      ✓ Completed
+                                    </span>
+                                  )}
+                                </div> */}
+                                <div className="flex-1 min-w-0">
+                                  <span className="block font-medium text-sm whitespace-normal break-words">
                                     {removeFileExtension(file.FilesName)}
                                   </span>
                                   {isViewed && !isSelected && (
@@ -637,7 +647,7 @@ const UnitsWithFiles = () => {
                   <h3 className="text-xl font-bold mb-4">
                     {selectedFile.FilesName || "External Content Link"}
                   </h3>
-                  <p className="mb-6 text-gray-600">
+                  <p className="mb-6 text-gray-600 italic">
                     {selectedFile.Description ||
                       "This content is hosted externally. Click the button below to view it."}
                   </p>
