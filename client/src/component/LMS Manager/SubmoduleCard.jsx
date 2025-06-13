@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import ApiContext from "../../context/ApiContext";
 import ByteArrayImage from "../../utils/ByteArrayImage";
 import ProgressBar from "./ProgressBar";
@@ -8,6 +8,7 @@ import BreadCrumb from "./BreadCrumb";
 
 const SubModuleCard = () => {
   const { moduleId } = useParams();
+  const [searchParams] = useSearchParams();
   const [filteredSubModules, setFilteredSubModules] = useState([]);
   const [moduleName, setModuleName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -18,15 +19,13 @@ const SubModuleCard = () => {
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
 
   useEffect(() => {
-    if (location.state?.moduleName) {
+    const nameFromParams = searchParams.get('moduleName');
+    if (nameFromParams) {
+      setModuleName(decodeURIComponent(nameFromParams));
+    } else if (location.state?.moduleName) {
       setModuleName(location.state.moduleName);
-      localStorage.setItem("moduleName", location.state.moduleName);
-    } else {
-      const storedName = localStorage.getItem("moduleName");
-      if (storedName) setModuleName(storedName);
     }
-  }, [location.state]);
-
+  }, [location.state, searchParams]);
 
   useEffect(() => {
     const fetchAllSubModules = async () => {
@@ -34,37 +33,44 @@ const SubModuleCard = () => {
         setLoading(true);
         setError(null);
 
-        // First fetch submodules data
-        const subModulesResponse = await fetchData(`dropdown/getSubModules?moduleId=${moduleId}`, "GET");
+        // Step 1: Fetch submodules
+        const subModulesResponse = await fetchData(
+          `dropdown/getSubModules?moduleId=${moduleId}`,
+          "GET"
+        );
 
         if (!subModulesResponse?.success) {
           setError(subModulesResponse?.message || "Failed to fetch submodules");
           return;
         }
 
+        const subModuleIds = subModulesResponse.data.map(sm => sm.SubModuleID);
+
+        // Step 2: Fetch progress
         const progressResponse = await fetchData(
           'progressTrack/getSubModulesProgress',
           'POST',
-          {
-            moduleId,
-            subModuleIds: subModulesResponse.data.map(sm => sm.SubModuleID)
-          },
+          { moduleId, subModuleIds },
           {
             "Content-Type": "application/json",
             "auth-token": userToken
           }
         );
-        console.log("hhjsd b", progressResponse)
+
+        // Step 3: Merge progress data into submodules
         const subModulesWithProgress = subModulesResponse.data.map(subModule => ({
           ...subModule,
           progress: progressResponse?.data?.find(p => p.subModuleID === subModule.SubModuleID)?.progressPercentage || 0
         }));
 
         setFilteredSubModules(subModulesWithProgress);
+
+        // Step 4: Set module name and expanded state
         const currentModule = subModulesResponse.data.find(
-          (module) => module.ModuleID?.toString() === moduleId
+          module => module.ModuleID?.toString() === moduleId
         );
         setModuleName(currentModule?.ModuleName || "");
+
         const initialExpandedState = {};
         subModulesResponse.data.forEach(subModule => {
           initialExpandedState[subModule.SubModuleID] = false;
@@ -81,6 +87,7 @@ const SubModuleCard = () => {
     fetchAllSubModules();
   }, [moduleId, fetchData, userToken]);
 
+
   const toggleDescription = (subModuleId, event) => {
     event.stopPropagation();
     setExpandedDescriptions(prev => ({
@@ -89,21 +96,10 @@ const SubModuleCard = () => {
     }));
   };
 
-const handleSubModuleClick = (subModule) => {
-  // Store all necessary data in localStorage
-  localStorage.setItem('moduleName', moduleName);
-  localStorage.setItem('moduleId', moduleId);
-  localStorage.setItem('submoduleName', subModule.SubModuleName);
-  localStorage.setItem('subModuleId', subModule.SubModuleID);
+  const handleSubModuleClick = (subModule) => {
+    navigate(`/submodule/${subModule.SubModuleID}?moduleId=${moduleId}&moduleName=${encodeURIComponent(moduleName)}&submoduleName=${encodeURIComponent(subModule.SubModuleName)}`);
+  };
 
-  navigate(`/submodule/${subModule.SubModuleID}`, {
-    state: {
-      moduleName,
-      submoduleName: subModule.SubModuleName,
-      moduleId
-    }
-  });
-};
 
   const handleFileClick = (file, subModule) => {
     navigate('/file-viewer', {

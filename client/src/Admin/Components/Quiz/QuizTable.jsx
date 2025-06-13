@@ -239,12 +239,12 @@ const QuizTable = () => {
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!'
+      confirmButtonText: 'Ok!'
     });
 
     if (result.isConfirmed) {
       try {
-        const endpoint = `quiz/deleteQuiz/${quizId}`;
+        const endpoint = `quiz/deleteQuiz`;
         const method = "POST";
         const headers = {
           'Content-Type': 'application/json',
