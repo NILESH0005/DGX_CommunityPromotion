@@ -183,7 +183,6 @@ export const getQuestionGroupDropdown = async (req, res) => {
     }
 };
 
-// controllers/dropdown.js
 export const getModuleById = async (req, res) => {
     let success = false;
     const { moduleId } = req.query;
