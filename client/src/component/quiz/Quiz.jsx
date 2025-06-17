@@ -62,8 +62,6 @@ const Quiz = () => {
 
 
   useEffect(() => {
-    // console.log("Current quiz data:", quiz); 
-
     if (!quiz?.QuizID) {
       setError("Quiz ID is missing");
       setLoading(false);
@@ -77,10 +75,9 @@ const Quiz = () => {
     }
 
      if (userToken) {
-    // Call fetchQuizQuestions with the quiz object
     fetchQuizQuestions({
       QuizID: quiz.QuizID,
-      group_id: quiz.group_id || null, // Make group_id optional
+      group_id: quiz.group_id || null, 
       duration: quiz.QuizDuration // Pass duration if available
     });
   }
@@ -174,20 +171,16 @@ const Quiz = () => {
 
     try {
       console.log("Fetching questions with:", quizData);
-
-      // Determine the endpoint and request body based on available data
       let endpoint, requestBody;
 
       if (quizData.group_id && quizData.QuizID) {
-        // Regular quiz flow with both group_id and QuizID
         endpoint = "quiz/getQuizQuestions";
         requestBody = {
           quizGroupID: quizData.group_id,
           QuizID: quizData.QuizID
         };
       } else if (quizData.QuizID) {
-        // LMS module flow with only QuizID
-        endpoint = "quiz/getQuizQuestionsByQuizId"; // You'll need to create this endpoint
+        endpoint = "quiz/getQuizQuestionsByQuizId"; 
         requestBody = {
           QuizID: quizData.QuizID
         };
@@ -218,8 +211,6 @@ const Quiz = () => {
 
         const saved = loadSavedAnswers();
         setSelectedAnswers(saved?.answers || Array(transformedQuestions.length).fill(null));
-
-        // Initialize timer and question status
         if (transformedQuestions.length > 0) {
           const duration = transformedQuestions[0].duration || quizData.duration || 30;
           const hours = Math.floor(duration / 60);
@@ -251,7 +242,6 @@ const Quiz = () => {
 
   const transformQuestions = (apiQuestions) => {
     return apiQuestions.map((item) => {
-      // First ensure options have proper IDs
       const optionsWithIds = item.options.map((option, index) => ({
         ...option,
         id: option.id ? Number(option.id) : index + 1, // Fallback to index if ID is missing

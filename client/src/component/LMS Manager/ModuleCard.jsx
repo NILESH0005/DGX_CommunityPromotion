@@ -35,7 +35,7 @@ const ModuleCard = () => {
   }, [fetchData]);
 
   const handleModuleClick = (moduleId, moduleName) => {
-    navigate(`/module/${moduleId}`, { state: { moduleName } });
+    navigate(`/module/${moduleId}?moduleName=${encodeURIComponent(moduleName)}`);
   };
 
   const toggleDescription = (moduleId, event) => {
@@ -78,15 +78,15 @@ const ModuleCard = () => {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modules.map((module) => (
-            <div 
-              key={module.ModuleID} 
+            <div
+              key={module.ModuleID}
               className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
               onClick={() => handleModuleClick(module.ModuleID, module.ModuleName)}
             >
               <div className="h-48 bg-gray-100 overflow-hidden">
                 {module.ModuleImage ? (
-                  <ByteArrayImage 
-                    byteArray={module.ModuleImage.data} 
+                  <ByteArrayImage
+                    byteArray={module.ModuleImage.data}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
@@ -96,18 +96,17 @@ const ModuleCard = () => {
                 )}
               </div>
               <div className="p-6">
-                <h3 
+                <h3
                   className="text-xl font-bold text-gray-800 mb-3 hover:text-blue-600 transition-colors duration-200 break-words"
                 >
                   {module.ModuleName}
                 </h3>
-                
-                <p 
-                  className={`text-gray-600 text-base mb-4 hover:text-gray-800 transition-colors duration-200 break-words ${
-                    expandedDescriptions[module.ModuleID] 
-                      ? 'overflow-y-auto max-h-32' 
+
+                <p
+                  className={`text-gray-600 text-base mb-4 hover:text-gray-800 transition-colors duration-200 break-words ${expandedDescriptions[module.ModuleID]
+                      ? 'overflow-y-auto max-h-32'
                       : 'line-clamp-2'
-                  }`}
+                    }`}
                 >
                   {module.ModuleDescription || "No description available"}
                 </p>

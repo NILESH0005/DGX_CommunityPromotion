@@ -354,12 +354,12 @@ function App() {
               path="/submodule/:subModuleId"
               element={<UnitsWithFiles />}
             />
-              
+{/* 
             <Route path="/module/:moduleId" element={<SubModuleCard />} />
             <Route
               path="/submodule/:subModuleId"
               element={<UnitsWithFiles />}
-            />
+            /> */}
           </Routes>
         </div>
         <Footer />

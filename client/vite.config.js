@@ -7,7 +7,7 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "./",
+  base: "/",
   // base: "/DGX_Community/",
   assetsInclude: ["**/*.woff", "**/*.woff2", "**/*.ttf"],
 });
