@@ -102,9 +102,9 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules, onCreateQuiz
             text: "Are you sure you want to update this module?",
             icon: "question",
             showCancelButton: true,
-            confirmButtonText: "Yes",
+            confirmButtonText: "OK",
             cancelButtonText: "Cancel",
-        });
+        });     
 
         if (!confirmResult.isConfirmed) return;
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import ApiContext from "../../../../context/ApiContext";
 import Swal from "sweetalert2";
 import AddUnitModal from "./AddUnitModal";
+import UnitOrder from "./UnitOrder";
+import FilesOrder from "./FilesOrder";
 import {
   FaEdit,
   FaTrash,
@@ -18,6 +20,8 @@ import { Link } from "react-router-dom";
 import EditModule from "./EditModule";
 
 const ViewContent = ({ submodule, onBack }) => {
+  const [showUnitOrder, setShowUnitOrder] = useState(false);
+  const [showFilesOrder, setShowFilesOrder] = useState(false);
   const [units, setUnits] = useState([]);
   const [filteredUnits, setFilteredUnits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +101,108 @@ const ViewContent = ({ submodule, onBack }) => {
     }
   }, [selectedUnit, units, fetchData, userToken]);
 
+  // const handleSaveFilesOrder = async (orderedFiles) => {
+  //   try {
+  //     const response = await fetchData(
+  //       "lmsEdit/updateFilesOrder",
+  //       "POST",
+  //       { files: orderedFiles },
+  //       {
+  //         "Content-Type": "application/json",
+  //         "auth-token": userToken,
+  //       }
+  //     );
+
+  //     if (response?.success) {
+  //       setFiles(orderedFiles);
+  //       setShowFilesOrder(false);
+  //       Swal.fire("Success!", "Files order has been updated.", "success");
+  //     } else {
+  //       throw new Error(response?.message || "Failed to update files order");
+  //     }
+  //   } catch (err) {
+  //     console.error("Error updating files order:", err);
+  //     Swal.fire(
+  //       "Error!",
+  //       `Failed to update files order: ${err.message}`,
+  //       "error"
+  //     );
+  //   }
+  // };
+
+  const handleSaveFilesOrder = async (orderedFiles) => {
+    try {
+      // Validate input
+      if (
+        !orderedFiles ||
+        !Array.isArray(orderedFiles) ||
+        orderedFiles.length === 0
+      ) {
+        throw new Error("No files to update");
+      }
+
+      // Prepare files with their new order positions and equal percentage distribution
+      const equalPercentage = (100 / orderedFiles.length).toFixed(2);
+      const filesWithOrder = orderedFiles.map((file, index) => ({
+        FileID: file.FileID,
+        Percentage: equalPercentage, // Distribute percentage equally
+        SortingOrder: index + 1, // 1-based index
+      }));
+
+      // Filter out any files with invalid IDs (like temporary IDs)
+      const validFiles = filesWithOrder.filter(
+        (file) =>
+          file.FileID && Number.isInteger(file.FileID) && file.FileID > 0
+      );
+
+      const response = await fetchData(
+        "lmsEdit/updateFilesOrder",
+        "POST",
+        { files: validFiles },
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        }
+      );
+
+      if (response?.success) {
+        // Update local state with new order and percentages
+        const updatedFiles = files
+          .map((file) => {
+            const updatedFile = validFiles.find(
+              (f) => f.FileID === file.FileID
+            );
+            return updatedFile
+              ? {
+                  ...file,
+                  SortingOrder: updatedFile.SortingOrder,
+                  Percentage: updatedFile.Percentage,
+                }
+              : file;
+          })
+          .sort((a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0));
+
+        setFiles(updatedFiles);
+        setShowFilesOrder(false); // Close the modal after successful save
+
+        Swal.fire(
+          "Success!",
+          "Files order and percentages have been updated.",
+          "success"
+        );
+      } else {
+        throw new Error(response?.message || "Failed to update files order");
+      }
+    } catch (err) {
+      console.error("Error updating files order:", err);
+      Swal.fire(
+        "Error!",
+        err.message || "Failed to update files order",
+        "error"
+      );
+    }
+  };
+
   const handleEditUnit = (unit) => {
     setEditingUnit(unit);
     setEditedUnitData({
@@ -165,6 +271,62 @@ const ViewContent = ({ submodule, onBack }) => {
       setError(err.message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveUnitOrder = async (orderedUnits) => {
+    try {
+      // Prepare units with their new order positions
+      const unitsWithOrder = orderedUnits.map((unit, index) => ({
+        UnitID: unit.UnitID,
+        SortingOrder: index + 1,
+      }));
+
+      const response = await fetchData(
+        "lmsEdit/updateUnitOrder",
+        "POST",
+        { units: unitsWithOrder },
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        }
+      );
+
+      if (response?.success) {
+        // Update local state with new order
+        const updatedUnits = [...units]
+          .map((unit) => {
+            const updatedUnit = unitsWithOrder.find(
+              (u) => u.UnitID === unit.UnitID
+            );
+            return updatedUnit
+              ? { ...unit, SortingOrder: updatedUnit.SortingOrder }
+              : unit;
+          })
+          .sort((a, b) => {
+            const orderA = a.SortingOrder || Number.MAX_SAFE_INTEGER;
+            const orderB = b.SortingOrder || Number.MAX_SAFE_INTEGER;
+            return orderA - orderB || a.UnitID - b.UnitID;
+          });
+
+        setUnits(updatedUnits);
+        setFilteredUnits(
+          updatedUnits.filter(
+            (unit) => unit.SubModuleID === submodule.SubModuleID
+          )
+        );
+        setShowUnitOrder(false);
+        Swal.fire("Success!", "Unit order has been updated.", "success");
+      } else {
+        throw new Error(response?.message || "Failed to update unit order");
+      }
+    } catch (err) {
+      console.error("Error updating unit order:", err);
+      Swal.fire(
+        "Error!",
+        `Failed to update unit order: ${err.message}`,
+        "error"
+      );
     }
   };
 
@@ -238,9 +400,8 @@ const ViewContent = ({ submodule, onBack }) => {
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files); // Convert FileList to array
-    setNewFiles(prevFiles => [...prevFiles, ...selectedFiles]);
+    setNewFiles((prevFiles) => [...prevFiles, ...selectedFiles]);
   };
-
 
   const handleUploadFiles = async () => {
     if (newFiles.length === 0 && fileLink.trim() === "") {
@@ -256,7 +417,8 @@ const ViewContent = ({ submodule, onBack }) => {
         didOpen: () => Swal.showLoading(),
       });
 
-      const totalFilesAfterUpload = files.length + newFiles.length + (fileLink.trim() ? 1 : 0);
+      const totalFilesAfterUpload =
+        files.length + newFiles.length + (fileLink.trim() ? 1 : 0);
       const equalPercentage = (100 / totalFilesAfterUpload).toFixed(2);
 
       // Upload all files
@@ -302,13 +464,13 @@ const ViewContent = ({ submodule, onBack }) => {
               fileName: linkName || "Link",
               description: linkDescription || "",
               percentage: equalPercentage,
-              fileType: "link"
+              fileType: "link",
             },
             {
               "Content-Type": "application/json",
               "auth-token": userToken,
             }
-          ).catch(err => {
+          ).catch((err) => {
             console.error("Link upload error:", err);
             return { success: false, error: err.message };
           })
@@ -320,8 +482,8 @@ const ViewContent = ({ submodule, onBack }) => {
       await uploadToast.close();
 
       // Filter successful uploads
-      const successfulUploads = results.filter(result => result?.success);
-      const failedUploads = results.filter(result => !result?.success);
+      const successfulUploads = results.filter((result) => result?.success);
+      const failedUploads = results.filter((result) => !result?.success);
 
       if (failedUploads.length > 0) {
         console.error("Some uploads failed:", failedUploads);
@@ -334,7 +496,7 @@ const ViewContent = ({ submodule, onBack }) => {
           Percentage: equalPercentage,
         }));
 
-        const newFileData = successfulUploads.map(result => ({
+        const newFileData = successfulUploads.map((result) => ({
           ...result.data,
           Percentage: equalPercentage,
         }));
@@ -343,7 +505,9 @@ const ViewContent = ({ submodule, onBack }) => {
         resetForm();
         Swal.fire(
           "Success!",
-          `Uploaded ${successfulUploads.length} items successfully${failedUploads.length > 0 ? ` (${failedUploads.length} failed)` : ''}`,
+          `Uploaded ${successfulUploads.length} items successfully${
+            failedUploads.length > 0 ? ` (${failedUploads.length} failed)` : ""
+          }`,
           "success"
         );
       } else {
@@ -367,7 +531,6 @@ const ViewContent = ({ submodule, onBack }) => {
       fileInputRef.current.value = ""; // Clear the file input
     }
   };
-
 
   const handleDeleteFile = async (fileId) => {
     const result = await Swal.fire({
@@ -470,7 +633,7 @@ const ViewContent = ({ submodule, onBack }) => {
         </div>
 
         {/* Header Section */}
-        <div className="flex items-center justify-between mb-6">
+        {/* <div className="flex items-center justify-between mb-6">
           <button
             onClick={handleAddUnitClick}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
@@ -483,7 +646,24 @@ const ViewContent = ({ submodule, onBack }) => {
             <span className="text-red-600 dark:text-red-400">
               {submodule.SubModuleName}
             </span>
-          </h1> */}
+          </h1> 
+        </div> */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex gap-2">
+            <button
+              onClick={handleAddUnitClick}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
+            >
+              <FaEdit className="mr-2" />
+              Add New Unit
+            </button>
+            <button
+              onClick={() => setShowUnitOrder(true)}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
+            >
+              Manage Unit Order
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -502,10 +682,11 @@ const ViewContent = ({ submodule, onBack }) => {
                     .map((unit) => (
                       <div
                         key={unit.UnitID}
-                        className={`p-4 cursor-pointer transition-colors duration-200 ${selectedUnit?.UnitID === unit.UnitID
-                          ? "bg-blue-50 dark:bg-gray-700"
-                          : "hover:bg-gray-50 dark:hover:bg-gray-700"
-                          }`}
+                        className={`p-4 cursor-pointer transition-colors duration-200 ${
+                          selectedUnit?.UnitID === unit.UnitID
+                            ? "bg-blue-50 dark:bg-gray-700"
+                            : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                        }`}
                         onClick={() => setSelectedUnit(unit)}
                       >
                         <div className="flex justify-between items-start">
@@ -738,13 +919,20 @@ const ViewContent = ({ submodule, onBack }) => {
                           {newFiles.length > 0 && (
                             <div className="space-y-2">
                               {newFiles.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded"
+                                >
                                   <span className="text-sm text-gray-800 dark:text-gray-200 flex items-center">
                                     <FaFile className="mr-2" />
                                     {file.name}
                                   </span>
                                   <button
-                                    onClick={() => setNewFiles(prev => prev.filter((_, i) => i !== index))}
+                                    onClick={() =>
+                                      setNewFiles((prev) =>
+                                        prev.filter((_, i) => i !== index)
+                                      )
+                                    }
                                     className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                   >
                                     <FaTimes />
@@ -756,7 +944,11 @@ const ViewContent = ({ submodule, onBack }) => {
                           {/* Save Button */}
                           <button
                             onClick={handleUploadFiles}
-                            disabled={(newFiles.length === 0 && fileLink.trim() === "") || isUploading}
+                            disabled={
+                              (newFiles.length === 0 &&
+                                fileLink.trim() === "") ||
+                              isUploading
+                            }
                             className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors duration-200 flex items-center justify-center disabled:opacity-50"
                           >
                             {isUploading ? (
@@ -786,12 +978,21 @@ const ViewContent = ({ submodule, onBack }) => {
                             ) : (
                               <>
                                 <FaSave className="mr-2" />
-                                {newFiles.length > 0 || fileLink.trim() ? "Upload Content" : "Save"}
+                                {newFiles.length > 0 || fileLink.trim()
+                                  ? "Upload Content"
+                                  : "Save"}
                               </>
                             )}
                           </button>
                         </div>
                       </div>
+                      <button
+                        onClick={() => setShowFilesOrder(true)}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 mb-6"
+                        disabled={files.length === 0}
+                      >
+                        Reorder Files
+                      </button>
 
                       {files.length > 0 ? (
                         <div className="overflow-x-auto">
@@ -874,6 +1075,21 @@ const ViewContent = ({ submodule, onBack }) => {
       <ReactTooltip id="edit-unit-tooltip" place="top" effect="solid" />
       <ReactTooltip id="delete-unit-tooltip" place="top" effect="solid" />
       <ReactTooltip id="delete-file-tooltip" place="top" effect="solid" />
+
+      {showUnitOrder && (
+        <UnitOrder
+          units={filteredUnits}
+          onClose={() => setShowUnitOrder(false)}
+          onSave={handleSaveUnitOrder}
+        />
+      )}
+      {showFilesOrder && (
+        <FilesOrder
+          files={files}
+          onClose={() => setShowFilesOrder(false)}
+          onSave={handleSaveFilesOrder}
+        />
+      )}
     </div>
   );
 };

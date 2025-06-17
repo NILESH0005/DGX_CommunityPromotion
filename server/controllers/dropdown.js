@@ -257,6 +257,115 @@ export const getModuleById = async (req, res) => {
     }
 };
 
+// export const getModules = async (req, res) => {
+//     let success = false;
+
+//     try {
+//         connectToDatabase(async (err, conn) => {
+//             if (err) {
+//                 logError(err);
+//                 return res.status(500).json({
+//                     success,
+//                     message: "Database connection error"
+//                 });
+//             }
+
+//             try {
+//                 const query = `
+//             SELECT 
+//               ModuleID, 
+//               ModuleName, 
+//               ModuleImage, 
+//               ModuleDescription 
+//             FROM ModulesDetails 
+//             WHERE delStatus = 0
+//             ORDER BY ModuleID
+//           `;
+
+//                 const results = await queryAsync(conn, query);
+
+//                 success = true;
+//                 res.status(200).json({
+//                     success,
+//                     data: results,
+//                     message: "Modules fetched successfully"
+//                 });
+//             } catch (queryErr) {
+//                 logError(queryErr);
+//                 res.status(500).json({
+//                     success,
+//                     message: "Error fetching modules"
+//                 });
+//             } finally {
+//                 closeConnection();
+//             }
+//         });
+//     } catch (error) {
+//         logError(error);
+//         res.status(500).json({
+//             success,
+//             message: "Server error"
+//         });
+//     }
+// };
+
+
+// export const getModules = async (req, res) => {
+//     let success = false;
+
+//     try {
+//         connectToDatabase(async (err, conn) => {
+//             if (err) {
+//                 logError(err);
+//                 return res.status(500).json({
+//                     success,
+//                     message: "Database connection error"
+//                 });
+//             }
+
+//             try {
+//                 const query = `
+//                     SELECT 
+//                         ModuleID, 
+//                         ModuleName, 
+//                         ModuleImage, 
+//                         ModuleDescription,
+//                         SortingOrder
+//                     FROM ModulesDetails 
+//                     WHERE delStatus = 0
+//                     ORDER BY 
+//                         CASE WHEN SortingOrder IS NULL THEN 1 ELSE 0 END,
+//                         SortingOrder ASC,
+//                         ModuleID ASC
+//                 `;
+
+//                 const results = await queryAsync(conn, query);
+
+//                 success = true;
+//                 res.status(200).json({
+//                     success,
+//                     data: results,
+//                     message: "Modules fetched successfully"
+//                 });
+//             } catch (queryErr) {
+//                 logError(queryErr);
+//                 res.status(500).json({
+//                     success,
+//                     message: "Error fetching modules"
+//                 });
+//             } finally {
+//                 closeConnection();
+//             }
+//         });
+//     } catch (error) {
+//         logError(error);
+//         res.status(500).json({
+//             success,
+//             message: "Server error"
+//         });
+//     }
+// };
+
 export const getModules = async (req, res) => {
     let success = false;
 
@@ -272,15 +381,19 @@ export const getModules = async (req, res) => {
 
             try {
                 const query = `
-            SELECT 
-              ModuleID, 
-              ModuleName, 
-              ModuleImage, 
-              ModuleDescription 
-            FROM ModulesDetails 
-            WHERE delStatus = 0
-            ORDER BY ModuleID
-          `;
+                    SELECT 
+                        ModuleID, 
+                        ModuleName, 
+                        ModuleImage, 
+                        ModuleDescription,
+                        SortingOrder
+                    FROM ModulesDetails 
+                    WHERE delStatus = 0
+                    ORDER BY 
+                        CASE WHEN SortingOrder IS NULL THEN 1 ELSE 0 END,
+                        SortingOrder ASC,
+                        ModuleID ASC
+                `;
 
                 const results = await queryAsync(conn, query);
 
@@ -309,54 +422,56 @@ export const getModules = async (req, res) => {
     }
 };
 
-export const getSubModules = async (req, res) => {
-    let success = false;
-    const { moduleId } = req.query;
 
-    if (!moduleId) {
-        return res.status(400).json({ success, message: "moduleId is required" });
-    }
 
-    try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError(err);
-                return res.status(500).json({ success, message: "Database connection error" });
-            }
+// export const getSubModules = async (req, res) => {
+//     let success = false;
+//     const { moduleId } = req.query;
 
-            try {
-                const query = `
-                    SELECT 
-                        SubModuleID, 
-                        SubModuleName, 
-                        SubModuleImage, 
-                        SubModuleDescription,
-                        ModuleID
-                    FROM SubModulesDetails 
-                    WHERE ISNULL(delStatus, 0) = 0 AND ModuleID = ?
-                    ORDER BY SubModuleID
-                `;
+//     if (!moduleId) {
+//         return res.status(400).json({ success, message: "moduleId is required" });
+//     }
 
-                const results = await queryAsync(conn, query, [moduleId]);
+//     try {
+//         connectToDatabase(async (err, conn) => {
+//             if (err) {
+//                 logError(err);
+//                 return res.status(500).json({ success, message: "Database connection error" });
+//             }
 
-                success = true;
-                res.status(200).json({
-                    success,
-                    data: results,
-                    message: "SubModules fetched successfully"
-                });
-            } catch (queryErr) {
-                logError(queryErr);
-                res.status(500).json({ success, message: "Error fetching submodules" });
-            } finally {
-                closeConnection();
-            }
-        });
-    } catch (error) {
-        logError(error);
-        res.status(500).json({ success, message: "Server error" });
-    }
-};
+//             try {
+//                 const query = `
+//                     SELECT 
+//                         SubModuleID, 
+//                         SubModuleName, 
+//                         SubModuleImage, 
+//                         SubModuleDescription,
+//                         ModuleID
+//                     FROM SubModulesDetails 
+//                     WHERE ISNULL(delStatus, 0) = 0 AND ModuleID = ?
+//                     ORDER BY SubModuleID
+//                 `;
+
+//                 const results = await queryAsync(conn, query, [moduleId]);
+
+//                 success = true;
+//                 res.status(200).json({
+//                     success,
+//                     data: results,
+//                     message: "SubModules fetched successfully"
+//                 });
+//             } catch (queryErr) {
+//                 logError(queryErr);
+//                 res.status(500).json({ success, message: "Error fetching submodules" });
+//             } finally {
+//                 closeConnection();
+//             }
+//         });
+//     } catch (error) {
+//         logError(error);
+//         res.status(500).json({ success, message: "Server error" });
+//     }
+// };
 
 
 // export const getUnitsWithFiles = async (req, res) => {
@@ -445,7 +560,153 @@ export const getSubModules = async (req, res) => {
 //         });
 //     }
 // };
+export const getSubModules = async (req, res) => {
+    let success = false;
+    const { moduleId } = req.query;
 
+    if (!moduleId) {
+        return res.status(400).json({ success, message: "moduleId is required" });
+    }
+
+    try {
+        connectToDatabase(async (err, conn) => {
+            if (err) {
+                logError(err);
+                return res.status(500).json({ success, message: "Database connection error" });
+            }
+
+            try {
+                const query = `
+                    SELECT 
+                        SubModuleID, 
+                        SubModuleName, 
+                        SubModuleImage, 
+                        SubModuleDescription,
+                        ModuleID,
+                        SortingOrder
+                    FROM SubModulesDetails 
+                    WHERE ISNULL(delStatus, 0) = 0 AND ModuleID = ?
+                    ORDER BY 
+                        CASE WHEN SortingOrder IS NULL THEN 1 ELSE 0 END,
+                        SortingOrder ASC,
+                        SubModuleID ASC
+                `;
+
+                const results = await queryAsync(conn, query, [moduleId]);
+
+                success = true;
+                res.status(200).json({
+                    success,
+                    data: results,
+                    message: "SubModules fetched successfully"
+                });
+            } catch (queryErr) {
+                logError(queryErr);
+                res.status(500).json({ success, message: "Error fetching submodules" });
+            } finally {
+                closeConnection();
+            }
+        });
+    } catch (error) {
+        logError(error);
+        res.status(500).json({ success, message: "Server error" });
+    }
+};
+
+
+// export const getUnitsWithFiles = async (req, res) => {
+//     let success = false;
+//     const { subModuleId } = req.params; 
+
+//     try {
+//         connectToDatabase(async (err, conn) => {
+//             if (err) {
+//                 logError(err);
+//                 return res.status(500).json({
+//                     success,
+//                     message: "Database connection error"
+//                 });
+//             }
+
+//             try {
+//                 const query = `
+//                     SELECT 
+//                         u.UnitID,
+//                         u.UnitName,
+//                         u.UnitImg,
+//                         u.UnitDescription,
+//                         u.SubModuleID,
+//                         u.AuthAdd,
+//                         f.FileID,
+//                         f.FilesName,
+//                         f.FilePath,
+//                         f.FileType,
+//                         f.Description,
+//                         f.AuthAdd AS FileAuthAdd,
+//                         f.Percentage
+//                     FROM UnitsDetails u
+//                     LEFT JOIN FilesDetails f ON u.UnitID = f.UnitID AND ISNULL(f.delStatus, 0) = 0
+//                     WHERE ISNULL(u.delStatus, 0) = 0
+//                     AND u.SubModuleID = ?
+//                     ORDER BY u.UnitID, f.FileID
+//                 `;
+
+//                 const results = await queryAsync(conn, query, [subModuleId]);
+
+//                 // Group files by UnitID
+//                 const unitsMap = new Map();
+//                 results.forEach(row => {
+//                     if (!unitsMap.has(row.UnitID)) {
+//                         unitsMap.set(row.UnitID, {
+//                             UnitID: row.UnitID,
+//                             UnitName: row.UnitName,
+//                             UnitImg: row.UnitImg,
+//                             UnitDescription: row.UnitDescription,
+//                             SubModuleID: row.SubModuleID,
+//                             AuthAdd: row.AuthAdd,
+//                             files: []
+//                         });
+//                     }
+
+//                     if (row.FileID) {
+//                         unitsMap.get(row.UnitID).files.push({
+//                             FileID: row.FileID,
+//                             FilesName: row.FilesName,
+//                             Description: row.Description,
+//                             FilePath: row.FilePath,
+//                             FileType: row.FileType,
+//                             AuthAdd: row.FileAuthAdd,
+//                             Percentage: row.Percentage
+//                         });
+//                     }
+//                 });
+
+//                 const result = Array.from(unitsMap.values());
+
+//                 success = true;
+//                 res.status(200).json({
+//                     success,
+//                     data: result,
+//                     message: "Units with files fetched successfully"
+//                 });
+//             } catch (queryErr) {
+//                 logError(queryErr);
+//                 res.status(500).json({
+//                     success,
+//                     message: "Error fetching units with files"
+//                 });
+//             } finally {
+//                 closeConnection();
+//             }
+//         });
+//     } catch (error) {
+//         logError(error);
+//         res.status(500).json({
+//             success,
+//             message: "Server error"
+//         });
+//     }
+// };
 
 
 export const getUnitsWithFiles = async (req, res) => {
@@ -471,23 +732,31 @@ export const getUnitsWithFiles = async (req, res) => {
                         u.UnitDescription,
                         u.SubModuleID,
                         u.AuthAdd,
+                        u.SortingOrder AS UnitSortingOrder,
                         f.FileID,
                         f.FilesName,
                         f.FilePath,
                         f.FileType,
                         f.Description,
                         f.AuthAdd AS FileAuthAdd,
-                        f.Percentage
+                        f.Percentage,
+                        f.SortingOrder AS FileSortingOrder
                     FROM UnitsDetails u
                     LEFT JOIN FilesDetails f ON u.UnitID = f.UnitID AND ISNULL(f.delStatus, 0) = 0
                     WHERE ISNULL(u.delStatus, 0) = 0
                     AND u.SubModuleID = ?
-                    ORDER BY u.UnitID, f.FileID
+                    ORDER BY 
+                        CASE WHEN u.SortingOrder IS NULL THEN 1 ELSE 0 END,
+                        u.SortingOrder ASC,
+                        u.UnitID ASC,
+                        CASE WHEN f.SortingOrder IS NULL THEN 1 ELSE 0 END,
+                        f.SortingOrder ASC,
+                        f.FileID
                 `;
 
                 const results = await queryAsync(conn, query, [subModuleId]);
 
-                // Group files by UnitID
+                // Group files by UnitID and sort files within each unit
                 const unitsMap = new Map();
                 results.forEach(row => {
                     if (!unitsMap.has(row.UnitID)) {
@@ -498,6 +767,7 @@ export const getUnitsWithFiles = async (req, res) => {
                             UnitDescription: row.UnitDescription,
                             SubModuleID: row.SubModuleID,
                             AuthAdd: row.AuthAdd,
+                            SortingOrder: row.UnitSortingOrder,
                             files: []
                         });
                     }
@@ -510,12 +780,19 @@ export const getUnitsWithFiles = async (req, res) => {
                             FilePath: row.FilePath,
                             FileType: row.FileType,
                             AuthAdd: row.FileAuthAdd,
-                            Percentage: row.Percentage
+                            Percentage: row.Percentage,
+                            SortingOrder: row.FileSortingOrder
                         });
                     }
                 });
 
-                const result = Array.from(unitsMap.values());
+                // Sort files within each unit by their SortingOrder
+                const result = Array.from(unitsMap.values()).map(unit => ({
+                    ...unit,
+                    files: unit.files.sort((a, b) => 
+                        (a.SortingOrder || Number.MAX_SAFE_INTEGER) - (b.SortingOrder || Number.MAX_SAFE_INTEGER)
+                    )
+                }));
 
                 success = true;
                 res.status(200).json({
@@ -542,3 +819,106 @@ export const getUnitsWithFiles = async (req, res) => {
     }
 };
 
+
+
+// export const getUnitsWithFiles = async (req, res) => {
+//     let success = false;
+//     const { subModuleId } = req.params; 
+
+//     try {
+//         connectToDatabase(async (err, conn) => {
+//             if (err) {
+//                 logError(err);
+//                 return res.status(500).json({
+//                     success,
+//                     message: "Database connection error"
+//                 });
+//             }
+
+//             try {
+//                 const query = `
+//                     SELECT 
+//                         u.UnitID,
+//                         u.UnitName,
+//                         u.UnitImg,
+//                         u.UnitDescription,
+//                         u.SubModuleID,
+//                         u.AuthAdd,
+//                         u.SortingOrder,
+//                         f.FileID,
+//                         f.FilesName,
+//                         f.FilePath,
+//                         f.FileType,
+//                         f.Description,
+//                         f.AuthAdd AS FileAuthAdd,
+//                         f.Percentage
+//                     FROM UnitsDetails u
+//                     LEFT JOIN FilesDetails f ON u.UnitID = f.UnitID AND ISNULL(f.delStatus, 0) = 0
+//                     WHERE ISNULL(u.delStatus, 0) = 0
+//                     AND u.SubModuleID = ?
+//                     ORDER BY 
+//                         CASE WHEN u.SortingOrder IS NULL THEN 1 ELSE 0 END,
+//                         u.SortingOrder ASC,
+//                         u.UnitID ASC,
+//                         f.FileID
+//                 `;
+
+//                 const results = await queryAsync(conn, query, [subModuleId]);
+
+//                 // Group files by UnitID
+//                 const unitsMap = new Map();
+//                 results.forEach(row => {
+//                     if (!unitsMap.has(row.UnitID)) {
+//                         unitsMap.set(row.UnitID, {
+//                             UnitID: row.UnitID,
+//                             UnitName: row.UnitName,
+//                             UnitImg: row.UnitImg,
+//                             UnitDescription: row.UnitDescription,
+//                             SubModuleID: row.SubModuleID,
+//                             AuthAdd: row.AuthAdd,
+//                             SortingOrder: row.SortingOrder,
+//                             files: []
+//                         });
+//                     }
+
+//                     if (row.FileID) {
+//                         unitsMap.get(row.UnitID).files.push({
+//                             FileID: row.FileID,
+//                             FilesName: row.FilesName,
+//                             Description: row.Description,
+//                             FilePath: row.FilePath,
+//                             FileType: row.FileType,
+//                             AuthAdd: row.FileAuthAdd,
+//                             Percentage: row.Percentage
+//                         });
+//                     }
+//                 });
+
+//                 const result = Array.from(unitsMap.values());
+
+//                 success = true;
+//                 res.status(200).json({
+//                     success,
+//                     data: result,
+//                     message: "Units with files fetched successfully"
+//                 });
+//             } catch (queryErr) {
+//                 logError(queryErr);
+//                 res.status(500).json({
+//                     success,
+//                     message: "Error fetching units with files"
+//                 });
+//             } finally {
+//                 closeConnection();
+//                 console.log("closeeee",closeConnection);
+                
+//             }
+//         });
+//     } catch (error) {
+//         logError(error);
+//         res.status(500).json({
+//             success,
+//             message: "Server error"
+//         });
+//     }
+// };

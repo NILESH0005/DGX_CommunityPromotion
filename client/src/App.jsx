@@ -110,7 +110,7 @@ import ModuleCard from "./component/LMS Manager/ModuleCard.jsx";
 import SubModuleCard from "./component/LMS Manager/SubmoduleCard.jsx";
 import UnitsWithFiles from "./component/LMS Manager/UnitsWithFiles.jsx";
 import ProfilePage from "./component/ProfilePage.jsx";
-
+import ModuleOrder from "./Admin/Components/LMS/EditableComponents/ModuleOrder.jsx";
 import { pdfjs } from "react-pdf";
 
 // Use CDN to load the worker (best option with Vite)
@@ -225,6 +225,9 @@ function App() {
 
             {/* LMS */}
             <Route path="/Lms" element={<Lms />} />
+            <Route path="/ModuleOrder" element={<ModuleOrder />} />
+
+
             <Route path="/teaching-modules" element={<TeachingModules />} />
             <Route path="/edge-ai-robotics-kit" element={<AiRoboticsKit />} />
             <Route path="/deep-learning-kit" element={<DeepLearningKit />} />
@@ -351,7 +354,7 @@ function App() {
               path="/submodule/:subModuleId"
               element={<UnitsWithFiles />}
             />
-
+              
             <Route path="/module/:moduleId" element={<SubModuleCard />} />
             <Route
               path="/submodule/:subModuleId"
