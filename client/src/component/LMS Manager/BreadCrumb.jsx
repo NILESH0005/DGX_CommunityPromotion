@@ -9,41 +9,75 @@ const BreadCrumb = ({ customPaths = [] }) => {
   const params = useParams();
   const { state } = location;
 
-  // State to track current module/submodule names
-  const [currentModule, setCurrentModule] = useState({
-    name: state?.moduleName || localStorage.getItem('moduleName'),
-    id: params.moduleId || localStorage.getItem('moduleId')
-  });
-  
-  const [currentSubmodule, setCurrentSubmodule] = useState({
-    name: state?.submoduleName || localStorage.getItem('submoduleName'),
-    id: params.subModuleId || localStorage.getItem('subModuleId')
+  // State to track navigation history
+  const [navHistory, setNavHistory] = useState(() => {
+    // Initialize from localStorage if available
+    const savedHistory = localStorage.getItem('navHistory');
+    return savedHistory ? JSON.parse(savedHistory) : [];
   });
 
-  // Update state when navigation occurs
+  // Update navigation history when location changes
   useEffect(() => {
-    // Store module info if present in state
-    if (state?.moduleName) {
-      localStorage.setItem('moduleName', state.moduleName);
-      localStorage.setItem('moduleId', state.moduleId);
-    }
-    
-    // Store submodule info if present in state
-    if (state?.submoduleName) {
-      localStorage.setItem('submoduleName', state.submoduleName);
-      localStorage.setItem('subModuleId', state.submoduleId);
-    }
+    const newEntry = {
+      pathname: location.pathname,
+      state: location.state,
+      params: params,
+      timestamp: Date.now()
+    };
 
-    setCurrentModule({
-      name: state?.moduleName || localStorage.getItem('moduleName'),
-      id: params.moduleId || localStorage.getItem('moduleId')
-    });
-    
-    setCurrentSubmodule({
-      name: state?.submoduleName || localStorage.getItem('submoduleName'),
-      id: params.subModuleId || localStorage.getItem('subModuleId')
-    });
-  }, [location, params, state]);
+    // Check if this is a new navigation or going back
+    const isNewNavigation = !navHistory.some(entry => 
+      entry.pathname === location.pathname && 
+      JSON.stringify(entry.params) === JSON.stringify(params)
+    );
+
+    if (isNewNavigation) {
+      const updatedHistory = [...navHistory, newEntry];
+      setNavHistory(updatedHistory);
+      localStorage.setItem('navHistory', JSON.stringify(updatedHistory));
+    }
+  }, [location, params]);
+
+  // Get current module info from most recent relevant navigation entry
+  const getCurrentModule = () => {
+    // Look backwards through history to find most recent module info
+    for (let i = navHistory.length - 1; i >= 0; i--) {
+      const entry = navHistory[i];
+      if (entry.state?.moduleName) {
+        return {
+          name: entry.state.moduleName,
+          id: entry.state.moduleId || entry.params?.moduleId
+        };
+      }
+    }
+    // Fallback to localStorage
+    return {
+      name: localStorage.getItem('moduleName'),
+      id: localStorage.getItem('moduleId')
+    };
+  };
+
+  // Get current submodule info from most recent relevant navigation entry
+  const getCurrentSubmodule = () => {
+    // Look backwards through history to find most recent submodule info
+    for (let i = navHistory.length - 1; i >= 0; i--) {
+      const entry = navHistory[i];
+      if (entry.state?.submoduleName) {
+        return {
+          name: entry.state.submoduleName,
+          id: entry.state.submoduleId || entry.params?.subModuleId
+        };
+      }
+    }
+    // Fallback to localStorage
+    return {
+      name: localStorage.getItem('submoduleName'),
+      id: localStorage.getItem('subModuleId')
+    };
+  };
+
+  const currentModule = getCurrentModule();
+  const currentSubmodule = getCurrentSubmodule();
 
   // Generate breadcrumb items based on route
   const getBreadcrumbItems = () => {
@@ -62,7 +96,11 @@ const BreadCrumb = ({ customPaths = [] }) => {
       items.push({
         label: currentModule.name,
         path: `/module/${currentModule.id}`,
-        isActive: pathnames.includes('module') && !pathnames.includes('submodule')
+        isActive: pathnames.includes('module') && !pathnames.includes('submodule'),
+        state: {
+          moduleName: currentModule.name,
+          moduleId: currentModule.id
+        }
       });
     }
 
@@ -91,16 +129,7 @@ const BreadCrumb = ({ customPaths = [] }) => {
           )}
           {item.path ? (
             <button
-              onClick={() => navigate(item.path, {
-                state: {
-                  moduleName: currentModule.name,
-                  moduleId: currentModule.id,
-                  ...(item.label === currentSubmodule.name ? {
-                    submoduleName: currentSubmodule.name,
-                    submoduleId: currentSubmodule.id
-                  } : {})
-                }
-              })}
+              onClick={() => navigate(item.path, { state: item.state })}
               className={`hover:text-blue-600 transition-colors duration-200 ${
                 item.isActive ? 'font-semibold text-gray-800' : 'font-medium text-gray-500'
               }`}
