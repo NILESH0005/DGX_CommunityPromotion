@@ -200,21 +200,17 @@ const UnitsWithFiles = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  // Helper function to check if text needs "Read more" functionality
   const needsReadMore = (text) => {
     if (!text) return false;
     return text.split(" ").length > 10;
   };
 
-  // Helper function to get truncated text
   const getTruncatedText = (text, wordLimit = 10) => {
     if (!text) return "";
     const words = text.split(" ");
     if (words.length <= wordLimit) return text;
     return words.slice(0, wordLimit).join(" ") + "...";
   };
-
-  // Toggle expanded description
   const toggleDescription = (id) => {
     setExpandedDescriptions((prev) => {
       const newSet = new Set(prev);
@@ -414,7 +410,6 @@ const UnitsWithFiles = () => {
                   key={unit.UnitID}
                   className={`${isSidebarCollapsed ? "p-3" : "p-2"}  
                   `}
-                  //  rounded-xl hover:bg-gray-700 hover:shadow-lg transition-all duration-200 cursor-pointer border border-gray-600 hover:border-gray-500 bg-gray-800/50 backdrop-blur-sm transform hover:scale-[1.02]
                   onClick={() => {
                     if (unit.files?.length > 0) {
                       setSelectedFile({

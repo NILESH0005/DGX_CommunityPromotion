@@ -18,8 +18,8 @@ import lmsEdit from './routes/LmsEdit.js';
 import progressRoute from './routes/ProgressTrack.js';
 
 
-import { fileURLToPath } from 'url'; 
-import { dirname } from 'path'; 
+// import { fileURLToPath } from 'url'; 
+// import { dirname } from 'path'; 
 
 
 
@@ -28,8 +28,8 @@ dotenv.config();
 const port = process.env.PORT || 8000;
 const app = express();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = dirname(__filename);
 
 app.use(
   cors({
@@ -57,10 +57,10 @@ app.use('/quiz', quizRoutes);
 app.use('/lmsEdit', lmsEdit);
 app.use('/progressTrack', progressRoute )
 
-app.use(express.static(path.join(__dirname, 'client/dist')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
-});
+// app.use(express.static(path.join(__dirname, 'client/dist')));
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
+// });
 
 
 const learningMaterialStorage = multer.diskStorage({

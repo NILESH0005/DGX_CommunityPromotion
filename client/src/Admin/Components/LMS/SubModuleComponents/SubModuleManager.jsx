@@ -184,7 +184,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
         });
     };
 
-    const handleUploadFile = async (subModuleId, unitId, file) => {
+    const handleUploadFile = async (subModuleId, unitId, file, customFileName) => {
         if (!file) {
             Swal.fire('Error', 'No file selected', 'error');
             return false;
@@ -221,9 +221,8 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             formData.append('moduleId', module.id);
             formData.append('subModuleId', subModuleId);
             formData.append('unitId', unitId);
-            formData.append('percentage', equalPercentage); // Include calculated percentage
-
-            console.log("ddaatta", formData )
+            formData.append('percentage', equalPercentage);
+            formData.append('customFileName', customFileName); // Add custom file name
 
             if (!userToken) {
                 throw new Error('Authentication token missing');
@@ -237,9 +236,6 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                 }
             });
 
-            console.log("reessp", response);
-            
-
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || 'Upload failed');
@@ -247,22 +243,18 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
 
             const result = await response.json();
             await uploadToast.close();
-
-            // Update state with new file and recalculated percentages
             setSubModules(prev => prev.map(subModule => {
                 if (subModule.id === subModuleId) {
                     const updatedUnits = subModule.units.map(unit => {
                         if (unit.id === unitId) {
                             const newFile = {
                                 id: uuidv4(),
-                                originalName: result.file?.name || file.name,
+                                originalName: customFileName || result.file?.name || file.name,
                                 filePath: result.file?.path || URL.createObjectURL(file),
                                 fileType: result.file?.type || file.type,
                                 uploadedAt: new Date().toISOString(),
-                                percentage: equalPercentage // Store as number
+                                percentage: equalPercentage
                             };
-
-                            // Update all files with new equal percentages
                             const updatedFiles = (unit.files || []).map(f => ({
                                 ...f,
                                 percentage: parseFloat(equalPercentage)
@@ -324,7 +316,6 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
 
     return (
         <div className="space-y-6">
-            {/* Header Section */}
             <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
