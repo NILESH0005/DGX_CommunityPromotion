@@ -676,7 +676,7 @@ export const getAllUser = async (req, res) => {
         }
 
         try {
-          const deleteQuery = `DELETE FROM Community_User WHERE UserID = ?`;
+           const deleteQuery = '';//`DELETE FROM Community_User WHERE UserID = ?`;
           const result = await queryAsync(conn, deleteQuery, [userId]);
 
           closeConnection();

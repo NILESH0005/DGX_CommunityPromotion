@@ -2,11 +2,11 @@ import { body, validationResult } from "express-validator";
 import { connectToDatabase, closeConnection } from "../database/mySql.js";
 import dotenv from "dotenv";
 import {
-    queryAsync,
-    mailSender,
-    logError,
-    logInfo,
-    logWarning,
+  queryAsync,
+  mailSender,
+  logError,
+  logInfo,
+  logWarning,
 } from "../helper/index.js";
 import { log } from "util";
 import { Console } from "console";
@@ -14,91 +14,95 @@ import { Console } from "console";
 dotenv.config();
 
 export const updateModule = async (req, res) => {
-    let success = false;
+  let success = false;
 
-    const userId = req.user?.UserID || req.user?.id;
-    if (!userId) {
-        return res.status(401).json({ success, message: "User not authenticated" });
-    }
+  const userId = req.user?.UserID || req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ success, message: "User not authenticated" });
+  }
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        logWarning("Data validation failed", errors.array());
-        return res.status(400).json({
-            success,
-            data: errors.array(),
-            message: "Data is not in the right format",
-        });
-    }
-    const moduleId = parseInt(req.params.id, 10);
-    if (isNaN(moduleId)) {
-        return res.status(400).json({ success, message: "Invalid module ID" });
-    }
-    let { ModuleName, ModuleDescription, ModuleImage } = req.body;
-    let imageBuffer = null;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    logWarning("Data validation failed", errors.array());
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: "Data is not in the right format",
+    });
+  }
+  const moduleId = parseInt(req.params.id, 10);
+  if (isNaN(moduleId)) {
+    return res.status(400).json({ success, message: "Invalid module ID" });
+  }
+  let { ModuleName, ModuleDescription, ModuleImage } = req.body;
+  let imageBuffer = null;
 
-    if (req.is("multipart/form-data")) {
-        imageBuffer = req.file ? req.file.buffer : null;
-    } else if (req.body.ModuleImage?.data) {
-        try {
-            imageBuffer = Buffer.from(req.body.ModuleImage.data, 'base64');
-        } catch (e) {
-            logError("Image conversion error", e);
-            return res.status(400).json({
-                success: false,
-                message: "Invalid image format"
-            });
-        }
-    }
-
+  if (req.is("multipart/form-data")) {
+    imageBuffer = req.file ? req.file.buffer : null;
+  } else if (req.body.ModuleImage?.data) {
     try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError("Database connection failed", err);
-                return res.status(500).json({
-                    success,
-                    message: "Failed to connect to database",
-                });
-            }
+      imageBuffer = Buffer.from(req.body.ModuleImage.data, "base64");
+    } catch (e) {
+      logError("Image conversion error", e);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid image format",
+      });
+    }
+  }
 
-            try {
-                // 4. Fetch user details - handle both numeric ID and email
-                let userQuery, userRows;
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError("Database connection failed", err);
+        return res.status(500).json({
+          success,
+          message: "Failed to connect to database",
+        });
+      }
 
-                // First try to get user by numeric ID
-                if (!isNaN(Number(userId))) {
-                    userQuery = `
+      try {
+        // 4. Fetch user details - handle both numeric ID and email
+        let userQuery, userRows;
+
+        // First try to get user by numeric ID
+        if (!isNaN(Number(userId))) {
+          userQuery = `
                         SELECT UserID, Name, isAdmin FROM Community_User 
                         WHERE ISNULL(delStatus, 0) = 0 AND UserID = ?
                     `;
-                    userRows = await queryAsync(conn, userQuery, [Number(userId)]);
-                }
+          userRows = await queryAsync(conn, userQuery, [Number(userId)]);
+        }
 
-                // If not found and userId looks like an email, try by email
-                if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
-                    userQuery = `
+        // If not found and userId looks like an email, try by email
+        if (
+          (!userRows || userRows.length === 0) &&
+          typeof userId === "string" &&
+          userId.includes("@")
+        ) {
+          userQuery = `
                         SELECT UserID, Name, isAdmin FROM Community_User 
                         WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?
                     `;
-                    userRows = await queryAsync(conn, userQuery, [userId]);
-                }
+          userRows = await queryAsync(conn, userQuery, [userId]);
+        }
 
-                if (!userRows || userRows.length === 0) {
-                    closeConnection(conn);
-                    return res.status(404).json({ success, message: "User not found" });
-                }
+        if (!userRows || userRows.length === 0) {
+          closeConnection(conn);
+          return res.status(404).json({ success, message: "User not found" });
+        }
 
-                const user = userRows[0];
+        const user = userRows[0];
 
-                // 5. Build dynamic update query with proper image handling
-                const updateParams = [
-                    ModuleName || null,
-                    ModuleDescription || null,
-                    user.Name,
-                    new Date(),
-                ];
+        // 5. Build dynamic update query with proper image handling
+        const updateParams = [
+          ModuleName || null,
+          ModuleDescription || null,
+          user.Name,
+          new Date(),
+        ];
 
-                let updateQuery = `
+        let updateQuery = `
                     UPDATE ModulesDetails
                     SET 
                         ModuleName = ?,
@@ -107,113 +111,170 @@ export const updateModule = async (req, res) => {
                         editOnDt = ?
                 `;
 
-                // Add image parameter only if we have an image
-                if (imageBuffer !== null && imageBuffer !== undefined) {
-                    updateQuery += `, ModuleImage = ?`;
-                    updateParams.push(imageBuffer);
-                }
+        // Add image parameter only if we have an image
+        if (imageBuffer !== null && imageBuffer !== undefined) {
+          updateQuery += `, ModuleImage = ?`;
+          updateParams.push(imageBuffer);
+        }
 
-                updateQuery += ` WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0`;
-                updateParams.push(moduleId);
+        updateQuery += ` WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0`;
+        updateParams.push(moduleId);
 
-                // 6. Execute update
-                const result = await queryAsync(conn, updateQuery, updateParams);
+        // 6. Execute update
+        const result = await queryAsync(conn, updateQuery, updateParams);
 
-                if (result.affectedRows === 0) {
-                    closeConnection(conn);
-                    return res.status(404).json({
-                        success,
-                        message: "Module not found or already deleted",
-                    });
-                }
+        if (result.affectedRows === 0) {
+          closeConnection(conn);
+          return res.status(404).json({
+            success,
+            message: "Module not found or already deleted",
+          });
+        }
 
-                // 7. Fetch updated module
-                const fetchQuery = `
+        // 7. Fetch updated module
+        const fetchQuery = `
                     SELECT ModuleID, ModuleName, ModuleDescription, 
                            AuthLstEdit, editOnDt, ModuleImage
                     FROM ModulesDetails
                     WHERE ModuleID = ? AND ISNULL(delStatus, 0) = 0
                 `;
 
-                const updatedModule = await queryAsync(conn, fetchQuery, [moduleId]);
-                const moduleData = updatedModule[0];
-                if (moduleData.ModuleImage) {
-                    moduleData.ModuleImage = {
-                        data: moduleData.ModuleImage.toString('base64'),
-                        contentType: 'image/jpeg' // Adjust based on your actual image type
-                    };
-                }
-                success = true;
-                closeConnection(conn);
-                logInfo("Module updated successfully");
+        const updatedModule = await queryAsync(conn, fetchQuery, [moduleId]);
+        const moduleData = updatedModule[0];
+        if (moduleData.ModuleImage) {
+          moduleData.ModuleImage = {
+            data: moduleData.ModuleImage.toString("base64"),
+            contentType: "image/jpeg", // Adjust based on your actual image type
+          };
+        }
+        success = true;
+        closeConnection(conn);
+        logInfo("Module updated successfully");
 
-                return res.status(200).json({
-                    success,
-                    data: updatedModule[0],
-                    message: "Module updated successfully",
-                });
-            } catch (queryErr) {
-                closeConnection(conn);
-                logError("Database query failed", queryErr);
-                return res.status(500).json({
-                    success,
-                    message: "Database operation failed",
-                    details: queryErr.message.includes('Conversion failed')
-                        ? "Invalid data type in database operation"
-                        : queryErr.message,
-                });
-            }
+        return res.status(200).json({
+          success,
+          data: updatedModule[0],
+          message: "Module updated successfully",
         });
-    } catch (error) {
-        logError("Unexpected error", error);
+      } catch (queryErr) {
+        closeConnection(conn);
+        logError("Database query failed", queryErr);
         return res.status(500).json({
-            success,
-            message: "Unexpected server error",
-            details: error.message,
+          success,
+          message: "Database operation failed",
+          details: queryErr.message.includes("Conversion failed")
+            ? "Invalid data type in database operation"
+            : queryErr.message,
         });
-    }
+      }
+    });
+  } catch (error) {
+    logError("Unexpected error", error);
+    return res.status(500).json({
+      success,
+      message: "Unexpected server error",
+      details: error.message,
+    });
+  }
 };
 
+export const updateModuleOrder = async (req, res) => {
+  let success = false;
+  const { modules } = req.body;
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success,
+          message: "Database connection error",
+        });
+      }
+
+      try {
+        await conn.beginTransaction();
+
+        // Update each module's sorting order
+        for (const module of modules) {
+          const updateQuery = `
+                        UPDATE ModulesDetails 
+                        SET 
+                            SortingOrder = ?,
+                            editOnDt = CURRENT_TIMESTAMP
+                        WHERE ModuleID = ?
+                    `;
+          await queryAsync(conn, updateQuery, [
+            module.SortingOrder,
+            module.ModuleID,
+          ]);
+        }
+
+        await conn.commit();
+        success = true;
+        res.status(200).json({
+          success,
+          message: "Module order updated successfully",
+        });
+      } catch (queryErr) {
+        await conn.rollback();
+        logError(queryErr);
+        res.status(500).json({
+          success,
+          message: "Error updating module order",
+        });
+      } finally {
+        closeConnection();
+      }
+    });
+  } catch (error) {
+    logError(error);
+    res.status(500).json({
+      success,
+      message: "Server error",
+    });
+  }
+};
 
 export const deleteModule = (req, res) => {
-    const { moduleId } = req.body;
+  const { moduleId } = req.body;
 
-    // Input validation
-    if (!moduleId || isNaN(moduleId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid module ID provided",
+  // Input validation
+  if (!moduleId || isNaN(moduleId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid module ID provided",
+    });
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection error",
         });
-    }
+      }
 
-    try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError(err);
-                return res.status(500).json({
-                    success: false,
-                    message: "Database connection error",
-                });
-            }
-
-            try {
-                // Check if module exists and isn't deleted
-                const checkQuery = `
+      try {
+        // Check if module exists and isn't deleted
+        const checkQuery = `
                     SELECT * FROM ModulesDetails 
                     WHERE ModuleID = ? AND (delStatus IS NULL OR delStatus = 0)
                 `;
-                const [existingModule] = await queryAsync(conn, checkQuery, [moduleId]);
+        const [existingModule] = await queryAsync(conn, checkQuery, [moduleId]);
 
-                if (!existingModule) {
-                    closeConnection(conn);
-                    return res.status(404).json({
-                        success: false,
-                        message: "Module not found or already deleted",
-                    });
-                }
+        if (!existingModule) {
+          closeConnection(conn);
+          return res.status(404).json({
+            success: false,
+            message: "Module not found or already deleted",
+          });
+        }
 
-                // Perform the soft delete
-                const deleteQuery = `
+        // Perform the soft delete
+        const deleteQuery = `
                     UPDATE ModulesDetails
                     SET 
                         delStatus = 1,
@@ -221,77 +282,78 @@ export const deleteModule = (req, res) => {
                     WHERE ModuleID = ? AND (delStatus IS NULL OR delStatus = 0)
                 `;
 
-                const result = await queryAsync(conn, deleteQuery, [moduleId]);
-                closeConnection(conn);
+        const result = await queryAsync(conn, deleteQuery, [moduleId]);
+        closeConnection(conn);
 
-                // Check if update was successful
+        // Check if update was successful
 
-                return res.status(200).json({
-                    success: true,
-                    data: {
-                        moduleId: moduleId,
-                        deletedAt: new Date().toISOString()
-                    },
-                    message: "Module deleted successfully",
-                });
-
-            } catch (error) {
-                closeConnection(conn);
-                logError(`Error deleting module: ${error.message}`);
-                return res.status(500).json({
-                    success: false,
-                    message: "Database error during deletion",
-                });
-            }
+        return res.status(200).json({
+          success: true,
+          data: {
+            moduleId: moduleId,
+            deletedAt: new Date().toISOString(),
+          },
+          message: "Module deleted successfully",
         });
-    } catch (outerError) {
-        logError(`Unexpected error: ${outerError.message}`);
+      } catch (error) {
+        closeConnection(conn);
+        logError(`Error deleting module: ${error.message}`);
         return res.status(500).json({
-            success: false,
-            message: "Unexpected server error",
+          success: false,
+          message: "Database error during deletion",
         });
-    }
+      }
+    });
+  } catch (outerError) {
+    logError(`Unexpected error: ${outerError.message}`);
+    return res.status(500).json({
+      success: false,
+      message: "Unexpected server error",
+    });
+  }
 };
 
 export const deleteSubModule = (req, res) => {
-    const { subModuleId } = req.body;
+  const { subModuleId } = req.body;
 
-    // Input validation
-    if (!subModuleId || isNaN(subModuleId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid sub-module ID provided",
+  // Input validation
+  if (!subModuleId || isNaN(subModuleId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid sub-module ID provided",
+    });
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection error",
         });
-    }
+      }
 
-    try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError(err);
-                return res.status(500).json({
-                    success: false,
-                    message: "Database connection error",
-                });
-            }
-
-            try {
-                // Check if sub-module exists and isn't deleted
-                const checkQuery = `
+      try {
+        // Check if sub-module exists and isn't deleted
+        const checkQuery = `
                     SELECT * FROM SubModulesDetails 
                     WHERE SubModuleID = ? AND (delStatus IS NULL OR delStatus = 0)
                 `;
-                const [existingSubModule] = await queryAsync(conn, checkQuery, [subModuleId]);
+        const [existingSubModule] = await queryAsync(conn, checkQuery, [
+          subModuleId,
+        ]);
 
-                if (!existingSubModule) {
-                    closeConnection(conn);
-                    return res.status(404).json({
-                        success: false,
-                        message: "Sub-module not found or already deleted",
-                    });
-                }
+        if (!existingSubModule) {
+          closeConnection(conn);
+          return res.status(404).json({
+            success: false,
+            message: "Sub-module not found or already deleted",
+          });
+        }
 
-                // Perform the soft delete
-                const deleteQuery = `
+        // Perform the soft delete
+        const deleteQuery = `
                     UPDATE SubModulesDetails
                     SET 
                         delStatus = 1,
@@ -300,147 +362,153 @@ export const deleteSubModule = (req, res) => {
                     WHERE SubModuleID = ? AND (delStatus IS NULL OR delStatus = 0)
                 `;
 
-                const adminId = req.user?.id; // Get current user ID
-                await queryAsync(conn, deleteQuery, [adminId, subModuleId]);
-                closeConnection(conn);
+        const adminId = req.user?.id; // Get current user ID
+        await queryAsync(conn, deleteQuery, [adminId, subModuleId]);
+        closeConnection(conn);
 
-                return res.status(200).json({
-                    success: true,
-                    data: {
-                        subModuleId: subModuleId,
-                        deletedAt: new Date().toISOString(),
-                        deletedBy: adminId
-                    },
-                    message: "Sub-module deleted successfully",
-                });
-
-            } catch (error) {
-                closeConnection(conn);
-                logError(`Error deleting sub-module: ${error.message}`);
-                return res.status(500).json({
-                    success: false,
-                    message: "Database error during deletion",
-                });
-            }
+        return res.status(200).json({
+          success: true,
+          data: {
+            subModuleId: subModuleId,
+            deletedAt: new Date().toISOString(),
+            deletedBy: adminId,
+          },
+          message: "Sub-module deleted successfully",
         });
-    } catch (outerError) {
-        logError(`Unexpected error: ${outerError.message}`);
+      } catch (error) {
+        closeConnection(conn);
+        logError(`Error deleting sub-module: ${error.message}`);
         return res.status(500).json({
-            success: false,
-            message: "Unexpected server error",
+          success: false,
+          message: "Database error during deletion",
         });
-    }
+      }
+    });
+  } catch (outerError) {
+    logError(`Unexpected error: ${outerError.message}`);
+    return res.status(500).json({
+      success: false,
+      message: "Unexpected server error",
+    });
+  }
 };
 
 export const updateSubModule = async (req, res) => {
-    let success = false;
+  let success = false;
 
-    // 1. Authentication and validation
-    const userId = req.user?.UserID || req.user?.id;
-    if (!userId) {
-        return res.status(401).json({ success, message: "User not authenticated" });
-    }
+  // 1. Authentication and validation
+  const userId = req.user?.UserID || req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ success, message: "User not authenticated" });
+  }
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        logWarning("Data validation failed", errors.array());
-        return res.status(400).json({
-            success,
-            data: errors.array(),
-            message: "Data is not in the right format",
-        });
-    }
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    logWarning("Data validation failed", errors.array());
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: "Data is not in the right format",
+    });
+  }
 
-    // 2. Parameter extraction
-    const subModuleId = parseInt(req.params.id, 10);
-    if (isNaN(subModuleId)) {
-        return res.status(400).json({ success, message: "Invalid submodule ID" });
-    }
+  // 2. Parameter extraction
+  const subModuleId = parseInt(req.params.id, 10);
+  if (isNaN(subModuleId)) {
+    return res.status(400).json({ success, message: "Invalid submodule ID" });
+  }
 
-    // 3. Extract/update body fields with proper image handling
-    let { SubModuleName, SubModuleDescription, SubModuleImage } = req.body;
-    let imageBuffer = null;
+  // 3. Extract/update body fields with proper image handling
+  let { SubModuleName, SubModuleDescription, SubModuleImage } = req.body;
+  let imageBuffer = null;
 
-    if (req.is("multipart/form-data")) {
-        // Handle file upload from form-data
-        imageBuffer = req.file ? req.file.buffer : null;
-    } else if (req.body.SubModuleImage?.data) {
-        // Handle base64 image string
-        try {
-            imageBuffer = Buffer.from(req.body.SubModuleImage.data, 'base64');
-        } catch (e) {
-            logError("Image conversion error", e);
-            return res.status(400).json({
-                success: false,
-                message: "Invalid image format"
-            });
-        }
-    }
-
-    let conn; // Declare connection outside try-catch
-
+  if (req.is("multipart/form-data")) {
+    // Handle file upload from form-data
+    imageBuffer = req.file ? req.file.buffer : null;
+  } else if (req.body.SubModuleImage?.data) {
+    // Handle base64 image string
     try {
-        // Get database connection
-        conn = await new Promise((resolve, reject) => {
-            connectToDatabase((err, connection) => {
-                if (err) return reject(err);
-                resolve(connection);
-            });
-        });
+      imageBuffer = Buffer.from(req.body.SubModuleImage.data, "base64");
+    } catch (e) {
+      logError("Image conversion error", e);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid image format",
+      });
+    }
+  }
 
-        // Begin transaction
-        await queryAsync(conn, "BEGIN TRANSACTION");
+  let conn; // Declare connection outside try-catch
 
-        // 4. Fetch user details - handle both numeric ID and email
-        let userQuery, userRows;
+  try {
+    // Get database connection
+    conn = await new Promise((resolve, reject) => {
+      connectToDatabase((err, connection) => {
+        if (err) return reject(err);
+        resolve(connection);
+      });
+    });
 
-        // First try to get user by numeric ID
-        if (!isNaN(Number(userId))) {
-            userQuery = `
+    // Begin transaction
+    await queryAsync(conn, "BEGIN TRANSACTION");
+
+    // 4. Fetch user details - handle both numeric ID and email
+    let userQuery, userRows;
+
+    // First try to get user by numeric ID
+    if (!isNaN(Number(userId))) {
+      userQuery = `
                 SELECT UserID, Name, isAdmin FROM Community_User 
                 WHERE ISNULL(delStatus, 0) = 0 AND UserID = ?
             `;
-            userRows = await queryAsync(conn, userQuery, [Number(userId)]);
-        }
+      userRows = await queryAsync(conn, userQuery, [Number(userId)]);
+    }
 
-        // If not found and userId looks like an email, try by email
-        if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
-            userQuery = `
+    // If not found and userId looks like an email, try by email
+    if (
+      (!userRows || userRows.length === 0) &&
+      typeof userId === "string" &&
+      userId.includes("@")
+    ) {
+      userQuery = `
                 SELECT UserID, Name, isAdmin FROM Community_User 
                 WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?
             `;
-            userRows = await queryAsync(conn, userQuery, [userId]);
-        }
+      userRows = await queryAsync(conn, userQuery, [userId]);
+    }
 
-        if (!userRows || userRows.length === 0) {
-            await queryAsync(conn, "ROLLBACK");
-            closeConnection(conn);
-            return res.status(404).json({ success, message: "User not found" });
-        }
+    if (!userRows || userRows.length === 0) {
+      await queryAsync(conn, "ROLLBACK");
+      closeConnection(conn);
+      return res.status(404).json({ success, message: "User not found" });
+    }
 
-        const user = userRows[0];
+    const user = userRows[0];
 
-        // 5. Build dynamic update query with proper image handling
-        let imageBuffer = null;
-        if (SubModuleImage) {
-            if (SubModuleImage.startsWith('data:image')) {
-                const base64Data = SubModuleImage.replace(/^data:image\/\w+;base64,/, '');
-                imageBuffer = Buffer.from(base64Data, 'base64');
-            } else {
-                imageBuffer = Buffer.from(SubModuleImage, 'binary');
-            }
-        }
+    // 5. Build dynamic update query with proper image handling
+    let imageBuffer = null;
+    if (SubModuleImage) {
+      if (SubModuleImage.startsWith("data:image")) {
+        const base64Data = SubModuleImage.replace(
+          /^data:image\/\w+;base64,/,
+          ""
+        );
+        imageBuffer = Buffer.from(base64Data, "base64");
+      } else {
+        imageBuffer = Buffer.from(SubModuleImage, "binary");
+      }
+    }
 
-        const updateParams = [
-            SubModuleName || null,
-            SubModuleDescription || null,
-            imageBuffer,
-            user.Name,
-            new Date(),
-            subModuleId
-        ];
-        console.log("save updateParams test", updateParams);
-        let updateQuery = `
+    const updateParams = [
+      SubModuleName || null,
+      SubModuleDescription || null,
+      imageBuffer,
+      user.Name,
+      new Date(),
+      subModuleId,
+    ];
+    console.log("save updateParams test", updateParams);
+    let updateQuery = `
             UPDATE SubModulesDetails
             SET 
                 SubModuleName = ?,
@@ -450,86 +518,337 @@ export const updateSubModule = async (req, res) => {
                 editOnDt = ?
         `;
 
-        // Add image parameter only if we have an image
-        // if (imageBuffer !== null && imageBuffer !== undefined) {
-        //     updateQuery += `, SubModuleImage = ?`;
-        //     updateParams.push(imageBuffer);
-        // }
+    // Add image parameter only if we have an image
+    // if (imageBuffer !== null && imageBuffer !== undefined) {
+    //     updateQuery += `, SubModuleImage = ?`;
+    //     updateParams.push(imageBuffer);
+    // }
 
-        updateQuery += ` WHERE SubModuleID = ? AND ISNULL(delStatus, 0) = 0`;
-        //console.log("Update test query",updateQuery);
-        //updateParams.push(subModuleId);
+    updateQuery += ` WHERE SubModuleID = ? AND ISNULL(delStatus, 0) = 0`;
+    //console.log("Update test query",updateQuery);
+    //updateParams.push(subModuleId);
 
-        // 6. Execute update
-        const result = await queryAsync(conn, updateQuery, updateParams);
-        console.log("save result test", result);
-        if (result.affectedRows === 0) {
-            await queryAsync(conn, "ROLLBACK");
-            closeConnection(conn);
-            return res.status(404).json({
-                success,
-                message: "Submodule not found or already deleted",
-            });
-        }
+    // 6. Execute update
+    const result = await queryAsync(conn, updateQuery, updateParams);
+    console.log("save result test", result);
+    if (result.affectedRows === 0) {
+      await queryAsync(conn, "ROLLBACK");
+      closeConnection(conn);
+      return res.status(404).json({
+        success,
+        message: "Submodule not found or already deleted",
+      });
+    }
 
-        // 7. Fetch updated submodule
-        const fetchQuery = `
+    // 7. Fetch updated submodule
+    const fetchQuery = `
             SELECT SubModuleID, SubModuleName, SubModuleDescription, 
                    AuthLstEdit, editOnDt, SubModuleImage
             FROM SubModulesDetails
             WHERE SubModuleID = ? AND ISNULL(delStatus, 0) = 0
         `;
 
-        const updatedSubmodule = await queryAsync(conn, fetchQuery, [subModuleId]);
-        const submoduleData = updatedSubmodule[0];
+    const updatedSubmodule = await queryAsync(conn, fetchQuery, [subModuleId]);
+    const submoduleData = updatedSubmodule[0];
 
-        // Convert image buffer to base64 if it exists
-        if (submoduleData.SubModuleImage) {
-            submoduleData.SubModuleImage = {
-                data: submoduleData.SubModuleImage.toString('base64'),
-                contentType: 'image/jpeg' // Adjust based on your actual image type
-            };
-        }
-
-        // Commit transaction
-        await queryAsync(conn, "COMMIT");
-        success = true;
-        logInfo("Submodule updated successfully");
-
-        return res.status(200).json({
-            success,
-            data: submoduleData,
-            message: "Submodule updated successfully",
-        });
-
-    } catch (error) {
-        // Rollback transaction if there was an error
-        if (conn) {
-            await queryAsync(conn, "ROLLBACK").catch(rollbackErr => {
-                logError("Rollback failed", rollbackErr);
-            });
-        }
-
-        logError("Unexpected error", error);
-        return res.status(500).json({
-            success,
-            message: "Unexpected server error",
-            details: error.message,
-        });
-    } finally {
-        // Close connection if it exists
-        if (conn) {
-            closeConnection(conn);
-        }
+    // Convert image buffer to base64 if it exists
+    if (submoduleData.SubModuleImage) {
+      submoduleData.SubModuleImage = {
+        data: submoduleData.SubModuleImage.toString("base64"),
+        contentType: "image/jpeg", // Adjust based on your actual image type
+      };
     }
+
+    // Commit transaction
+    await queryAsync(conn, "COMMIT");
+    success = true;
+    logInfo("Submodule updated successfully");
+
+    return res.status(200).json({
+      success,
+      data: submoduleData,
+      message: "Submodule updated successfully",
+    });
+  } catch (error) {
+    // Rollback transaction if there was an error
+    if (conn) {
+      await queryAsync(conn, "ROLLBACK").catch((rollbackErr) => {
+        logError("Rollback failed", rollbackErr);
+      });
+    }
+
+    logError("Unexpected error", error);
+    return res.status(500).json({
+      success,
+      message: "Unexpected server error",
+      details: error.message,
+    });
+  } finally {
+    // Close connection if it exists
+    if (conn) {
+      closeConnection(conn);
+    }
+  }
 };
+
+// export const updateSubmoduleOrder = async (req, res) => {
+//     let success = false;
+//     const { submodules } = req.body;
+
+//     if (!submodules || !Array.isArray(submodules)) {
+//         return res.status(400).json({
+//             success,
+//             message: "submodules array is required"
+//         });
+//     }
+
+//     try {
+//         connectToDatabase(async (err, conn) => {
+//             if (err) {
+//                 logError(err);
+//                 return res.status(500).json({
+//                     success,
+//                     message: "Database connection error"
+//                 });
+//             }
+
+//             try {
+//                 await conn.beginTransaction();
+
+//                 // Update each submodule's sorting order
+//                 for (const submodule of submodules) {
+//                     const updateQuery = `
+//                         UPDATE SubModulesDetails
+//                         SET
+//                             SortingOrder = ?,
+//                             editOnDt = CURRENT_TIMESTAMP
+//                         WHERE SubModuleID = ?
+//                     `;
+//                     await queryAsync(conn, updateQuery, [
+//                         submodule.SortingOrder,
+//                         submodule.SubModuleID
+//                     ]);
+//                 }
+
+//                 await conn.commit();
+//                 success = true;
+//                 res.status(200).json({
+//                     success,
+//                     message: "Submodule order updated successfully"
+//                 });
+//             } catch (queryErr) {
+//                 await conn.rollback();
+//                 logError(queryErr);
+//                 res.status(500).json({
+//                     success,
+//                     message: "Error updating submodule order"
+//                 });
+//             } finally {
+//                 closeConnection();
+//             }
+//         });
+//     } catch (error) {
+//         logError(error);
+//         res.status(500).json({
+//             success,
+//             message: "Server error"
+//         });
+//     }
+// };
+
+export const updateSubmoduleOrder = async (req, res) => {
+  let success = false;
+  const { submodules } = req.body;
+
+  if (!submodules || !Array.isArray(submodules)) {
+    return res.status(400).json({
+      success,
+      message: "submodules array is required",
+    });
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success,
+          message: "Database connection error",
+        });
+      }
+
+      try {
+        await conn.beginTransaction();
+
+        for (const submodule of submodules) {
+          const updateQuery = `
+            UPDATE SubModulesDetails 
+            SET 
+              SortingOrder = ?,
+              editOnDt = CURRENT_TIMESTAMP
+            WHERE SubModuleID = ?
+          `;
+          await queryAsync(conn, updateQuery, [
+            submodule.SortingOrder,
+            submodule.SubModuleID,
+          ]);
+        }
+
+        await conn.commit();
+        success = true;
+        res.status(200).json({
+          success,
+          message: "Submodule order updated successfully",
+        });
+      } catch (queryErr) {
+        await conn.rollback();
+        logError(queryErr);
+        res.status(500).json({
+          success,
+          message: "Error updating submodule order",
+        });
+      } finally {
+        closeConnection();
+      }
+    });
+  } catch (error) {
+    logError(error);
+    res.status(500).json({
+      success,
+      message: "Server error",
+    });
+  }
+};
+
+export const updateUnitOrder = async (req, res) => {
+  let success = false;
+  const { units } = req.body;
+
+  if (!units || !Array.isArray(units)) {
+    return res.status(400).json({
+      success,
+      message: "units array is required",
+    });
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success,
+          message: "Database connection error",
+        });
+      }
+
+      try {
+        await conn.beginTransaction();
+
+        // Update each unit's sorting order
+        for (const unit of units) {
+          const updateQuery = `
+                        UPDATE UnitsDetails 
+                        SET 
+                            SortingOrder = ?,
+                            editOnDt = CURRENT_TIMESTAMP
+                        WHERE UnitID = ?
+                    `;
+          await queryAsync(conn, updateQuery, [unit.SortingOrder, unit.UnitID]);
+        }
+
+        await conn.commit();
+        success = true;
+        res.status(200).json({
+          success,
+          message: "Unit order updated successfully",
+        });
+      } catch (queryErr) {
+        await conn.rollback();
+        logError(queryErr);
+        res.status(500).json({
+          success,
+          message: "Error updating unit order",
+        });
+      } finally {
+        closeConnection();
+      }
+    });
+  } catch (error) {
+    logError(error);
+    res.status(500).json({
+      success,
+      message: "Server error",
+    });
+  }
+};
+
+// export const updateFilesOrder = async (req, res) => {
+//   let success = false;
+//   const { files } = req.body;
+
+//   if (!files || !Array.isArray(files)) {
+//     return res.status(400).json({
+//       success,
+//       message: "files array is required",
+//     });
+//   }
+
+//   try {
+//     connectToDatabase(async (err, conn) => {
+//       if (err) {
+//         logError(err);
+//         return res.status(500).json({
+//           success,
+//           message: "Database connection error",
+//         });
+//       }
+
+//       try {
+//         await conn.beginTransaction();
+
+//         // Update each file's percentage and order
+//         for (const file of files) {
+//           const updateQuery = `
+//                         UPDATE FilesDetails 
+//                         SET 
+//                             Percentage = ?,
+//                             editOnDt = CURRENT_TIMESTAMP
+//                         WHERE FileID = ?
+//                     `;
+//           await queryAsync(conn, updateQuery, [file.Percentage, file.FileID]);
+//         }
+
+//         await conn.commit();
+//         success = true;
+//         res.status(200).json({
+//           success,
+//           message: "Files order updated successfully",
+//         });
+//       } catch (queryErr) {
+//         await conn.rollback();
+//         logError(queryErr);
+//         res.status(500).json({
+//           success,
+//           message: "Error updating files order",
+//         });
+//       } finally {
+//         closeConnection();
+//       }
+//     });
+//   } catch (error) {
+//     logError(error);
+//     res.status(500).json({
+//       success,
+//       message: "Server error",
+//     });
+//   }
+// };
 
 // export const addSubmodule = async (req, res) => {
 //     console.log("Incoming request body", req.body);
 //     let success = false;
 //     const userId = req.user.id;
 //     console.log("User ID:", userId);
-
 
 //     const errors = validationResult(req);
 //     if (!errors.isEmpty()) {
@@ -547,7 +866,7 @@ export const updateSubModule = async (req, res) => {
 //             SubModuleName,
 //             SubModuleDescription,
 //             SubModuleImage,
-//             ModuleID 
+//             ModuleID
 //         } = req.body;
 
 //         if (!ModuleID) {
@@ -597,16 +916,16 @@ export const updateSubModule = async (req, res) => {
 
 //                 // Insert new submodule with ModuleID
 //                 const insertQuery = `
-//                     INSERT INTO SubModulesDetails 
+//                     INSERT INTO SubModulesDetails
 //                     (
-//                         SubModuleName, 
-//                         SubModuleImage, 
+//                         SubModuleName,
+//                         SubModuleImage,
 //                         SubModuleDescription,
 //                         ModuleID,
 //                         AuthAdd,
 //                         AddOnDt,
 //                         delStatus
-//                     ) 
+//                     )
 //                     VALUES (?, CONVERT(IMAGE, ?), ?, ?, ?, GETDATE(), 0);
 //                 `;
 
@@ -624,8 +943,8 @@ export const updateSubModule = async (req, res) => {
 
 //                 // Get the newly created submodule
 //                 const newSubmoduleQuery = `
-//                     SELECT * FROM SubModulesDetails 
-//                     WHERE SubModuleID = SCOPE_IDENTITY() 
+//                     SELECT * FROM SubModulesDetails
+//                     WHERE SubModuleID = SCOPE_IDENTITY()
 //                     AND ISNULL(delStatus,0) = 0;
 //                 `;
 //                 const newSubmodule = await queryAsync(conn, newSubmoduleQuery);
@@ -662,86 +981,149 @@ export const updateSubModule = async (req, res) => {
 //         });
 //     }
 // };
+export const updateFilesOrder = async (req, res) => {
+  let success = false;
+  const { files } = req.body;
 
+  if (!files || !Array.isArray(files)) {
+    return res.status(400).json({
+      success,
+      message: "files array is required",
+    });
+  }
 
-
-export const addSubmodule = async (req, res) => {
-    console.log("Incoming request body", req.body);
-    let success = false;
-    const userId = req.user.id;
-    console.log("User ID:", userId);
-
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        const warningMessage = "Data is not in the right format";
-        logWarning(warningMessage);
-        return res.status(400).json({
-            success,
-            data: errors.array(),
-            message: warningMessage
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success,
+          message: "Database connection error",
         });
-    }
+      }
 
-    try {
-        const {
-            SubModuleName,
-            SubModuleDescription,
-            SubModuleImage,
-            ModuleID
-        } = req.body;
+      try {
+        await conn.beginTransaction();
 
-        if (!ModuleID) {
-            const warningMessage = "ModuleID is required";
-            logWarning(warningMessage);
-            return res.status(400).json({
-                success: false,
-                data: {},
-                message: warningMessage
-            });
+        // Update each file's sorting order
+        for (const [index, file] of files.entries()) {
+          const updateQuery = `
+            UPDATE FilesDetails 
+            SET 
+                SortingOrder = ?,
+                Percentage = ?,
+                editOnDt = CURRENT_TIMESTAMP
+            WHERE FileID = ?
+          `;
+          await queryAsync(conn, updateQuery, [
+            index + 1, // 1-based sorting order
+            file.Percentage || 0, // Keep existing percentage logic
+            file.FileID
+          ]);
         }
 
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                const errorMessage = "Failed to connect to database";
-                logError(errorMessage);
-                return res.status(500).json({
-                    success: false,
-                    data: err,
-                    message: errorMessage
-                });
-            }
+        await conn.commit();
+        success = true;
+        res.status(200).json({
+          success,
+          message: "Files order updated successfully",
+        });
+      } catch (queryErr) {
+        await conn.rollback();
+        logError(queryErr);
+        res.status(500).json({
+          success,
+          message: "Error updating files order",
+        });
+      } finally {
+        closeConnection();
+      }
+    });
+  } catch (error) {
+    logError(error);
+    res.status(500).json({
+      success,
+      message: "Server error",
+    });
+  }
+};
 
-            try {
-                const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
-                const userRows = await queryAsync(conn, userQuery, [userId]);
+export const addSubmodule = async (req, res) => {
+  console.log("Incoming request body", req.body);
+  let success = false;
+  const userId = req.user.id;
+  console.log("User ID:", userId);
 
-                if (userRows.length === 0) {
-                    closeConnection();
-                    const warningMessage = "User not found";
-                    logWarning(warningMessage);
-                    return res.status(404).json({
-                        success: false,
-                        data: {},
-                        message: warningMessage
-                    });
-                }
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const warningMessage = "Data is not in the right format";
+    logWarning(warningMessage);
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: warningMessage,
+    });
+  }
 
-                let imageBuffer = null;
-                if (SubModuleImage) {
-                    if (SubModuleImage.startsWith('data:image')) {
-                        const base64Data = SubModuleImage.replace(/^data:image\/\w+;base64,/, '');
-                        imageBuffer = Buffer.from(base64Data, 'base64');
-                    } else {
-                        imageBuffer = Buffer.from(SubModuleImage, 'binary');
-                    }
-                }
+  try {
+    const { SubModuleName, SubModuleDescription, SubModuleImage, ModuleID } =
+      req.body;
 
-                // Start a transaction
-                await queryAsync(conn, "BEGIN TRANSACTION");
+    if (!ModuleID) {
+      const warningMessage = "ModuleID is required";
+      logWarning(warningMessage);
+      return res.status(400).json({
+        success: false,
+        data: {},
+        message: warningMessage,
+      });
+    }
 
-                try {
-                    // Insert new submodule with ModuleID and get the ID back
-                    const insertQuery = `
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        const errorMessage = "Failed to connect to database";
+        logError(errorMessage);
+        return res.status(500).json({
+          success: false,
+          data: err,
+          message: errorMessage,
+        });
+      }
+
+      try {
+        const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`;
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+
+        if (userRows.length === 0) {
+          closeConnection();
+          const warningMessage = "User not found";
+          logWarning(warningMessage);
+          return res.status(404).json({
+            success: false,
+            data: {},
+            message: warningMessage,
+          });
+        }
+
+        let imageBuffer = null;
+        if (SubModuleImage) {
+          if (SubModuleImage.startsWith("data:image")) {
+            const base64Data = SubModuleImage.replace(
+              /^data:image\/\w+;base64,/,
+              ""
+            );
+            imageBuffer = Buffer.from(base64Data, "base64");
+          } else {
+            imageBuffer = Buffer.from(SubModuleImage, "binary");
+          }
+        }
+
+        // Start a transaction
+        await queryAsync(conn, "BEGIN TRANSACTION");
+
+        try {
+          // Insert new submodule with ModuleID and get the ID back
+          const insertQuery = `
                         INSERT INTO SubModulesDetails 
                         (
                             SubModuleName, 
@@ -756,30 +1138,27 @@ export const addSubmodule = async (req, res) => {
                         VALUES (?, CONVERT(IMAGE, ?), ?, ?, ?, GETDATE(), 0);
                     `;
 
-                    const insertResult = await queryAsync(
-                        conn,
-                        insertQuery,
-                        [
-                            SubModuleName,
-                            imageBuffer,
-                            SubModuleDescription,
-                            ModuleID,
-                            userRows[0].Name
-                        ]
-                    );
+          const insertResult = await queryAsync(conn, insertQuery, [
+            SubModuleName,
+            imageBuffer,
+            SubModuleDescription,
+            ModuleID,
+            userRows[0].Name,
+          ]);
 
-                    // Get the newly created SubModuleID
-                    const newSubmoduleId = insertResult[0].SubModuleID;
+          // Get the newly created SubModuleID
+          const newSubmoduleId = insertResult[0].SubModuleID;
 
-                    // Get module name for the group name
-                    const moduleQuery = `SELECT ModuleName FROM ModulesDetails WHERE ModuleID = ?`;
-                    const moduleRows = await queryAsync(conn, moduleQuery, [ModuleID]);
-                    const moduleName = moduleRows.length > 0 ? moduleRows[0].ModuleName : '';
+          // Get module name for the group name
+          const moduleQuery = `SELECT ModuleName FROM ModulesDetails WHERE ModuleID = ?`;
+          const moduleRows = await queryAsync(conn, moduleQuery, [ModuleID]);
+          const moduleName =
+            moduleRows.length > 0 ? moduleRows[0].ModuleName : "";
 
-                    // Insert into group table
-                    // Insert into group table
-                    const groupName = `${SubModuleName} (${moduleName})`;
-                    const groupInsertQuery = `
+          // Insert into group table
+          // Insert into group table
+          const groupName = `${SubModuleName} (${moduleName})`;
+          const groupInsertQuery = `
                     INSERT INTO GroupMaster 
                     (
                         group_name,
@@ -791,111 +1170,108 @@ export const addSubmodule = async (req, res) => {
                     )
                     VALUES (?, 'submodule', ?, ?, GETDATE(), 0);`;
 
-                    await queryAsync(
-                        conn,
-                        groupInsertQuery,
-                        [
-                            groupName,
-                            newSubmoduleId,             // Use the newly created SubModuleID
-                            userRows[0].Name
-                        ]
-                    );
+          await queryAsync(conn, groupInsertQuery, [
+            groupName,
+            newSubmoduleId, // Use the newly created SubModuleID
+            userRows[0].Name,
+          ]);
 
+          // Commit the transaction
+          await queryAsync(conn, "COMMIT TRANSACTION");
 
-                    // Commit the transaction
-                    await queryAsync(conn, "COMMIT TRANSACTION");
-
-                    // Get the newly created submodule with all details
-                    const newSubmoduleQuery = `
+          // Get the newly created submodule with all details
+          const newSubmoduleQuery = `
                         SELECT * FROM SubModulesDetails 
                         WHERE SubModuleID = ?
                         AND ISNULL(delStatus,0) = 0;
                     `;
-                    const newSubmodule = await queryAsync(conn, newSubmoduleQuery, [newSubmoduleId]);
+          const newSubmodule = await queryAsync(conn, newSubmoduleQuery, [
+            newSubmoduleId,
+          ]);
 
-                    success = true;
-                    closeConnection();
+          success = true;
+          closeConnection();
 
-                    const infoMessage = "Submodule and corresponding group added successfully";
-                    logInfo(infoMessage);
+          const infoMessage =
+            "Submodule and corresponding group added successfully";
+          logInfo(infoMessage);
 
-                    return res.status(200).json({
-                        success,
-                        data: newSubmodule[0],
-                        message: infoMessage
-                    });
-
-                } catch (queryErr) {
-                    // Rollback transaction if any error occurs
-                    await queryAsync(conn, "ROLLBACK TRANSACTION");
-                    closeConnection();
-                    console.error("Database Query Error:", queryErr);
-                    logError(queryErr);
-                    return res.status(500).json({
-                        success: false,
-                        data: queryErr,
-                        message: 'Failed to add submodule. Please check your input data.'
-                    });
-                }
-            } catch (error) {
-                closeConnection();
-                logError(error);
-                return res.status(500).json({
-                    success: false,
-                    data: {},
-                    message: 'Internal server error'
-                });
-            }
-        });
-    } catch (error) {
+          return res.status(200).json({
+            success,
+            data: newSubmodule[0],
+            message: infoMessage,
+          });
+        } catch (queryErr) {
+          // Rollback transaction if any error occurs
+          await queryAsync(conn, "ROLLBACK TRANSACTION");
+          closeConnection();
+          console.error("Database Query Error:", queryErr);
+          logError(queryErr);
+          return res.status(500).json({
+            success: false,
+            data: queryErr,
+            message: "Failed to add submodule. Please check your input data.",
+          });
+        }
+      } catch (error) {
+        closeConnection();
         logError(error);
         return res.status(500).json({
-            success: false,
-            data: {},
-            message: 'Internal server error'
+          success: false,
+          data: {},
+          message: "Internal server error",
         });
-    }
+      }
+    });
+  } catch (error) {
+    logError(error);
+    return res.status(500).json({
+      success: false,
+      data: {},
+      message: "Internal server error",
+    });
+  }
 };
 
 export const deleteUnit = (req, res) => {
-    const { unitId } = req.body;
+  const { unitId } = req.body;
 
-    // Input validation
-    if (!unitId || isNaN(unitId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid unit ID provided",
+  // Input validation
+  if (!unitId || isNaN(unitId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid unit ID provided",
+    });
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection error",
         });
-    }
+      }
 
-    try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError(err);
-                return res.status(500).json({
-                    success: false,
-                    message: "Database connection error",
-                });
-            }
-
-            try {
-                // Check if unit exists and isn't deleted
-                const checkQuery = `
+      try {
+        // Check if unit exists and isn't deleted
+        const checkQuery = `
                     SELECT * FROM UnitsDetails 
                     WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)
                 `;
-                const [existingUnit] = await queryAsync(conn, checkQuery, [unitId]);
+        const [existingUnit] = await queryAsync(conn, checkQuery, [unitId]);
 
-                if (!existingUnit) {
-                    closeConnection(conn);
-                    return res.status(404).json({
-                        success: false,
-                        message: "Unit not found or already deleted",
-                    });
-                }
+        if (!existingUnit) {
+          closeConnection(conn);
+          return res.status(404).json({
+            success: false,
+            message: "Unit not found or already deleted",
+          });
+        }
 
-                // Perform the soft delete
-                const deleteQuery = `
+        // Perform the soft delete
+        const deleteQuery = `
                     UPDATE UnitsDetails
                     SET 
                         delStatus = 1,
@@ -904,106 +1280,108 @@ export const deleteUnit = (req, res) => {
                     WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)
                 `;
 
-                const adminId = req.user?.id; // Get current user ID
-                await queryAsync(conn, deleteQuery, [adminId, unitId]);
-                closeConnection(conn);
+        const adminId = req.user?.id; // Get current user ID
+        await queryAsync(conn, deleteQuery, [adminId, unitId]);
+        closeConnection(conn);
 
-                return res.status(200).json({
-                    success: true,
-                    data: {
-                        unitId: unitId,
-                        deletedAt: new Date().toISOString(),
-                        deletedBy: adminId
-                    },
-                    message: "Unit deleted successfully",
-                });
-
-            } catch (error) {
-                closeConnection(conn);
-                logError(`Error deleting unit: ${error.message}`);
-                return res.status(500).json({
-                    success: false,
-                    message: "Database error during deletion",
-                });
-            }
+        return res.status(200).json({
+          success: true,
+          data: {
+            unitId: unitId,
+            deletedAt: new Date().toISOString(),
+            deletedBy: adminId,
+          },
+          message: "Unit deleted successfully",
         });
-    } catch (outerError) {
-        logError(`Unexpected error: ${outerError.message}`);
+      } catch (error) {
+        closeConnection(conn);
+        logError(`Error deleting unit: ${error.message}`);
         return res.status(500).json({
-            success: false,
-            message: "Unexpected server error",
+          success: false,
+          message: "Database error during deletion",
         });
-    }
+      }
+    });
+  } catch (outerError) {
+    logError(`Unexpected error: ${outerError.message}`);
+    return res.status(500).json({
+      success: false,
+      message: "Unexpected server error",
+    });
+  }
 };
 
-
 export const updateUnit = async (req, res) => {
-    let success = false;
+  let success = false;
 
-    // 1. Authentication and validation
-    const userId = req.user?.UserID || req.user?.id;
-    if (!userId) {
-        return res.status(401).json({ success, message: "User not authenticated" });
-    }
+  // 1. Authentication and validation
+  const userId = req.user?.UserID || req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ success, message: "User not authenticated" });
+  }
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        logWarning("Data validation failed", errors.array());
-        return res.status(400).json({
-            success,
-            data: errors.array(),
-            message: "Data is not in the right format",
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    logWarning("Data validation failed", errors.array());
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: "Data is not in the right format",
+    });
+  }
+
+  // 2. Parameter extraction
+  const unitId = parseInt(req.params.id, 10);
+  if (isNaN(unitId)) {
+    return res.status(400).json({ success, message: "Invalid unit ID" });
+  }
+
+  // 3. Extract body fields
+  const { UnitName, UnitDescription } = req.body;
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError("Database connection failed", err);
+        return res.status(500).json({
+          success,
+          message: "Failed to connect to database",
         });
-    }
+      }
 
-    // 2. Parameter extraction
-    const unitId = parseInt(req.params.id, 10);
-    if (isNaN(unitId)) {
-        return res.status(400).json({ success, message: "Invalid unit ID" });
-    }
+      try {
+        let userQuery, userRows;
 
-    // 3. Extract body fields
-    const { UnitName, UnitDescription } = req.body;
-
-    try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError("Database connection failed", err);
-                return res.status(500).json({
-                    success,
-                    message: "Failed to connect to database",
-                });
-            }
-
-            try {
-                let userQuery, userRows;
-
-                if (!isNaN(Number(userId))) {
-                    userQuery = `
+        if (!isNaN(Number(userId))) {
+          userQuery = `
                         SELECT UserID, Name, isAdmin FROM Community_User 
                         WHERE ISNULL(delStatus, 0) = 0 AND UserID = ?
                     `;
-                    userRows = await queryAsync(conn, userQuery, [Number(userId)]);
-                }
+          userRows = await queryAsync(conn, userQuery, [Number(userId)]);
+        }
 
-                // If not found and userId looks like an email, try by email
-                if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
-                    userQuery = `
+        // If not found and userId looks like an email, try by email
+        if (
+          (!userRows || userRows.length === 0) &&
+          typeof userId === "string" &&
+          userId.includes("@")
+        ) {
+          userQuery = `
                         SELECT UserID, Name, isAdmin FROM Community_User 
                         WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?
                     `;
-                    userRows = await queryAsync(conn, userQuery, [userId]);
-                }
+          userRows = await queryAsync(conn, userQuery, [userId]);
+        }
 
-                if (!userRows || userRows.length === 0) {
-                    closeConnection(conn);
-                    return res.status(404).json({ success, message: "User not found" });
-                }
+        if (!userRows || userRows.length === 0) {
+          closeConnection(conn);
+          return res.status(404).json({ success, message: "User not found" });
+        }
 
-                const user = userRows[0];
+        const user = userRows[0];
 
-                // 5. Build update query
-                const updateQuery = `
+        // 5. Build update query
+        const updateQuery = `
                     UPDATE UnitsDetails
                     SET 
                         UnitName = ?,
@@ -1013,27 +1391,27 @@ export const updateUnit = async (req, res) => {
                     WHERE UnitID = ? AND ISNULL(delStatus, 0) = 0
                 `;
 
-                const updateParams = [
-                    UnitName || null,
-                    UnitDescription || null,
-                    user.Name,  // AuthLstEdit
-                    new Date(),  // editOnDt
-                    unitId
-                ];
+        const updateParams = [
+          UnitName || null,
+          UnitDescription || null,
+          user.Name, // AuthLstEdit
+          new Date(), // editOnDt
+          unitId,
+        ];
 
-                // 6. Execute update
-                const result = await queryAsync(conn, updateQuery, updateParams);
+        // 6. Execute update
+        const result = await queryAsync(conn, updateQuery, updateParams);
 
-                if (result.affectedRows === 0) {
-                    closeConnection(conn);
-                    return res.status(404).json({
-                        success,
-                        message: "Unit not found or already deleted",
-                    });
-                }
+        if (result.affectedRows === 0) {
+          closeConnection(conn);
+          return res.status(404).json({
+            success,
+            message: "Unit not found or already deleted",
+          });
+        }
 
-                // 7. Fetch updated unit
-                const fetchQuery = `
+        // 7. Fetch updated unit
+        const fetchQuery = `
                     SELECT 
                         UnitID, 
                         UnitName, 
@@ -1044,84 +1422,84 @@ export const updateUnit = async (req, res) => {
                     WHERE UnitID = ? AND ISNULL(delStatus, 0) = 0
                 `;
 
-                const updatedUnit = await queryAsync(conn, fetchQuery, [unitId]);
+        const updatedUnit = await queryAsync(conn, fetchQuery, [unitId]);
 
-                success = true;
-                closeConnection(conn);
-                logInfo("Unit updated successfully");
+        success = true;
+        closeConnection(conn);
+        logInfo("Unit updated successfully");
 
-                return res.status(200).json({
-                    success,
-                    data: updatedUnit[0],
-                    message: "Unit updated successfully",
-                });
-            } catch (queryErr) {
-                closeConnection(conn);
-                logError("Database query failed", queryErr);
-                return res.status(500).json({
-                    success,
-                    message: "Database operation failed",
-                    details: queryErr.message.includes('Conversion failed')
-                        ? "Invalid data type in database operation"
-                        : queryErr.message,
-                });
-            }
+        return res.status(200).json({
+          success,
+          data: updatedUnit[0],
+          message: "Unit updated successfully",
         });
-    } catch (error) {
-        logError("Unexpected error", error);
+      } catch (queryErr) {
+        closeConnection(conn);
+        logError("Database query failed", queryErr);
         return res.status(500).json({
-            success,
-            message: "Unexpected server error",
-            details: error.message,
+          success,
+          message: "Database operation failed",
+          details: queryErr.message.includes("Conversion failed")
+            ? "Invalid data type in database operation"
+            : queryErr.message,
         });
-    }
+      }
+    });
+  } catch (error) {
+    logError("Unexpected error", error);
+    return res.status(500).json({
+      success,
+      message: "Unexpected server error",
+      details: error.message,
+    });
+  }
 };
 
 export const deleteFile = (req, res) => {
-    const { fileId } = req.body;
+  const { fileId } = req.body;
 
-    // Input validation
-    if (!fileId || isNaN(fileId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid file ID provided",
+  // Input validation
+  if (!fileId || isNaN(fileId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid file ID provided",
+    });
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection error",
         });
-    }
+      }
 
-    try {
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                logError(err);
-                return res.status(500).json({
-                    success: false,
-                    message: "Database connection error",
-                });
-            }
+      try {
+        await queryAsync(conn, "BEGIN TRANSACTION");
 
-            try {
-                await queryAsync(conn, 'BEGIN TRANSACTION');
-
-                // Check if file exists and isn't deleted
-                const checkQuery = `
+        // Check if file exists and isn't deleted
+        const checkQuery = `
                     SELECT * FROM FilesDetails 
                     WHERE FileID = ? AND (delStatus IS NULL OR delStatus = 0)
                 `;
-                const [existingFile] = await queryAsync(conn, checkQuery, [fileId]);
+        const [existingFile] = await queryAsync(conn, checkQuery, [fileId]);
 
-                if (!existingFile) {
-                    await queryAsync(conn, 'ROLLBACK TRANSACTION');
-                    closeConnection(conn);
-                    return res.status(404).json({
-                        success: false,
-                        message: "File not found or already deleted",
-                    });
-                }
+        if (!existingFile) {
+          await queryAsync(conn, "ROLLBACK TRANSACTION");
+          closeConnection(conn);
+          return res.status(404).json({
+            success: false,
+            message: "File not found or already deleted",
+          });
+        }
 
-                // Get the unit ID before deleting
-                const unitId = existingFile.UnitID;
+        // Get the unit ID before deleting
+        const unitId = existingFile.UnitID;
 
-                // Perform the soft delete
-                const deleteQuery = `
+        // Perform the soft delete
+        const deleteQuery = `
                     UPDATE FilesDetails
                     SET 
                         delStatus = 1,
@@ -1130,131 +1508,140 @@ export const deleteFile = (req, res) => {
                     WHERE FileID = ? AND (delStatus IS NULL OR delStatus = 0)
                 `;
 
-                const adminId = req.user?.id; // Get current user ID
-                await queryAsync(conn, deleteQuery, [adminId, fileId]);
+        const adminId = req.user?.id; // Get current user ID
+        await queryAsync(conn, deleteQuery, [adminId, fileId]);
 
-                // Count remaining active files in the unit
-                const countQuery = `
+        // Count remaining active files in the unit
+        const countQuery = `
                     SELECT COUNT(*) as remainingCount 
                     FROM FilesDetails 
                     WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)
                 `;
-                const [countResult] = await queryAsync(conn, countQuery, [unitId]);
+        const [countResult] = await queryAsync(conn, countQuery, [unitId]);
 
-                // Update percentages if files remain
-                if (countResult.remainingCount > 0) {
-                    const newPercentage = (100 / countResult.remainingCount).toFixed(2);
+        // Update percentages if files remain
+        if (countResult.remainingCount > 0) {
+          const newPercentage = (100 / countResult.remainingCount).toFixed(2);
 
-                    await queryAsync(
-                        conn,
-                        `UPDATE FilesDetails 
+          await queryAsync(
+            conn,
+            `UPDATE FilesDetails 
                          SET Percentage = ?
                          WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)`,
-                        [newPercentage, unitId]
-                    );
-                }
+            [newPercentage, unitId]
+          );
+        }
 
-                await queryAsync(conn, 'COMMIT TRANSACTION');
-                closeConnection(conn);
+        await queryAsync(conn, "COMMIT TRANSACTION");
+        closeConnection(conn);
 
-                return res.status(200).json({
-                    success: true,
-                    data: {
-                        fileId: fileId,
-                        deletedAt: new Date().toISOString(),
-                        deletedBy: adminId,
-                        fileName: existingFile.FilesName,
-                        unitId: unitId,
-                        remainingFiles: countResult.remainingCount,
-                        newPercentage: countResult.remainingCount > 0 ?
-                            (100 / countResult.remainingCount).toFixed(2) : 0
-                    },
-                    message: "File deleted successfully",
-                });
-
-            } catch (error) {
-                await queryAsync(conn, 'ROLLBACK TRANSACTION');
-                closeConnection(conn);
-                logError(`Error deleting file: ${error.message}`);
-                return res.status(500).json({
-                    success: false,
-                    message: "Database error during deletion",
-                    details: error.message
-                });
-            }
+        return res.status(200).json({
+          success: true,
+          data: {
+            fileId: fileId,
+            deletedAt: new Date().toISOString(),
+            deletedBy: adminId,
+            fileName: existingFile.FilesName,
+            unitId: unitId,
+            remainingFiles: countResult.remainingCount,
+            newPercentage:
+              countResult.remainingCount > 0
+                ? (100 / countResult.remainingCount).toFixed(2)
+                : 0,
+          },
+          message: "File deleted successfully",
         });
-    } catch (outerError) {
-        logError(`Unexpected error: ${outerError.message}`);
+      } catch (error) {
+        await queryAsync(conn, "ROLLBACK TRANSACTION");
+        closeConnection(conn);
+        logError(`Error deleting file: ${error.message}`);
         return res.status(500).json({
-            success: false,
-            message: "Unexpected server error",
-            details: outerError.message
+          success: false,
+          message: "Database error during deletion",
+          details: error.message,
         });
-    }
+      }
+    });
+  } catch (outerError) {
+    logError(`Unexpected error: ${outerError.message}`);
+    return res.status(500).json({
+      success: false,
+      message: "Unexpected server error",
+      details: outerError.message,
+    });
+  }
 };
 
 export const addUnit = async (req, res) => {
-    console.log("Incoming request body", req.body);
-    let success = false;
-    const userId = req.user?.id || req.user?.UserID;
+  console.log("Incoming request body", req.body);
+  let success = false;
+  const userId = req.user?.id || req.user?.UserID;
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({
-            success,
-            data: errors.array(),
-            message: "Data is not in the right format"
-        });
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: "Data is not in the right format",
+    });
+  }
+
+  try {
+    const { UnitName, UnitDescription, SubModuleID } = req.body;
+
+    if (!SubModuleID) {
+      return res.status(400).json({
+        success: false,
+        message: "SubModuleID is required",
+      });
     }
 
-    try {
-        const { UnitName, UnitDescription, SubModuleID } = req.body;
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: "Database connection failed",
+        });
+      }
 
-        if (!SubModuleID) {
-            return res.status(400).json({
-                success: false,
-                message: "SubModuleID is required"
-            });
+      try {
+        // Get user details
+        let userRows;
+        if (!isNaN(Number(userId))) {
+          userRows = await queryAsync(
+            conn,
+            `SELECT UserID, Name FROM Community_User 
+                         WHERE ISNULL(delStatus,0) = 0 AND UserID = ?`,
+            [Number(userId)]
+          );
         }
 
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    message: "Database connection failed"
-                });
-            }
-
-            try {
-                // Get user details
-                let userRows;
-                if (!isNaN(Number(userId))) {
-                    userRows = await queryAsync(conn,
-                        `SELECT UserID, Name FROM Community_User 
-                         WHERE ISNULL(delStatus,0) = 0 AND UserID = ?`,
-                        [Number(userId)]);
-                }
-
-                if ((!userRows || userRows.length === 0) && typeof userId === 'string' && userId.includes('@')) {
-                    userRows = await queryAsync(conn,
-                        `SELECT UserID, Name FROM Community_User 
+        if (
+          (!userRows || userRows.length === 0) &&
+          typeof userId === "string" &&
+          userId.includes("@")
+        ) {
+          userRows = await queryAsync(
+            conn,
+            `SELECT UserID, Name FROM Community_User 
                          WHERE ISNULL(delStatus,0) = 0 AND EmailId = ?`,
-                        [userId]);
-                }
+            [userId]
+          );
+        }
 
-                if (!userRows || userRows.length === 0) {
-                    closeConnection(conn);
-                    return res.status(404).json({
-                        success: false,
-                        message: "User not found"
-                    });
-                }
+        if (!userRows || userRows.length === 0) {
+          closeConnection(conn);
+          return res.status(404).json({
+            success: false,
+            message: "User not found",
+          });
+        }
 
-                // Start transaction
-                await queryAsync(conn, "BEGIN TRANSACTION");
+        // Start transaction
+        await queryAsync(conn, "BEGIN TRANSACTION");
 
-                // Insert new unit
-                const insertQuery = `
+        // Insert new unit
+        const insertQuery = `
                     INSERT INTO UnitsDetails 
                     (UnitName, UnitDescription, SubModuleID, AuthAdd, AddOnDt, delStatus) 
                     OUTPUT INSERTED.UnitID, INSERTED.UnitName, INSERTED.UnitDescription,
@@ -1262,137 +1649,129 @@ export const addUnit = async (req, res) => {
                     VALUES (?, ?, ?, ?, GETDATE(), 0);
                 `;
 
-                const [newUnit] = await queryAsync(conn, insertQuery, [
-                    UnitName,
-                    UnitDescription || null,
-                    SubModuleID,
-                    userRows[0].Name
-                ]);
+        const [newUnit] = await queryAsync(conn, insertQuery, [
+          UnitName,
+          UnitDescription || null,
+          SubModuleID,
+          userRows[0].Name,
+        ]);
 
-                // Commit transaction
-                await queryAsync(conn, "COMMIT TRANSACTION");
-                closeConnection(conn);
+        // Commit transaction
+        await queryAsync(conn, "COMMIT TRANSACTION");
+        closeConnection(conn);
 
-                return res.status(200).json({
-                    success: true,
-                    UnitID: newUnit.UnitID,
-                    data: newUnit,
-                    message: "Unit added successfully"
-                });
-
-            } catch (queryErr) {
-                await queryAsync(conn, "ROLLBACK TRANSACTION");
-                closeConnection(conn);
-                console.error("Database Error:", queryErr);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to add unit'
-                });
-            }
+        return res.status(200).json({
+          success: true,
+          UnitID: newUnit.UnitID,
+          data: newUnit,
+          message: "Unit added successfully",
         });
-    } catch (error) {
-        console.error("Server Error:", error);
+      } catch (queryErr) {
+        await queryAsync(conn, "ROLLBACK TRANSACTION");
+        closeConnection(conn);
+        console.error("Database Error:", queryErr);
         return res.status(500).json({
-            success: false,
-            message: 'Internal server error'
+          success: false,
+          message: "Failed to add unit",
         });
-    }
+      }
+    });
+  } catch (error) {
+    console.error("Server Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };
-
-
 
 /*-----------------------progress api -------------------------*/
 
 export const recordFileView = async (req, res) => {
-    console.log("Incoming file view request");
-    var success = false;
-    var infoMessage = "";
-    const userId = req.user.id;
+  console.log("Incoming file view request");
+  var success = false;
+  var infoMessage = "";
+  const userId = req.user.id;
 
-    try {
-        const { FileID } = req.body;
+  try {
+    const { FileID } = req.body;
 
-        if (!FileID) {
-            const warningMessage = "FileID is required";
-            logWarning(warningMessage);
-            return res.status(400).json({ success, message: warningMessage });
+    if (!FileID) {
+      const warningMessage = "FileID is required";
+      logWarning(warningMessage);
+      return res.status(400).json({ success, message: warningMessage });
+    }
+
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        const errorMessage = "Database connection failed";
+        logError(err);
+        return res.status(500).json({ success: false, message: errorMessage });
+      }
+
+      try {
+        // Get current user details
+        const userQuery = `SELECT UserID, Name FROM Community_User 
+                                 WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+
+        if (userRows.length === 0) {
+          closeConnection(conn);
+          const warningMessage = "User not found";
+          logWarning(warningMessage);
+          return res
+            .status(404)
+            .json({ success: false, message: warningMessage });
         }
 
-        connectToDatabase(async (err, conn) => {
-            if (err) {
-                const errorMessage = "Database connection failed";
-                logError(err);
-                return res.status(500).json({ success: false, message: errorMessage });
-            }
+        const user = userRows[0];
 
-            try {
-                // Get current user details
-                const userQuery = `SELECT UserID, Name FROM Community_User 
-                                 WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
-                const userRows = await queryAsync(conn, userQuery, [userId]);
-
-                if (userRows.length === 0) {
-                    closeConnection(conn);
-                    const warningMessage = "User not found";
-                    logWarning(warningMessage);
-                    return res.status(404).json({ success: false, message: warningMessage });
-                }
-
-                const user = userRows[0];
-
-                // Check if THIS USER has already viewed THIS FILE
-                const checkQuery = `SELECT UserID, FileID FROM UserLmsProgress 
+        // Check if THIS USER has already viewed THIS FILE
+        const checkQuery = `SELECT UserID, FileID FROM UserLmsProgress 
                                   WHERE FileID = ? AND UserID = ? AND isnull(delStatus,0)=0`;
-                const existingViews = await queryAsync(conn, checkQuery, [FileID, user.UserID]);
+        const existingViews = await queryAsync(conn, checkQuery, [
+          FileID,
+          user.UserID,
+        ]);
 
-                if (existingViews.length > 0) {
-                    // This user has already viewed this file
-                    infoMessage = "File view already recorded for this user";
-                    success = true;
-                } else {
-                    // Record new view for this user
-                    const insertQuery = `
+        if (existingViews.length > 0) {
+          // This user has already viewed this file
+          infoMessage = "File view already recorded for this user";
+          success = true;
+        } else {
+          // Record new view for this user
+          const insertQuery = `
                         INSERT INTO UserLmsProgress 
                         (UserID, FileID, AuthAdd, AddOnDt, delStatus) 
                         VALUES (?, ?, ?, GETDATE(), 0);
                     `;
 
-                    await queryAsync(conn, insertQuery, [
-                        user.UserID,
-                        FileID,
-                        user.Name
-                    ]);
-                    success = true;
-                    infoMessage = "File view recorded successfully";
-                }
+          await queryAsync(conn, insertQuery, [user.UserID, FileID, user.Name]);
+          success = true;
+          infoMessage = "File view recorded successfully";
+        }
 
-                closeConnection(conn);
-                logInfo(infoMessage);
-                return res.status(200).json({
-                    success,
-                    message: infoMessage
-                });
-
-            } catch (queryErr) {
-                closeConnection(conn);
-                console.error("Database Query Error:", queryErr);
-                logError(queryErr);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to record file view'
-                });
-            }
+        closeConnection(conn);
+        logInfo(infoMessage);
+        return res.status(200).json({
+          success,
+          message: infoMessage,
         });
-    } catch (error) {
-        logError(error);
+      } catch (queryErr) {
+        closeConnection(conn);
+        console.error("Database Query Error:", queryErr);
+        logError(queryErr);
         return res.status(500).json({
-            success: false,
-            message: 'Internal server error'
+          success: false,
+          message: "Failed to record file view",
         });
-    }
+      }
+    });
+  } catch (error) {
+    logError(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };
-
-
-
-
-

@@ -232,47 +232,47 @@ const QuizTable = () => {
   }, [searchTerm, quizzes, categories, quizLevels]);
 
   const handleDelete = async (quizId) => {
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Ok!'
-    });
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "You won't be able to revert this!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Ok!'
+  });
 
-    if (result.isConfirmed) {
-      try {
-        const endpoint = `quiz/deleteQuiz`;
-        const method = "POST";
-        const headers = {
-          'Content-Type': 'application/json',
-          'auth-token': userToken
-        };
-        const body = {}
+  if (result.isConfirmed) {
+    try {
+      const endpoint = `quiz/deleteQuiz`;
+      const method = "POST";
+      const headers = {
+        'Content-Type': 'application/json',
+        'auth-token': userToken
+      };
+      const body = { QuizID: quizId }; // Added QuizID to the body
 
-        const response = await fetchData(endpoint, method, body, headers);
-        if (response.success) {
-          Swal.fire(
-            'Deleted!',
-            'Quiz has been deleted.',
-            'success'
-          );
-          setQuizzes(prevQuizzes => prevQuizzes.filter(quiz => quiz.QuizID !== quizId));
-        } else {
-          throw new Error(response.message || "Failed to delete quiz");
-        }
-      } catch (error) {
-        console.error("Error deleting quiz:", error);
+      const response = await fetchData(endpoint, method, body, headers);
+      if (response.success) {
         Swal.fire(
-          'Error!',
-          error.message || 'Failed to delete quiz',
-          'error'
+          'Deleted!',
+          'Quiz has been deleted.',
+          'success'
         );
+        setQuizzes(prevQuizzes => prevQuizzes.filter(quiz => quiz.QuizID !== quizId));
+      } else {
+        throw new Error(response.message || "Failed to delete quiz");
       }
+    } catch (error) {
+      console.error("Error deleting quiz:", error);
+      Swal.fire(
+        'Error!',
+        error.message || 'Failed to delete quiz',
+        'error'
+      );
     }
-  };
+  }
+};
 
   // Action handlers
   const handleView = (quiz) => {

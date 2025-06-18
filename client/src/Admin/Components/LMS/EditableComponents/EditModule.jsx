@@ -102,9 +102,9 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules, onCreateQuiz
             text: "Are you sure you want to update this module?",
             icon: "question",
             showCancelButton: true,
-            confirmButtonText: "Yes",
+            confirmButtonText: "OK",
             cancelButtonText: "Cancel",
-        });
+        });     
 
         if (!confirmResult.isConfirmed) return;
 
@@ -456,7 +456,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules, onCreateQuiz
                 </div>
                 {!isEditing && (
                     <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <div>
+                        {/* <div>
                             <button
                                 onClick={() => {
                                     if (onCreateQuiz) {
@@ -470,7 +470,7 @@ const EditModule = ({ module, onCancel, onDelete, onViewSubmodules, onCreateQuiz
                                 <FaPlus className="mr-1" size={12} />
                                 Create Quiz
                             </button>
-                        </div>
+                        </div> */}
                         <button
                             onClick={() => setIsEditing(true)}
                             className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center"
