@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { FaChevronRight } from 'react-icons/fa';
 import PropTypes from 'prop-types';
@@ -9,65 +9,79 @@ const BreadCrumb = ({ customPaths = [] }) => {
   const params = useParams();
   const { state } = location;
 
-  // Remove file extension from name
-  const removeExtension = (filename) => {
-    return filename?.replace(/\.[^/.]+$/, "") || '';
-  };
+  // State to track current module/submodule names
+  const [currentModule, setCurrentModule] = useState({
+    name: state?.moduleName || localStorage.getItem('moduleName'),
+    id: params.moduleId || localStorage.getItem('moduleId')
+  });
+  
+  const [currentSubmodule, setCurrentSubmodule] = useState({
+    name: state?.submoduleName || localStorage.getItem('submoduleName'),
+    id: params.subModuleId || localStorage.getItem('subModuleId')
+  });
+
+  // Update state when navigation occurs
+  useEffect(() => {
+    // Store module info if present in state
+    if (state?.moduleName) {
+      localStorage.setItem('moduleName', state.moduleName);
+      localStorage.setItem('moduleId', state.moduleId);
+    }
+    
+    // Store submodule info if present in state
+    if (state?.submoduleName) {
+      localStorage.setItem('submoduleName', state.submoduleName);
+      localStorage.setItem('subModuleId', state.submoduleId);
+    }
+
+    setCurrentModule({
+      name: state?.moduleName || localStorage.getItem('moduleName'),
+      id: params.moduleId || localStorage.getItem('moduleId')
+    });
+    
+    setCurrentSubmodule({
+      name: state?.submoduleName || localStorage.getItem('submoduleName'),
+      id: params.subModuleId || localStorage.getItem('subModuleId')
+    });
+  }, [location, params, state]);
 
   // Generate breadcrumb items based on route
   const getBreadcrumbItems = () => {
-  const pathnames = location.pathname.split('/').filter(x => x);
-  const items = [];
-  
-  // Always start with Modules
-  items.push({
-    label: 'Modules',
-    path: '/LearningPath',
-    isActive: false,
-    state: null
-  });
-
-  // Module level
-  const moduleName = state?.moduleName || localStorage.getItem('moduleName');
-  const moduleId = params.moduleId || localStorage.getItem('moduleId');
-  
-  if (moduleName && moduleId) {
+    const pathnames = location.pathname.split('/').filter(x => x);
+    const items = [];
+    
+    // Always start with Modules
     items.push({
-      label: moduleName,
-      path: `/module/${moduleId}`,
-      isActive: pathnames.includes('module') && !pathnames.includes('submodule'),
-      state: { moduleName }
+      label: 'Modules',
+      path: '/LearningPath',
+      isActive: false
     });
-  }
 
-  // Submodule level
-  const submoduleName = state?.submoduleName || localStorage.getItem('submoduleName');
-  const subModuleId = params.subModuleId || localStorage.getItem('subModuleId');
-  
-  if (submoduleName && subModuleId) {
-    items.push({
-      label: submoduleName,
-      path: null, // Make non-clickable
-      isActive: pathnames.includes('submodule'),
-    });
-  }
+    // Module level (show if we have module info and we're at module or submodule level)
+    if (currentModule.name && (pathnames.includes('module') || pathnames.includes('submodule'))) {
+      items.push({
+        label: currentModule.name,
+        path: `/module/${currentModule.id}`,
+        isActive: pathnames.includes('module') && !pathnames.includes('submodule')
+      });
+    }
 
-  // Unit level
-  if (state?.unitName) {
-    items.push({
-      label: state.unitName,
-      path: null,
-      isActive: true
-    });
-  }
+    // Submodule level (only show if we're at submodule level)
+    if (pathnames.includes('submodule') && currentSubmodule.name) {
+      items.push({
+        label: currentSubmodule.name,
+        path: null, // Current page - no link
+        isActive: true
+      });
+    }
 
-  return [...items, ...customPaths];
-};
+    return [...items, ...customPaths];
+  };
 
   const breadcrumbItems = getBreadcrumbItems();
 
   return (
-    <nav className="flex items-center flex-wrap gap-2 text-sm text-gray-600 mb-6 bg-white rounded-lg px-4 py-3 shadow-sm">
+    <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6 bg-white rounded-lg px-4 py-3 shadow-sm">
       {breadcrumbItems.map((item, index) => (
         <React.Fragment key={index}>
           {index > 0 && (
@@ -77,7 +91,16 @@ const BreadCrumb = ({ customPaths = [] }) => {
           )}
           {item.path ? (
             <button
-              onClick={() => navigate(item.path, { state: item.state })}
+              onClick={() => navigate(item.path, {
+                state: {
+                  moduleName: currentModule.name,
+                  moduleId: currentModule.id,
+                  ...(item.label === currentSubmodule.name ? {
+                    submoduleName: currentSubmodule.name,
+                    submoduleId: currentSubmodule.id
+                  } : {})
+                }
+              })}
               className={`hover:text-blue-600 transition-colors duration-200 ${
                 item.isActive ? 'font-semibold text-gray-800' : 'font-medium text-gray-500'
               }`}
@@ -85,9 +108,7 @@ const BreadCrumb = ({ customPaths = [] }) => {
               {item.label}
             </button>
           ) : (
-            <span className={`${
-              item.isActive ? 'font-semibold text-gray-800' : 'font-medium text-gray-500'
-            }`}>
+            <span className="font-semibold text-gray-800">
               {item.label}
             </span>
           )}
@@ -102,8 +123,7 @@ BreadCrumb.propTypes = {
     PropTypes.shape({
       label: PropTypes.string.isRequired,
       path: PropTypes.string,
-      isActive: PropTypes.bool,
-      state: PropTypes.object
+      isActive: PropTypes.bool
     })
   )
 };

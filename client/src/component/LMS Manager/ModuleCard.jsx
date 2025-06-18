@@ -35,7 +35,17 @@ const ModuleCard = () => {
   }, [fetchData]);
 
   const handleModuleClick = (moduleId, moduleName) => {
-    navigate(`/module/${moduleId}?moduleName=${encodeURIComponent(moduleName)}`);
+    // Store module name in localStorage for breadcrumb persistence
+    localStorage.setItem('moduleName', moduleName);
+    localStorage.setItem('moduleId', moduleId);
+    
+    // Navigate with state containing module name
+    navigate(`/module/${moduleId}`, {
+      state: { 
+        moduleName: moduleName,
+        moduleId: moduleId
+      }
+    });
   };
 
   const toggleDescription = (moduleId, event) => {
@@ -103,10 +113,11 @@ const ModuleCard = () => {
                 </h3>
 
                 <p
-                  className={`text-gray-600 text-base mb-4 hover:text-gray-800 transition-colors duration-200 break-words ${expandedDescriptions[module.ModuleID]
+                  className={`text-gray-600 text-base mb-4 hover:text-gray-800 transition-colors duration-200 break-words ${
+                    expandedDescriptions[module.ModuleID]
                       ? 'overflow-y-auto max-h-32'
                       : 'line-clamp-2'
-                    }`}
+                  }`}
                 >
                   {module.ModuleDescription || "No description available"}
                 </p>
