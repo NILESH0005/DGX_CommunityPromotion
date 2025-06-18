@@ -14,17 +14,7 @@ const ModuleOrder = ({ modules, onClose, onSave }) => {
     setOrderedModules(items);
   };
 
-  // const handleSave = () => {
-  //   // Only send ModuleID and SortingOrder to backend
-  //   const simplifiedModules = orderedModules.map((module, index) => ({
-  //     ModuleID: module.ModuleID,
-  //     SortingOrder: index + 1
-  //   }));
-  //   onSave(orderedModules); // Still pass full modules to parent for local state update
-  // };
-
   const handleSave = () => {
-    // Prepare the data structure expected by the API
     const modulesToSave = orderedModules.map((module, index) => ({
       ModuleID: module.ModuleID,
       SortingOrder: index + 1,
@@ -34,7 +24,7 @@ const ModuleOrder = ({ modules, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Manage Module Order</h2>
           <button
@@ -79,13 +69,13 @@ const ModuleOrder = ({ modules, onClose, onSave }) => {
                         {...provided.dragHandleProps}
                         className="flex items-center p-3 border border-gray-200 rounded-lg bg-white"
                       >
-                        <span className="text-gray-500 mr-4">{index + 1}</span>
-                        <span className="font-medium flex-grow">
+                        <span className="text-gray-500 mr-3 sm:mr-4 flex-shrink-0">{index + 1}</span>
+                        <span className="font-medium flex-grow min-w-0 break-words">
                           {module.ModuleName}
                         </span>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 text-gray-400"
+                          className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"

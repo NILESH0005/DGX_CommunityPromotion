@@ -32,7 +32,7 @@ const FilesOrder = ({ files, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Manage Files Order</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -64,16 +64,18 @@ const FilesOrder = ({ files, onClose, onSave }) => {
                           {...provided.dragHandleProps}
                           className="flex items-center p-3 border border-gray-200 rounded-lg bg-white"
                         >
-                          <span className="text-gray-500 mr-4">{index + 1}</span>
-                          <div className="flex items-center flex-grow">
+                          <span className="text-gray-500 mr-3 sm:mr-4 flex-shrink-0">{index + 1}</span>
+                          <div className="flex items-center flex-grow min-w-0">
                             {file.FileType === 'link' ? (
-                              <FaLink className="text-blue-500 mr-2" />
+                              <FaLink className="text-blue-500 mr-2 flex-shrink-0" />
                             ) : (
-                              <FaFile className="text-gray-500 mr-2" />
+                              <FaFile className="text-gray-500 mr-2 flex-shrink-0" />
                             )}
-                            <span className="font-medium">{file.FilesName}</span>
+                            <span className="font-medium truncate overflow-hidden text-ellipsis break-words">
+                              {file.FilesName}
+                            </span>
                           </div>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-gray-500 ml-2 flex-shrink-0">
                             {file.Percentage}%
                           </span>
                         </div>

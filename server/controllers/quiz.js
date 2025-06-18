@@ -31,7 +31,7 @@ export const createQuiz = async (req, res) => {
       quizVisibility,
       quizImage,
       refId = 0,
-      refName = 'quiz'
+      refName = "quiz",
     } = req.body;
 
     console.log("Request Body:", req.body);
@@ -43,8 +43,8 @@ export const createQuiz = async (req, res) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
-    let startDateAndTime = `${ startDate } ${ startTime }`;
-    let endDateTime = `${ endDate } ${ endTime }`;
+    let startDateAndTime = `${startDate} ${startTime}`;
+    let endDateTime = `${endDate} ${endTime}`;
 
     // Set default values for null checks
     category = category ?? null;
@@ -52,14 +52,14 @@ export const createQuiz = async (req, res) => {
     level = level ?? null;
     duration = duration ?? null;
     negativeMarking = negativeMarking ?? false;
-    passingPercentage = passingPercentage ?? 50
+    passingPercentage = passingPercentage ?? 50;
     startDateAndTime = startDateAndTime ?? null;
     endDateTime = endDateTime ?? null;
     type = type ?? null;
     quizVisibility = quizVisibility ?? "Public";
     quizImage = quizImage ?? null;
     refId = refId ?? 0;
-    refName = refName ?? 'quiz';
+    refName = refName ?? "quiz";
 
     connectToDatabase(async (err, conn) => {
       if (err) {
@@ -71,7 +71,8 @@ export const createQuiz = async (req, res) => {
       logInfo("Database connection established successfully");
 
       try {
-        const userQuery = 'SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?';
+        const userQuery =
+          "SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?";
         const userRows = await queryAsync(conn, userQuery, [userId]);
         console.log("User Rows:", userRows);
 
@@ -108,7 +109,7 @@ export const createQuiz = async (req, res) => {
           quizImage,
           authAdd,
           refId,
-          refName
+          refName,
         ]);
 
         // Fetch last inserted Quiz ID
@@ -249,7 +250,7 @@ GROUP BY
 export const deleteQuiz = (req, res) => {
   let success = false;
   const { QuizID } = req.body;
-  const adminName = req.user?.id;
+  const userId = req.user?.id; // This should be the email ID from authentication
 
   try {
     connectToDatabase(async (err, conn) => {
@@ -263,6 +264,23 @@ export const deleteQuiz = (req, res) => {
       }
 
       try {
+        // First, get the user's name from the database using email ID
+        const userQuery =
+          "SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?";
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+        console.log("User Rows:", userRows);
+
+        if (userRows.length === 0) {
+          logWarning("User not found, please login first.");
+          return res.status(400).json({
+            success: false,
+            message: "User not found, please login first.",
+          });
+        }
+
+        const user = userRows[0];
+        const adminName = user.Name;
+
         const checkQuery = `SELECT * FROM QuizDetails WHERE QuizID = ? AND (delStatus IS NULL OR delStatus = 0)`;
         const result = await queryAsync(conn, checkQuery, [QuizID]);
 
@@ -272,6 +290,7 @@ export const deleteQuiz = (req, res) => {
             message: "Quiz not found or already deleted.",
           });
         }
+
         const updateQuery = `
           UPDATE QuizDetails 
           SET 
@@ -316,6 +335,8 @@ export const deleteQuiz = (req, res) => {
           data: updateErr,
           message: "Error updating quiz deletion.",
         });
+      } finally {
+        closeConnection(conn);
       }
     });
   } catch (error) {
@@ -639,11 +660,11 @@ export const deleteQuestion = async (req, res) => {
             AuthLstEdt = ?
           WHERE id = ? AND (delStatus IS NULL OR delStatus = 0)`;
 
-        const questionDeleteResult = await queryAsync(conn, deleteQuestionQuery, [
-          adminName,
-          adminName,
-          id
-        ]);
+        const questionDeleteResult = await queryAsync(
+          conn,
+          deleteQuestionQuery,
+          [adminName, adminName, id]
+        );
 
         // Query to soft delete all options associated with this question
         const deleteOptionsQuery = `
@@ -658,7 +679,7 @@ export const deleteQuestion = async (req, res) => {
         const optionsDeleteResult = await queryAsync(conn, deleteOptionsQuery, [
           adminName,
           adminName,
-          id
+          id,
         ]);
 
         // Commit transaction
@@ -667,17 +688,17 @@ export const deleteQuestion = async (req, res) => {
         closeConnection(conn);
 
         success = true;
-        const infoMessage = "Question and associated options deleted successfully";
+        const infoMessage =
+          "Question and associated options deleted successfully";
         logInfo(infoMessage);
         res.status(200).json({
           success,
           data: {
             questionId: id,
-            optionsDeleted: optionsDeleteResult.affectedRows
+            optionsDeleted: optionsDeleteResult.affectedRows,
           },
-          message: infoMessage
+          message: infoMessage,
         });
-
       } catch (queryErr) {
         // Rollback transaction if error occurs
         if (transactionStarted) {
@@ -915,7 +936,9 @@ export const getUserQuizCategory = async (req, res) => {
     const warningMessage = "Data is not in the right format";
     console.error(warningMessage, errors.array());
     logWarning(warningMessage);
-    return res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    return res
+      .status(400)
+      .json({ success, data: errors.array(), message: warningMessage });
   }
 
   try {
@@ -926,19 +949,24 @@ export const getUserQuizCategory = async (req, res) => {
       if (err) {
         const errorMessage = "Failed to connect to database";
         logError(err);
-        return res.status(500).json({ success: false, data: err, message: errorMessage });
+        return res
+          .status(500)
+          .json({ success: false, data: err, message: errorMessage });
       }
 
       try {
         // First get the user ID from email
-        const userIdQuery = "SELECT UserID FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0";
+        const userIdQuery =
+          "SELECT UserID FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0";
         const userResult = await queryAsync(conn, userIdQuery, [userEmail]);
 
         if (!userResult || userResult.length === 0) {
           const errorMessage = "User not found";
           logError(errorMessage);
           closeConnection();
-          return res.status(404).json({ success: false, message: errorMessage });
+          return res
+            .status(404)
+            .json({ success: false, message: errorMessage });
         }
 
         const userId = userResult[0].UserID;
@@ -1329,10 +1357,136 @@ export const submitQuiz = async (req, res) => {
   }
 };
 
+// export const updateQuiz = async (req, res) => {
+//   console.log("Incoming quiz update request:", req.body);
+//   let success = false;
+//   const userId = req.user.id;
+
+//   const errors = validationResult(req);
+//   if (!errors.isEmpty()) {
+//     return res.status(400).json({
+//       success,
+//       errors: errors.array(),
+//       message: "Invalid data format",
+//     });
+//   }
+
+//   try {
+//     const {
+//       QuizID,
+//       QuizCategory,
+//       QuizName,
+//       QuizLevel,
+//       QuizDuration,
+//       NegativeMarking,
+//       StartDateAndTime,
+//       EndDateTime,
+//       QuizVisibility,
+//       AuthLstEdt,
+//     } = req.body;
+
+//     if (!QuizID) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "QuizID is required",
+//       });
+//     }
+
+//     connectToDatabase(async (err, conn) => {
+//       if (err) {
+//         console.error("Database connection error:", err);
+//         return res.status(500).json({
+//           success: false,
+//           message: "Database connection failed",
+//         });
+//       }
+
+//       try {
+//         const checkQuizQuery = `
+//           SELECT QuizID FROM QuizDetails
+//           WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
+//         `;
+//         const quizRows = await queryAsync(conn, checkQuizQuery, [QuizID]);
+
+//         if (quizRows.length === 0) {
+//           return res.status(404).json({
+//             success: false,
+//             message: "Quiz not found or has been deleted",
+//           });
+//         }
+
+//         // Update quiz details with current timestamp and editor info
+//         const updateQuery = `
+//           UPDATE QuizDetails
+//           SET
+//             QuizCategory = ?,
+//             QuizName = ?,
+//             QuizLevel = ?,
+//             QuizDuration = ?,
+//             NegativeMarking = ?,
+//             StartDateAndTime = CONVERT(datetime, ?),
+//             EndDateTime = CONVERT(datetime, ?),
+//             QuizVisibility = ?,
+//             AuthLstEdt = ?,
+//             editOnDt = GETDATE()
+//           WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
+//         `;
+
+//         const updateParams = [
+//           QuizCategory,
+//           QuizName,
+//           QuizLevel,
+//           QuizDuration,
+//           NegativeMarking,
+//           new Date(StartDateAndTime).toISOString(),
+//           new Date(EndDateTime).toISOString(),
+//           QuizVisibility,
+//           AuthLstEdt || req.user.username || "Unknown", // Fallback to current user if not provided
+//           QuizID,
+//         ];
+
+//         const result = await queryAsync(conn, updateQuery, updateParams);
+
+//         if (result.affectedRows === 0) {
+//           return res.status(404).json({
+//             success: false,
+//             message:
+//               "No quiz was updated. Quiz may not exist or data was identical.",
+//           });
+//         }
+
+//         closeConnection();
+
+//         return res.status(200).json({
+//           success: true,
+//           message: "Quiz updated successfully",
+//           quizId: QuizID,
+//         });
+//       } catch (queryErr) {
+//         closeConnection();
+//         console.error("Database query error:", queryErr);
+//         return res.status(500).json({
+//           success: false,
+//           message: "Failed to update quiz",
+//           error: queryErr.message,
+//         });
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Server error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
+
 export const updateQuiz = async (req, res) => {
   console.log("Incoming quiz update request:", req.body);
   let success = false;
   const userId = req.user.id;
+
+  console.log("User ID:", userId);
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -1354,7 +1508,6 @@ export const updateQuiz = async (req, res) => {
       StartDateAndTime,
       EndDateTime,
       QuizVisibility,
-      AuthLstEdt,
     } = req.body;
 
     if (!QuizID) {
@@ -1367,13 +1520,33 @@ export const updateQuiz = async (req, res) => {
     connectToDatabase(async (err, conn) => {
       if (err) {
         console.error("Database connection error:", err);
+        logError("Failed to connect to database");
         return res.status(500).json({
           success: false,
           message: "Database connection failed",
         });
       }
 
+      logInfo("Database connection established successfully");
+
       try {
+        // First, get the user's name from the database using email ID
+        const userQuery =
+          "SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?";
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+        console.log("User Rows:", userRows);
+
+        if (userRows.length === 0) {
+          logWarning("User not found, please login first.");
+          return res.status(400).json({
+            success: false,
+            message: "User not found, please login first.",
+          });
+        }
+
+        const user = userRows[0];
+        const authLstEdt = user.Name; // Get the username instead of email
+
         const checkQuizQuery = `
           SELECT QuizID FROM QuizDetails 
           WHERE QuizID = ? AND ISNULL(delStatus, 0) = 0
@@ -1413,10 +1586,11 @@ export const updateQuiz = async (req, res) => {
           new Date(StartDateAndTime).toISOString(),
           new Date(EndDateTime).toISOString(),
           QuizVisibility,
-          AuthLstEdt || req.user.username || "Unknown", // Fallback to current user if not provided
+          authLstEdt, // Use the username from database
           QuizID,
         ];
 
+        console.log("Executing update query: ", updateQuery);
         const result = await queryAsync(conn, updateQuery, updateParams);
 
         if (result.affectedRows === 0) {
@@ -1427,7 +1601,8 @@ export const updateQuiz = async (req, res) => {
           });
         }
 
-        closeConnection();
+        success = true;
+        logInfo("Quiz updated successfully!");
 
         return res.status(200).json({
           success: true,
@@ -1435,16 +1610,19 @@ export const updateQuiz = async (req, res) => {
           quizId: QuizID,
         });
       } catch (queryErr) {
-        closeConnection();
+        logError("Database Query Error:", queryErr.message || queryErr);
         console.error("Database query error:", queryErr);
         return res.status(500).json({
           success: false,
           message: "Failed to update quiz",
           error: queryErr.message,
         });
+      } finally {
+        closeConnection(conn);
       }
     });
   } catch (error) {
+    logError("Unexpected Error:", error.stack || JSON.stringify(error));
     console.error("Server error:", error);
     return res.status(500).json({
       success: false,
@@ -1845,7 +2023,6 @@ export const getLeaderboardRanking = async (req, res) => {
   }
 };
 
-
 export const getUserQuizHistory = async (req, res) => {
   let success = false;
   const errors = validationResult(req);
@@ -1853,7 +2030,9 @@ export const getUserQuizHistory = async (req, res) => {
     const warningMessage = "Data is not in the right format";
     console.error(warningMessage, errors.array());
     logWarning(warningMessage);
-    return res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    return res
+      .status(400)
+      .json({ success, data: errors.array(), message: warningMessage });
   }
 
   try {
@@ -1864,19 +2043,24 @@ export const getUserQuizHistory = async (req, res) => {
       if (err) {
         const errorMessage = "Failed to connect to database";
         logError(err);
-        return res.status(500).json({ success: false, data: err, message: errorMessage });
+        return res
+          .status(500)
+          .json({ success: false, data: err, message: errorMessage });
       }
 
       try {
         // First get the user ID from email
-        const userIdQuery = "SELECT UserID FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0";
+        const userIdQuery =
+          "SELECT UserID FROM Community_User WHERE EmailId = ? AND ISNULL(delStatus, 0) = 0";
         const userResult = await queryAsync(conn, userIdQuery, [userEmail]);
 
         if (!userResult || userResult.length === 0) {
           const errorMessage = "User not found";
           logError(errorMessage);
           closeConnection();
-          return res.status(404).json({ success: false, message: errorMessage });
+          return res
+            .status(404)
+            .json({ success: false, message: errorMessage });
         }
 
         const userId = userResult[0].UserID;
@@ -1973,11 +2157,7 @@ export const getUserQuizHistory = async (req, res) => {
   }
 };
 
-
-
-
 /*----------------LMS quiz-----------------------* */
-
 
 // In your backend API
 export const getQuizzesByRefId = async (req, res) => {
@@ -1987,7 +2167,7 @@ export const getQuizzesByRefId = async (req, res) => {
     if (!refId) {
       return res.status(400).json({
         success: false,
-        message: "refId is required"
+        message: "refId is required",
       });
     }
 
@@ -1996,7 +2176,7 @@ export const getQuizzesByRefId = async (req, res) => {
         console.error("Database connection error:", err);
         return res.status(500).json({
           success: false,
-          message: "Database connection failed"
+          message: "Database connection failed",
         });
       }
 
@@ -2011,13 +2191,13 @@ export const getQuizzesByRefId = async (req, res) => {
 
         return res.status(200).json({
           success: true,
-          data: quizzes
+          data: quizzes,
         });
       } catch (error) {
         console.error("Error fetching quizzes:", error);
         return res.status(500).json({
           success: false,
-          message: "Failed to fetch quizzes"
+          message: "Failed to fetch quizzes",
         });
       } finally {
         closeConnection();
@@ -2027,11 +2207,10 @@ export const getQuizzesByRefId = async (req, res) => {
     console.error("Unexpected error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
-
 
 export const getQuizQuestionsByQuizId = async (req, res) => {
   let success = false;

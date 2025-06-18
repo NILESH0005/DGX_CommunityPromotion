@@ -896,6 +896,8 @@ const EditSubModule = ({ module, onBack }) => {
         </div>
 
         {/* Tooltips */}
+
+        <ReactTooltip id="create-quiz-tooltip" place="top" effect="solid" />
         <ReactTooltip id="edit-tooltip" place="top" effect="solid" />
         <ReactTooltip id="delete-tooltip" place="top" effect="solid" />
         <ReactTooltip id="view-content-tooltip" place="top" effect="solid" />

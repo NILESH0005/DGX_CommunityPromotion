@@ -26,7 +26,7 @@ const UnitOrder = ({ units, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Manage Unit Order</h2>
           <button
@@ -56,9 +56,17 @@ const UnitOrder = ({ units, onClose, onSave }) => {
                         {...provided.dragHandleProps}
                         className="flex items-center p-3 border border-gray-200 rounded-lg bg-white"
                       >
-                        <span className="text-gray-500 mr-4">{index + 1}</span>
-                        <span className="font-medium flex-grow">{unit.UnitName}</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <span className="text-gray-500 mr-3 sm:mr-4 flex-shrink-0">{index + 1}</span>
+                        <span className="font-medium flex-grow min-w-0 break-words">
+                          {unit.UnitName}
+                        </span>
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" 
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                         </svg>
                       </div>
