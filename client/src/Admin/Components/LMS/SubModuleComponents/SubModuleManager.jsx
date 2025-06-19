@@ -184,7 +184,7 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
         });
     };
 
-    const handleUploadFile = async (subModuleId, unitId, file, customFileName) => {
+    const handleUploadFile = async (subModuleId, unitId, file, customFileName, description, url = null) => {
         if (!file) {
             Swal.fire('Error', 'No file selected', 'error');
             return false;
@@ -208,7 +208,6 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
                 didOpen: () => Swal.showLoading()
             });
 
-            // Get current files count to calculate percentage
             const currentUnit = subModules
                 .find(s => s.id === subModuleId)?.units
                 .find(u => u.id === unitId);
@@ -217,13 +216,26 @@ const SubModuleManager = ({ module = {}, onSave, onCancel }) => {
             const equalPercentage = (100 / totalFilesAfterUpload);
 
             const formData = new FormData();
-            formData.append('file', file);
-            formData.append('moduleId', module.id);
-            formData.append('subModuleId', subModuleId);
-            formData.append('unitId', unitId);
-            formData.append('percentage', equalPercentage);
-            formData.append('customFileName', customFileName); // Add custom file name
 
+            if (file) {
+
+                formData.append('file', file);
+                formData.append('moduleId', module.id);
+                formData.append('subModuleId', subModuleId);
+                formData.append('unitId', unitId);
+                formData.append('percentage', equalPercentage);
+                formData.append('customFileName', customFileName); // Add custom file name
+            } else if (ur) {
+                formData.append('url', url);
+                formData.append('name', fileName);
+                formData.append('description', description);
+                formData.append('subModuleId', subModuleId);
+                formData.append('unitId', unitId);
+                formData.append('type', 'link');
+            } else {
+                throw new Error('Either file or URL must be provided');
+            }
+            
             if (!userToken) {
                 throw new Error('Authentication token missing');
             }

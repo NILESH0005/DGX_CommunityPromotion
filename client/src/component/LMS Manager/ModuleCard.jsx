@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import ApiContext from "../../context/ApiContext";
 import ByteArrayImage from "../../utils/ByteArrayImage";
 import { FaAngleDown, FaAngleUp } from "react-icons/fa";
+import Swal from "sweetalert2";
 
 const ModuleCard = () => {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { fetchData } = useContext(ApiContext);
+  const { fetchData, userToken } = useContext(ApiContext); // Assuming isAuthenticated is available in your ApiContext
   const navigate = useNavigate();
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
 
@@ -35,6 +36,24 @@ const ModuleCard = () => {
   }, [fetchData]);
 
   const handleModuleClick = (moduleId, moduleName) => {
+    if (!userToken) {
+      Swal.fire({
+        title: 'Login Required',
+        text: 'You need to login to access this module',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Go to Login',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/SignInn');
+        }
+      });
+      return;
+    }
+    
     // Store module name in localStorage for breadcrumb persistence
     localStorage.setItem('moduleName', moduleName);
     localStorage.setItem('moduleId', moduleId);

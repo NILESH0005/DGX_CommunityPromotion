@@ -58,10 +58,10 @@ const Navbar = () => {
         { label: 'Event and Workshop', to: '/EventWorkshopPage', icon: faCalendar },
         { label: 'Blog', to: '/Blog', icon: faBlog },
         { label: 'Quiz', to: '/QuizInterface', icon: FaBrain },
+        // { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher },
+        { label: 'LMS', to: '/LearningPath', icon: faChalkboardTeacher },
         { label: 'Contact Us', to: '/ContactUs', icon: faEnvelope },
-        { label: 'Community Guidelines', to: '/CommunityGuidelines', icon: faBook },
-        { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher },
-        { label: 'LMS', to: '/LearningPath', icon: faChalkboardTeacher }
+        { label: 'Community Guidelines', to: '/CommunityGuidelines', icon: faBook }
     ];
 
     const mobileMenuLinks = [
