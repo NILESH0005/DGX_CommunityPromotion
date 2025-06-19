@@ -33,6 +33,7 @@ const ViewContent = ({ submodule, onBack }) => {
   const [files, setFiles] = useState([]);
   const fileInputRef = useRef(null);
   const [showAddUnitModal, setShowAddUnitModal] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   // Change from single file to array of files
   const [newFiles, setNewFiles] = useState([]);
   const [fileLinks, setFileLinks] = useState([]);
@@ -101,34 +102,54 @@ const ViewContent = ({ submodule, onBack }) => {
     }
   }, [selectedUnit, units, fetchData, userToken]);
 
-  // const handleSaveFilesOrder = async (orderedFiles) => {
-  //   try {
-  //     const response = await fetchData(
-  //       "lmsEdit/updateFilesOrder",
-  //       "POST",
-  //       { files: orderedFiles },
-  //       {
-  //         "Content-Type": "application/json",
-  //         "auth-token": userToken,
-  //       }
-  //     );
+  const handleDeleteMultipleFiles = async (fileIds) => {
+    const result = await Swal.fire({
+      title: `Are you sure you want to delete ${fileIds.length} files?`,
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete them!",
+    });
 
-  //     if (response?.success) {
-  //       setFiles(orderedFiles);
-  //       setShowFilesOrder(false);
-  //       Swal.fire("Success!", "Files order has been updated.", "success");
-  //     } else {
-  //       throw new Error(response?.message || "Failed to update files order");
-  //     }
-  //   } catch (err) {
-  //     console.error("Error updating files order:", err);
-  //     Swal.fire(
-  //       "Error!",
-  //       `Failed to update files order: ${err.message}`,
-  //       "error"
-  //     );
-  //   }
-  // };
+    if (!result.isConfirmed) return;
+
+    try {
+      // Optimistically update UI
+      setFiles(prev => prev.filter(file => !fileIds.includes(file.FileID)));
+      setSelectedFiles([]);
+
+      // Call API to delete files
+      const response = await fetchData(
+        "lmsEdit/deleteMultipleFiles",
+        "POST",
+        { fileIds },
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        }
+      );
+
+      if (!response?.success) {
+        const filesResponse = await fetchData(
+          `lms/getFiles?unitId=${selectedUnit.UnitID}`,
+          "GET",
+          null,
+          { "auth-token": userToken }
+        );
+        if (filesResponse?.success) {
+          setFiles(filesResponse.data);
+        }
+        throw new Error(response?.message || "Failed to delete files");
+      }
+
+      Swal.fire("Deleted!", `${fileIds.length} files have been deleted.`, "success");
+    } catch (err) {
+      console.error("Delete error:", err);
+      Swal.fire("Error!", `Failed to delete files: ${err.message}`, "error");
+    }
+  };
 
   const handleSaveFilesOrder = async (orderedFiles) => {
     try {
@@ -174,10 +195,10 @@ const ViewContent = ({ submodule, onBack }) => {
             );
             return updatedFile
               ? {
-                  ...file,
-                  SortingOrder: updatedFile.SortingOrder,
-                  Percentage: updatedFile.Percentage,
-                }
+                ...file,
+                SortingOrder: updatedFile.SortingOrder,
+                Percentage: updatedFile.Percentage,
+              }
               : file;
           })
           .sort((a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0));
@@ -201,6 +222,14 @@ const ViewContent = ({ submodule, onBack }) => {
         "error"
       );
     }
+  };
+
+  const toggleFileSelection = (fileId) => {
+    setSelectedFiles(prev =>
+      prev.includes(fileId)
+        ? prev.filter(id => id !== fileId)
+        : [...prev, fileId]
+    );
   };
 
   const handleEditUnit = (unit) => {
@@ -404,140 +433,139 @@ const ViewContent = ({ submodule, onBack }) => {
   };
 
   const handleUploadFiles = async () => {
-  if (newFiles.length === 0 && fileLink.trim() === "") {
-    Swal.fire("Error!", "Please select files or enter a link", "error");
-    return;
-  }
-
-  const resetForm = () => {
-  setNewFiles([]);
-  setFileLinks([]);
-  setFileLink("");
-  setLinkName("");
-  setLinkDescription("");
-  if (fileInputRef.current) {
-    fileInputRef.current.value = "";
-  }
-};
-
-  setIsUploading(true);
-  try {
-    const uploadToast = Swal.fire({
-      title: "Uploading...",
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
-
-    // Calculate new order positions
-    const currentFileCount = files.length;
-    const newFileCount = newFiles.length + (fileLink.trim() ? 1 : 0);
-    const totalFiles = currentFileCount + newFileCount;
-    const equalPercentage = (100 / totalFiles).toFixed(2);
-
-    // Update existing files' percentages first
-    const updatedExistingFiles = files.map(file => ({
-      ...file,
-      Percentage: equalPercentage
-    }));
-
-    // Upload all files
-    const uploadPromises = newFiles.map(async (file, index) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("unitId", selectedUnit.UnitID);
-      formData.append("percentage", equalPercentage);
-      formData.append("fileName", file.name);
-      formData.append("description", "");
-      formData.append("sortingOrder", currentFileCount + index + 1); // Add sorting order
-
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASEURL}lms/files`,
-          {
-            method: "POST",
-            body: formData,
-            headers: {
-              "auth-token": userToken,
-            },
-          }
-        );
-
-        if (!response.ok) throw new Error("Upload failed");
-        return await response.json();
-      } catch (err) {
-        console.error("File upload error:", err);
-        return { success: false, error: err.message };
-      }
-    });
-
-    // Add link if provided
-    if (fileLink.trim()) {
-      uploadPromises.push(
-        fetchData(
-          "lms/files",
-          "POST",
-          {
-            unitId: selectedUnit.UnitID,
-            link: fileLink,
-            fileName: linkName || "Link",
-            description: linkDescription || "",
-            percentage: equalPercentage,
-            fileType: "link",
-            sortingOrder: currentFileCount + newFiles.length + 1 // Add sorting order
-          },
-          {
-            "Content-Type": "application/json",
-            "auth-token": userToken,
-          }
-        ).catch((err) => {
-          console.error("Link upload error:", err);
-          return { success: false, error: err.message };
-        })
-      );
+    if (newFiles.length === 0 && fileLink.trim() === "") {
+      Swal.fire("Error!", "Please select files or enter a link", "error");
+      return;
     }
 
-    // Wait for all uploads to complete
-    const results = await Promise.all(uploadPromises);
-    await uploadToast.close();
+    const resetForm = () => {
+      setNewFiles([]);
+      setFileLinks([]);
+      setFileLink("");
+      setLinkName("");
+      setLinkDescription("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    };
 
-    // Process successful uploads
-    const successfulUploads = results.filter((result) => result?.success);
-    const failedUploads = results.filter((result) => !result?.success);
+    setIsUploading(true);
+    try {
+      const uploadToast = Swal.fire({
+        title: "Uploading...",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
 
-    if (successfulUploads.length > 0) {
-      // Create new file objects with proper sorting
-      const newFileData = successfulUploads.map((result, index) => ({
-        ...result.data,
-        Percentage: equalPercentage,
-        SortingOrder: currentFileCount + index + 1
+      // Calculate new order positions
+      const currentFileCount = files.length;
+      const newFileCount = newFiles.length + (fileLink.trim() ? 1 : 0);
+      const totalFiles = currentFileCount + newFileCount;
+      const equalPercentage = (100 / totalFiles).toFixed(2);
+
+      // Update existing files' percentages first
+      const updatedExistingFiles = files.map(file => ({
+        ...file,
+        Percentage: equalPercentage
       }));
 
-      // Combine with existing files (already updated with new percentages)
-      const allFiles = [...updatedExistingFiles, ...newFileData].sort((a, b) => 
-        (a.SortingOrder || 0) - (b.SortingOrder || 0)
-      );
+      // Upload all files
+      const uploadPromises = newFiles.map(async (file, index) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("unitId", selectedUnit.UnitID);
+        formData.append("percentage", equalPercentage);
+        formData.append("fileName", file.name);
+        formData.append("description", "");
+        formData.append("sortingOrder", currentFileCount + index + 1); // Add sorting order
 
-      // Update state
-      setFiles(allFiles);
-      resetForm();
-      
-      Swal.fire(
-        "Success!",
-        `Uploaded ${successfulUploads.length} items successfully${
-          failedUploads.length > 0 ? ` (${failedUploads.length} failed)` : ""
-        }`,
-        "success"
-      );
-    } else {
-      Swal.fire("Error!", "All uploads failed", "error");
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_BASEURL}lms/files`,
+            {
+              method: "POST",
+              body: formData,
+              headers: {
+                "auth-token": userToken,
+              },
+            }
+          );
+
+          if (!response.ok) throw new Error("Upload failed");
+          return await response.json();
+        } catch (err) {
+          console.error("File upload error:", err);
+          return { success: false, error: err.message };
+        }
+      });
+
+      // Add link if provided
+      if (fileLink.trim()) {
+        uploadPromises.push(
+          fetchData(
+            "lms/files",
+            "POST",
+            {
+              unitId: selectedUnit.UnitID,
+              link: fileLink,
+              fileName: linkName || "Link",
+              description: linkDescription || "",
+              percentage: equalPercentage,
+              fileType: "link",
+              sortingOrder: currentFileCount + newFiles.length + 1 // Add sorting order
+            },
+            {
+              "Content-Type": "application/json",
+              "auth-token": userToken,
+            }
+          ).catch((err) => {
+            console.error("Link upload error:", err);
+            return { success: false, error: err.message };
+          })
+        );
+      }
+
+      // Wait for all uploads to complete
+      const results = await Promise.all(uploadPromises);
+      await uploadToast.close();
+
+      // Process successful uploads
+      const successfulUploads = results.filter((result) => result?.success);
+      const failedUploads = results.filter((result) => !result?.success);
+
+      if (successfulUploads.length > 0) {
+        // Create new file objects with proper sorting
+        const newFileData = successfulUploads.map((result, index) => ({
+          ...result.data,
+          Percentage: equalPercentage,
+          SortingOrder: currentFileCount + index + 1
+        }));
+
+        // Combine with existing files (already updated with new percentages)
+        const allFiles = [...updatedExistingFiles, ...newFileData].sort((a, b) =>
+          (a.SortingOrder || 0) - (b.SortingOrder || 0)
+        );
+
+        // Update state
+        setFiles(allFiles);
+        resetForm();
+
+        Swal.fire(
+          "Success!",
+          `Uploaded ${successfulUploads.length} items successfully${failedUploads.length > 0 ? ` (${failedUploads.length} failed)` : ""
+          }`,
+          "success"
+        );
+      } else {
+        Swal.fire("Error!", "All uploads failed", "error");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      Swal.fire("Error!", err.message || "Failed to upload content", "error");
+    } finally {
+      setIsUploading(false);
     }
-  } catch (err) {
-    console.error("Upload error:", err);
-    Swal.fire("Error!", err.message || "Failed to upload content", "error");
-  } finally {
-    setIsUploading(false);
-  }
-};
+  };
 
   const resetForm = () => {
     setNewFiles([]);
@@ -700,11 +728,10 @@ const ViewContent = ({ submodule, onBack }) => {
                     .map((unit) => (
                       <div
                         key={unit.UnitID}
-                        className={`p-4 cursor-pointer transition-colors duration-200 ${
-                          selectedUnit?.UnitID === unit.UnitID
-                            ? "bg-blue-50 dark:bg-gray-700"
-                            : "hover:bg-gray-50 dark:hover:bg-gray-700"
-                        }`}
+                        className={`p-4 cursor-pointer transition-colors duration-200 ${selectedUnit?.UnitID === unit.UnitID
+                          ? "bg-blue-50 dark:bg-gray-700"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
                         onClick={() => setSelectedUnit(unit)}
                       >
                         <div className="flex justify-between items-start">
@@ -1004,6 +1031,15 @@ const ViewContent = ({ submodule, onBack }) => {
                           </button>
                         </div>
                       </div>
+                      {selectedFiles.length > 0 && (
+                        <button
+                          onClick={() => handleDeleteMultipleFiles(selectedFiles)}
+                          className="flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                        >
+                          <FaTrash />
+                          Delete Selected ({selectedFiles.length})
+                        </button>
+                      )}
                       <button
                         onClick={() => setShowFilesOrder(true)}
                         className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 mb-6"
@@ -1017,6 +1053,20 @@ const ViewContent = ({ submodule, onBack }) => {
                           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className="bg-gray-50 dark:bg-gray-700">
                               <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedFiles.length === files.length && files.length > 0}
+                                    onChange={() => {
+                                      if (selectedFiles.length === files.length) {
+                                        setSelectedFiles([]);
+                                      } else {
+                                        setSelectedFiles(files.map(file => file.FileID));
+                                      }
+                                    }}
+                                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                                  />
+                                </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                   File Name
                                 </th>
@@ -1037,6 +1087,14 @@ const ViewContent = ({ submodule, onBack }) => {
                                   key={file.FileID}
                                   className="hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedFiles.includes(file.FileID)}
+                                      onChange={() => toggleFileSelection(file.FileID)}
+                                      className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                                    />
+                                  </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                                       {file.FilesName}

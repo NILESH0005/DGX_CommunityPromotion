@@ -147,9 +147,6 @@ const UnitsWithFiles = () => {
       }
     };
 
-
-    
-
     if (subModuleId) {
       fetchDataForSubmodule();
     }
