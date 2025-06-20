@@ -9,7 +9,6 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
   const [categories, setCategories] = useState([]);
   const [quizLevels, setQuizLevels] = useState([]);
   const [quizData, setQuizData] = useState({
-    // name: '',
     category: "",
     name: "",
     level: "",
@@ -20,7 +19,7 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
     startTime: "",
     endDate: "",
     endTime: "",
-    type: "Public",
+    type: "",
     quizImage: null,
   });
   const [errors, setErrors] = useState({});
@@ -106,6 +105,9 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
       case "level":
         if (!value) error = "Please select a quiz level";
         break;
+      case "type":
+        if (!value) error = "Please select a quiz type";
+        break;
       case "duration":
         if (value < 5 || value > 180) error = "Duration must be between 5 and 180 minutes";
         break;
@@ -120,17 +122,9 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
         break;
       case "endDate":
         if (!value) error = "End date is required";
-        else if (quizData.startDate && value < quizData.startDate) {
-          error = "End date cannot be before start date";
-        }
         break;
       case "endTime":
         if (!value) error = "End time is required";
-        else if (quizData.startDate && quizData.endDate && quizData.startTime) {
-          if (quizData.startDate === quizData.endDate && value <= quizData.startTime) {
-            error = "End time must be after start time";
-          }
-        }
         break;
       case "quizImage":
         if (!value) error = "Please upload a quiz banner image";
@@ -139,6 +133,54 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
         break;
     }
     return error;
+  };
+
+  const validateDateTime = () => {
+    const { startDate, startTime, endDate, endTime } = quizData;
+    const newErrors = { ...errors };
+
+    if (startDate && endDate && startTime && endTime) {
+      const startDateTime = new Date(`${startDate}T${startTime}`);
+      const endDateTime = new Date(`${endDate}T${endTime}`);
+      const currentDateTime = new Date();
+
+      // Check if start date/time is in the past
+      if (startDateTime < currentDateTime) {
+        newErrors.startDate = "Start date/time cannot be in the past";
+        newErrors.startTime = "Start date/time cannot be in the past";
+      } else {
+        if (newErrors.startDate === "Start date/time cannot be in the past") {
+          delete newErrors.startDate;
+        }
+        if (newErrors.startTime === "Start date/time cannot be in the past") {
+          delete newErrors.startTime;
+        }
+      }
+
+      // Check if end date/time is after start date/time
+      if (endDateTime <= startDateTime) {
+        newErrors.endDate = "End date/time must be after start date/time";
+        newErrors.endTime = "End date/time must be after start date/time";
+      } else {
+        if (newErrors.endDate === "End date/time must be after start date/time") {
+          delete newErrors.endDate;
+        }
+        if (newErrors.endTime === "End date/time must be after start date/time") {
+          delete newErrors.endTime;
+        }
+      }
+
+      // Check if duration is at least 30 minutes
+      const timeDifference = (endDateTime - startDateTime) / (1000 * 60);
+      if (timeDifference < 30) {
+        newErrors.endTime = "Quiz duration must be at least 30 minutes";
+      } else if (newErrors.endTime === "Quiz duration must be at least 30 minutes") {
+        delete newErrors.endTime;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleChange = (e) => {
@@ -151,6 +193,11 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
     if (isSubmitted || errors[name]) {
       const error = validateField(name, fieldValue);
       setErrors((prev) => ({ ...prev, [name]: error }));
+    }
+
+    // Validate date/time fields when they change
+    if (name.includes("Date") || name.includes("Time")) {
+      setTimeout(validateDateTime, 100);
     }
   };
 
@@ -166,32 +213,11 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
     return `${hours}:${minutes}`;
   };
 
-  const validateDates = () => {
-    const { startDate, startTime, endDate, endTime } = quizData;
-
-    if (!startDate || !endDate || !startTime || !endTime) {
-      return false;
-    }
-
-    const startDateTime = new Date(`${startDate}T${startTime}`);
-    const endDateTime = new Date(`${endDate}T${endTime}`);
-    const currentDateTime = new Date();
-
-    if (startDateTime < currentDateTime) {
-      return false;
-    }
-
-    const timeDifference = (endDateTime - startDateTime) / (1000 * 60);
-    if (timeDifference < 30) {
-      return false;
-    }
-
-    return true;
-  };
-
   const validateForm = () => {
     const newErrors = {};
     let isValid = true;
+
+    // Validate all fields
     Object.keys(quizData).forEach(field => {
       if (field === "negativeMarking") return;
 
@@ -201,28 +227,9 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
         isValid = false;
       }
     });
-    if (!validateDates()) {
-      if (!quizData.startDate) newErrors.startDate = "Start date is required";
-      if (!quizData.startTime) newErrors.startTime = "Start time is required";
-      if (!quizData.endDate) newErrors.endDate = "End date is required";
-      if (!quizData.endTime) newErrors.endTime = "End time is required";
 
-      if (quizData.startDate && quizData.startTime && quizData.endDate && quizData.endTime) {
-        const startDateTime = new Date(`${quizData.startDate}T${quizData.startTime}`);
-        const currentDateTime = new Date();
-
-        if (startDateTime < currentDateTime) {
-          newErrors.startDate = "Cannot be in the past";
-          newErrors.startTime = "Cannot be in the past";
-        }
-
-        const endDateTime = new Date(`${quizData.endDate}T${quizData.endTime}`);
-        const timeDifference = (endDateTime - startDateTime) / (1000 * 60);
-        if (timeDifference < 30) {
-          newErrors.endTime = "Must be at least 30 minutes after start";
-        }
-      }
-
+    // Validate date/time
+    if (!validateDateTime()) {
       isValid = false;
     }
 
@@ -254,18 +261,6 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         setLoading(true);
-
-        let refId = 0;
-        let refName = "quiz";
-
-        if (moduleId) {
-          refId = moduleId;
-          refName = moduleName;
-        }
-
-        // if (subModuleId){
-
-        // }
 
         const payload = {
           category: quizData.category,
@@ -371,8 +366,8 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
   const minEndTime = getMinEndTime();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="w-full max-w-4xl bg-white rounded-xl shadow-2xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <div className="w-full max-w-4xl bg-white rounded-xl shadow-2xl p-6 md:p-8">
         <button
           onClick={onBack}
           className="absolute top-4 left-4 text-gray-600 hover:text-gray-800"
@@ -381,10 +376,10 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <h2 className="text-3xl font-bold text-center text-DGXblue mb-6">
+        <h2 className="text-2xl md:text-3xl font-bold text-center text-DGXblue mb-6">
           Create a New Quiz
         </h2>
-        <form onSubmit={handlecreateQuiz} className="space-y-6">
+        <form onSubmit={handlecreateQuiz} className="space-y-4 md:space-y-6">
           {/* Quiz Category Dropdown with Validation */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">
@@ -485,6 +480,7 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
               Enable Negative Marking
             </label>
           </div>
+          
           {/* Passing Percentage */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">
@@ -506,84 +502,97 @@ const CreateQuiz = ({ moduleId, moduleName, navigateToQuizTable, onBack }) => {
 
           {/* Start Date & Time */}
           <div>
-            <label className="block text-gray-700 font-medium mb-2  items-center gap-2">
+            <label className=" text-gray-700 font-medium mb-2 flex items-center gap-2">
               <FaCalendarAlt /> Start Date & Time *
             </label>
-            <div className="flex gap-4">
-              <input
-                type="date"
-                name="startDate"
-                min={currentDate}
-                value={quizData.startDate}
-                onChange={handleChange}
-                className={`w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.startDate ? "border-red-500" : "border-gray-300"
-                  }`}
-              />
-              <input
-                type="time"
-                name="startTime"
-                min={quizData.startDate === currentDate ? currentTime : "00:00"}
-                value={quizData.startTime}
-                onChange={handleChange}
-                className={`w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.startTime ? "border-red-500" : "border-gray-300"
-                  }`}
-              />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="w-full md:w-1/2">
+                <input
+                  type="date"
+                  name="startDate"
+                  min={currentDate}
+                  value={quizData.startDate}
+                  onChange={handleChange}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.startDate ? "border-red-500" : "border-gray-300"
+                    }`}
+                />
+                {errors.startDate && (
+                  <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
+                )}
+              </div>
+              <div className="w-full md:w-1/2">
+                <input
+                  type="time"
+                  name="startTime"
+                  min={quizData.startDate === currentDate ? currentTime : "00:00"}
+                  value={quizData.startTime}
+                  onChange={handleChange}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.startTime ? "border-red-500" : "border-gray-300"
+                    }`}
+                />
+                {errors.startTime && (
+                  <p className="text-red-500 text-sm mt-1">{errors.startTime}</p>
+                )}
+              </div>
             </div>
-            {errors.startDate && (
-              <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
-            )}
-            {errors.startTime && (
-              <p className="text-red-500 text-sm mt-1">{errors.startTime}</p>
-            )}
           </div>
 
           {/* End Date & Time */}
           <div>
-            <label className="block text-gray-700 font-medium mb-2  items-center gap-2">
+            <label className=" text-gray-700 font-medium mb-2 flex items-center gap-2">
               <FaCalendarAlt /> End Date & Time *
             </label>
-            <div className="flex gap-4">
-              <input
-                type="date"
-                name="endDate"
-                min={quizData.startDate || currentDate}
-                value={quizData.endDate}
-                onChange={handleChange}
-                className={`w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.endDate ? "border-red-500" : "border-gray-300"
-                  }`}
-              />
-              <input
-                type="time"
-                name="endTime"
-                min={minEndTime}
-                value={quizData.endTime}
-                onChange={handleChange}
-                className={`w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.endTime ? "border-red-500" : "border-gray-300"
-                  }`}
-              />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="w-full md:w-1/2">
+                <input
+                  type="date"
+                  name="endDate"
+                  min={quizData.startDate || currentDate}
+                  value={quizData.endDate}
+                  onChange={handleChange}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.endDate ? "border-red-500" : "border-gray-300"
+                    }`}
+                />
+                {errors.endDate && (
+                  <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>
+                )}
+              </div>
+              <div className="w-full md:w-1/2">
+                <input
+                  type="time"
+                  name="endTime"
+                  min={quizData.startDate === quizData.endDate ? minEndTime : "00:00"}
+                  value={quizData.endTime}
+                  onChange={handleChange}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.endTime ? "border-red-500" : "border-gray-300"
+                    }`}
+                />
+                {errors.endTime && (
+                  <p className="text-red-500 text-sm mt-1">{errors.endTime}</p>
+                )}
+              </div>
             </div>
-            {errors.endDate && (
-              <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>
-            )}
-            {errors.endTime && (
-              <p className="text-red-500 text-sm mt-1">{errors.endTime}</p>
-            )}
           </div>
 
           {/* Quiz Type */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">
-              Quiz Type
+              Quiz Type *
             </label>
             <select
               name="type"
               value={quizData.type}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.type ? "border-red-500" : "border-gray-300"
+                }`}
             >
+              <option value="">Select Quiz Type</option>
               <option value="Public">Public</option>
               <option value="Private">Private</option>
             </select>
+            {errors.type && (
+              <p className="text-red-500 text-sm mt-1">{errors.type}</p>
+            )}
           </div>
 
           {/* Quiz Banner Image */}

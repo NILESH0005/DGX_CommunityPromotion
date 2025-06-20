@@ -31,7 +31,8 @@ const Discussion = () => {
   const [communityHighlights, setCommunityHighlights] = useState([])
   const [topUsers, setTopUsers] = useState([])
   const [loading, setLoading] = useState(false);
-
+  const [allDiscussions, setAllDiscussions] = useState([]); // Store all original discussions
+  const [filteredDiscussions, setFilteredDiscussions] = useState([]); // Store filtered discussions
 
   useEffect(() => {
     const loadEvents = async () => {

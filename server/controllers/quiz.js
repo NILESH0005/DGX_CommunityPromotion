@@ -1043,6 +1043,7 @@ GROUP BY
   }
 };
 
+
 export const getQuizQuestions = async (req, res) => {
   let success = false;
   const errors = validationResult(req);
@@ -1088,11 +1089,12 @@ export const getQuizQuestions = async (req, res) => {
         const query = `SELECT 
           QuizMapping.idCode,
           QuizMapping.quizGroupID,
-		  GroupMaster.group_name,
+          GroupMaster.group_name,
           QuizMapping.quizId,
           QuizMapping.QuestionsID,
           Questions.question_text AS QuestionTxt,
           Questions.Ques_level,
+          Questions.question_type,               
           QuizMapping.negativeMarks,
           QuizMapping.totalMarks,
           QuizMapping.AuthAdd,
@@ -1100,19 +1102,23 @@ export const getQuizQuestions = async (req, res) => {
           QuizMapping.delStatus,
           QuizDetails.QuizName,
           QuizDetails.QuizDuration,
-		      QuizDetails.NegativeMarking,
+          QuizDetails.NegativeMarking,
           tblDDReferences.ddValue AS question_level,
           Questions.image AS question_image,
-		  QuestionOptions.is_correct,
+          QuestionOptions.is_correct,
           QuestionOptions.option_text,
           QuestionOptions.id AS optionId
-          FROM QuizMapping
-          LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
-          LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
-          LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
-          LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
-		  LEFT JOIN GroupMaster ON QuizMapping.quizGroupID = GroupMaster.group_id
-          WHERE QuizMapping.quizId = ? AND QuizMapping.delStatus = 0 AND QuestionOptions.delStatus = 0`;
+        FROM QuizMapping
+        LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
+        LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
+        LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
+        LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
+        LEFT JOIN GroupMaster ON QuizMapping.quizGroupID = GroupMaster.group_id
+        WHERE 
+          QuizMapping.quizId = ? 
+          AND QuizMapping.delStatus = 0 
+          AND QuestionOptions.delStatus = 0
+        `;
 
         const questions = await queryAsync(conn, query, [quizId]);
 
@@ -1124,6 +1130,7 @@ export const getQuizQuestions = async (req, res) => {
             message: "No questions found for this quiz",
           });
         }
+
         const questionMap = {};
         questions.forEach((q) => {
           if (!questionMap[q.QuestionsID]) {
@@ -1135,8 +1142,9 @@ export const getQuizQuestions = async (req, res) => {
               QuestionsID: q.QuestionsID,
               QuestionTxt: q.QuestionTxt,
               Ques_level: q.Ques_level,
+              question_type: q.question_type === 1, // Convert 0/1 to boolean
               negativeMarks: q.negativeMarks,
-              negativeMarking: q.NegativeMarking,
+              negativeMarking: q.NegativeMarking === 1, // Ensure consistent boolean
               totalMarks: q.totalMarks,
               AuthAdd: q.AuthAdd,
               AddOnDt: q.AddOnDt,
@@ -1148,19 +1156,16 @@ export const getQuizQuestions = async (req, res) => {
               options: [],
             };
           }
-
-          // Add option if it exists
           if (q.option_text) {
             questionMap[q.QuestionsID].options.push({
               id: q.optionId,
               option_text: q.option_text,
-              is_correct: q.is_correct === 1,
+              is_correct: q.is_correct === 1, // Convert to boolean
             });
           }
         });
 
         const formattedQuestions = Object.values(questionMap);
-
         success = true;
         closeConnection();
         return res.status(200).json({
@@ -1192,6 +1197,156 @@ export const getQuizQuestions = async (req, res) => {
     });
   }
 };
+// export const getQuizQuestions = async (req, res) => {
+//   let success = false;
+//   const errors = validationResult(req);
+//   if (!errors.isEmpty()) {
+//     return res.status(400).json({
+//       success,
+//       data: errors.array(),
+//       message: "Data is not in the right format",
+//     });
+//   }
+
+//   try {
+//     const { QuizID } = req.body;
+
+//     if (!QuizID) {
+//       return res.status(400).json({
+//         success: false,
+//         data: null,
+//         message: "QuizID is required",
+//       });
+//     }
+
+//     const quizId = parseInt(QuizID);
+//     if (isNaN(quizId)) {
+//       return res.status(400).json({
+//         success: false,
+//         data: null,
+//         message: "QuizID must be a valid number",
+//       });
+//     }
+
+//     connectToDatabase(async (err, conn) => {
+//       if (err) {
+//         console.error("Database connection error:", err);
+//         return res.status(500).json({
+//           success: false,
+//           data: null,
+//           message: "Database connection failed",
+//         });
+//       }
+
+//       try {
+//         const query = `SELECT 
+//     QuizMapping.idCode,
+//     QuizMapping.quizGroupID,
+//     GroupMaster.group_name,
+//     QuizMapping.quizId,
+//     QuizMapping.QuestionsID,
+//     Questions.question_text AS QuestionTxt,
+//     Questions.Ques_level,
+//     Questions.question_type,               
+//     QuizMapping.negativeMarks,
+//     QuizMapping.totalMarks,
+//     QuizMapping.AuthAdd,
+//     QuizMapping.AddOnDt,
+//     QuizMapping.delStatus,
+//     QuizDetails.QuizName,
+//     QuizDetails.QuizDuration,
+//     QuizDetails.NegativeMarking,
+//     tblDDReferences.ddValue AS question_level,
+//     Questions.image AS question_image,
+//     QuestionOptions.is_correct,
+//     QuestionOptions.option_text,
+//     QuestionOptions.id AS optionId
+// FROM QuizMapping
+// LEFT JOIN Questions ON QuizMapping.QuestionsID = Questions.id
+// LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
+// LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
+// LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
+// LEFT JOIN GroupMaster ON QuizMapping.quizGroupID = GroupMaster.group_id
+// WHERE 
+//     QuizMapping.quizId = ? 
+//     AND QuizMapping.delStatus = 0 
+//     AND QuestionOptions.delStatus = 0
+// `;
+
+//         const questions = await queryAsync(conn, query, [quizId]);
+
+//         if (!questions || questions.length === 0) {
+//           closeConnection();
+//           return res.status(404).json({
+//             success: false,
+//             data: null,
+//             message: "No questions found for this quiz",
+//           });
+//         }
+//         const questionMap = {};
+//         questions.forEach((q) => {
+//           if (!questionMap[q.QuestionsID]) {
+//             questionMap[q.QuestionsID] = {
+//               idCode: q.idCode,
+//               quizGroupID: q.quizGroupID,
+//               group_name: q.group_name,
+//               quizId: q.quizId,
+//               QuestionsID: q.QuestionsID,
+//               QuestionTxt: q.QuestionTxt,
+//               Ques_level: q.Ques_level,
+//               negativeMarks: q.negativeMarks,
+//               negativeMarking: q.NegativeMarking,
+//               totalMarks: q.totalMarks,
+//               AuthAdd: q.AuthAdd,
+//               AddOnDt: q.AddOnDt,
+//               delStatus: q.delStatus,
+//               QuizName: q.QuizName,
+//               QuizDuration: q.QuizDuration,
+//               question_level: q.question_level,
+//               question_image: q.question_image,
+//               options: [],
+//             };
+//           }
+//           if (q.option_text) {
+//             questionMap[q.QuestionsID].options.push({
+//               id: q.optionId,
+//               option_text: q.option_text,
+//               is_correct: q.is_correct === 1,
+//             });
+//           }
+//         });
+//         const formattedQuestions = Object.values(questionMap);
+//         success = true;
+//         closeConnection();
+//         return res.status(200).json({
+//           success,
+//           data: {
+//             quizId,
+//             quizName: questions[0]?.QuizName || "",
+//             quizDuration: questions[0]?.QuizDuration || 0,
+//             questions: formattedQuestions,
+//           },
+//           message: "Quiz questions fetched successfully",
+//         });
+//       } catch (queryErr) {
+//         console.error("Query error:", queryErr);
+//         closeConnection();
+//         return res.status(500).json({
+//           success: false,
+//           data: null,
+//           message: "Failed to execute query",
+//         });
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Unexpected error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       data: null,
+//       message: "Internal server error",
+//     });
+//   }
+// };
 
 export const submitQuiz = async (req, res) => {
   console.log("Incoming quiz submission:", req.body);
@@ -1693,278 +1848,7 @@ export const unmappQuestion = (req, res) => {
   }
 };
 
-export const updateQuestion = async (req, res) => {
-  console.log("Incoming question update request:", req.body);
-  const userId = req.user.id;
-
-  // Validate request
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      errors: errors.array(),
-      message: "Validation failed",
-    });
-  }
-
-  try {
-    const {
-      id,
-      question_text,
-      Ques_level,
-      group_id,
-      image,
-      question_type = 0,
-      options = [],
-      AuthLstEdt,
-    } = req.body;
-
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: "Question ID is required",
-      });
-    }
-
-    if (!question_text?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Question text is required",
-      });
-    }
-
-    if (!group_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Group ID is required",
-      });
-    }
-
-    if (options.length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: "At least 2 options are required",
-      });
-    }
-
-    const correctOptions = options.filter((opt) => opt.is_correct);
-    if (correctOptions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "At least one correct answer is required",
-      });
-    }
-
-    if (question_type === 1 && correctOptions.length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: "Multiple choice requires at least 2 correct answers",
-      });
-    }
-
-    connectToDatabase(async (err, conn) => {
-      if (err) {
-        console.error("Database connection error:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Database connection failed",
-        });
-      }
-
-      let transactionStarted = false;
-
-      try {
-        const [question] = await queryAsync(
-          conn,
-          `
-          SELECT id FROM Questions 
-          WHERE id = ? AND ISNULL(delStatus, 0) = 0
-        `,
-          [id]
-        );
-
-        if (!question) {
-          closeConnection(conn);
-          return res.status(404).json({
-            success: false,
-            message: "Question not found or has been deleted",
-          });
-        }
-
-        const [group] = await queryAsync(
-          conn,
-          `
-          SELECT group_id FROM GroupMaster 
-          WHERE group_id = ? AND ISNULL(delStatus, 0) = 0
-        `,
-          [group_id]
-        );
-
-        if (!group) {
-          closeConnection(conn);
-          return res.status(404).json({
-            success: false,
-            message: "Question group not found",
-          });
-        }
-
-        // Get existing options
-        const existingOptions = await queryAsync(
-          conn,
-          `
-          SELECT id FROM QuestionOptions 
-          WHERE question_id = ? AND ISNULL(delStatus, 0) = 0
-          ORDER BY id ASC
-        `,
-          [id]
-        );
-
-        await queryAsync(conn, "BEGIN TRANSACTION");
-        transactionStarted = true;
-
-        await queryAsync(
-          conn,
-          `
-          UPDATE Questions SET
-            question_text = ?,
-            Ques_level = ?,
-            group_id = ?,
-            image = ?,
-            question_type = ?,
-            AuthLstEdt = ?,
-            editOnDt = GETDATE()
-          WHERE id = ?
-        `,
-          [
-            question_text.trim(),
-            Ques_level || null,
-            group_id,
-            image || null,
-            question_type,
-            AuthLstEdt || req.user.email || "Unknown",
-            id,
-          ]
-        );
-
-        // Process options
-        const existingOptionIds = existingOptions.map((opt) => opt.id);
-        const newOptions = [];
-        const optionsToUpdate = [];
-        const optionsToDelete = [...existingOptionIds];
-
-        options.forEach((option, index) => {
-          if (index < existingOptions.length) {
-            optionsToUpdate.push({
-              id: existingOptions[index].id,
-              ...option,
-            });
-            optionsToDelete.splice(
-              optionsToDelete.indexOf(existingOptions[index].id),
-              1
-            );
-          } else {
-            newOptions.push(option);
-          }
-        });
-
-        // Update existing options
-        for (const option of optionsToUpdate) {
-          await queryAsync(
-            conn,
-            `
-            UPDATE QuestionOptions SET
-              option_text = ?,
-              is_correct = ?,
-              image = ?,
-              AuthLstEdt = ?,
-              editOnDt = GETDATE()
-            WHERE id = ? AND question_id = ?
-          `,
-            [
-              option.option_text.trim(),
-              option.is_correct ? 1 : 0,
-              option.image || null,
-              AuthLstEdt || req.user.email || "Unknown",
-              option.id,
-              id,
-            ]
-          );
-        }
-
-        // Add new options
-        for (const option of newOptions) {
-          await queryAsync(
-            conn,
-            `
-            INSERT INTO QuestionOptions (
-              question_id, option_text, is_correct, image,
-              AuthAdd, AuthLstEdt, AddOnDt
-            ) VALUES (?, ?, ?, ?, ?, ?, GETDATE())
-          `,
-            [
-              id,
-              option.option_text.trim(),
-              option.is_correct ? 1 : 0,
-              option.image || null,
-              AuthLstEdt || req.user.email || "Unknown",
-              AuthLstEdt || req.user.email || "Unknown",
-            ]
-          );
-        }
-
-        // Delete removed options
-        for (const optionId of optionsToDelete) {
-          await queryAsync(
-            conn,
-            `
-            UPDATE QuestionOptions SET
-              delStatus = 1,
-              AuthDel = ?,
-              AuthLstEdt = ?,
-              delOnDt = GETDATE()
-            WHERE id = ?
-          `,
-            [
-              AuthLstEdt || req.user.email || "Unknown",
-              AuthLstEdt || req.user.email || "Unknown",
-              optionId,
-            ]
-          );
-        }
-        await queryAsync(conn, "COMMIT");
-        closeConnection(conn);
-        return res.status(200).json({
-          success: true,
-          message: "Question updated successfully",
-          data: {
-            questionId: id,
-            optionsUpdated: optionsToUpdate.length,
-            optionsAdded: newOptions.length,
-            optionsDeleted: optionsToDelete.length,
-          },
-        });
-      } catch (error) {
-        if (transactionStarted) {
-          await queryAsync(conn, "ROLLBACK");
-        }
-        closeConnection(conn);
-        console.error("Database error:", error);
-        return res.status(500).json({
-          success: false,
-          message: "Failed to update question",
-          error: error.message,
-        });
-      }
-    });
-  } catch (error) {
-    console.error("Server error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
+export const updateQuestion = async (req, res) => {};
 
 export const getLeaderboardRanking = async (req, res) => {
   let success = false;

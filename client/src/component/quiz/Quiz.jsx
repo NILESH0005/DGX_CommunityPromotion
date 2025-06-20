@@ -26,6 +26,9 @@ const Quiz = () => {
   const [showScore, setShowScore] = useState(false);
   const [timer, setTimer] = useState({ hours: 0, minutes: 30, seconds: 0 });
   const [questionStatus, setQuestionStatus] = useState({});
+  const currentQuestionData = questions[currentQuestion];
+  const isMCQ = currentQuestionData?.questionType === 0;
+  const isMSQ = currentQuestionData?.questionType === 1;
 
   const loadSavedAnswers = () => {
     try {
@@ -60,7 +63,6 @@ const Quiz = () => {
 
   const [selectedAnswers, setSelectedAnswers] = useState([]);
 
-
   useEffect(() => {
     if (!quiz?.QuizID) {
       setError("Quiz ID is missing");
@@ -74,17 +76,14 @@ const Quiz = () => {
       return;
     }
 
-     if (userToken) {
-    fetchQuizQuestions({
-      QuizID: quiz.QuizID,
-      group_id: quiz.group_id || null, 
-      duration: quiz.QuizDuration // Pass duration if available
-    });
-  }
-}, [quiz, userToken]);
-
-
-
+    if (userToken) {
+      fetchQuizQuestions({
+        QuizID: quiz.QuizID,
+        group_id: quiz.group_id || null,
+        duration: quiz.QuizDuration, // Pass duration if available
+      });
+    }
+  }, [quiz, userToken]);
 
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -163,8 +162,6 @@ const Quiz = () => {
   //   }
   // };
 
-
-
   const fetchQuizQuestions = async (quizData) => {
     setLoading(true);
     setError(null);
@@ -177,30 +174,25 @@ const Quiz = () => {
         endpoint = "quiz/getQuizQuestions";
         requestBody = {
           quizGroupID: quizData.group_id,
-          QuizID: quizData.QuizID
+          QuizID: quizData.QuizID,
         };
       } else if (quizData.QuizID) {
-        endpoint = "quiz/getQuizQuestionsByQuizId"; 
+        endpoint = "quiz/getQuizQuestionsByQuizId";
         requestBody = {
-          QuizID: quizData.QuizID
+          QuizID: quizData.QuizID,
         };
       } else {
         throw new Error("Insufficient data to fetch questions");
       }
-      console.log("leetttss go", requestBody)
+      console.log("leetttss go", requestBody);
 
-      const data = await fetchData(
-        endpoint,
-        "POST",
-        requestBody,
-        {
-          "Content-Type": "application/json",
-          "auth-token": userToken,
-        }
-      );
+      const data = await fetchData(endpoint, "POST", requestBody, {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      });
 
       console.log("API Response:", data);
-
+      console.log("Raw API questions data:", data.data.questions);
       if (!data) {
         throw new Error("No data received from server");
       }
@@ -210,18 +202,24 @@ const Quiz = () => {
         setQuestions(transformedQuestions);
 
         const saved = loadSavedAnswers();
-        setSelectedAnswers(saved?.answers || Array(transformedQuestions.length).fill(null));
+        setSelectedAnswers(
+          saved?.answers || Array(transformedQuestions.length).fill(null)
+        );
         if (transformedQuestions.length > 0) {
-          const duration = transformedQuestions[0].duration || quizData.duration || 30;
+          const duration =
+            transformedQuestions[0].duration || quizData.duration || 30;
           const hours = Math.floor(duration / 60);
           const minutes = duration % 60;
           setTimer({ hours, minutes, seconds: 0 });
         }
 
-        const initialQuestionStatus = transformedQuestions.reduce((acc, _, index) => {
-          acc[index + 1] = "not-visited";
-          return acc;
-        }, {});
+        const initialQuestionStatus = transformedQuestions.reduce(
+          (acc, _, index) => {
+            acc[index + 1] = "not-visited";
+            return acc;
+          },
+          {}
+        );
 
         setQuestionStatus(initialQuestionStatus);
       } else {
@@ -244,10 +242,9 @@ const Quiz = () => {
     return apiQuestions.map((item) => {
       const optionsWithIds = item.options.map((option, index) => ({
         ...option,
-        id: option.id ? Number(option.id) : index + 1, // Fallback to index if ID is missing
+        id: option.id ? Number(option.id) : index + 1,
       }));
 
-      // Then find correct answers
       const correctAnswers = optionsWithIds
         .filter(
           (option) => option.is_correct === true || option.is_correct === 1
@@ -257,6 +254,8 @@ const Quiz = () => {
       return {
         id: Number(item.QuestionsID),
         question_text: item.QuestionTxt,
+        // MISSING THIS CRUCIAL FIELD:
+        questionType: Number(item.question_type) || 0, // Add this line
         totalMarks: Number(item.totalMarks) || 1,
         negativeMarks: Number(item.negativeMarks) || 0,
         duration: Number(item.QuizDuration) || 30,
@@ -318,61 +317,70 @@ const Quiz = () => {
     }
     setCurrentQuestion(nextQuestion);
   };
+
   const handleAnswerClick = (selectedOptionId) => {
-    const optionId = Number(selectedOptionId); // Ensure numeric ID
+    const optionId = Number(selectedOptionId);
     const currentQuestionData = questions[currentQuestion];
 
     if (!currentQuestionData) return;
 
-    console.log("Current question options:", currentQuestionData.options);
-    console.log("Selected option ID:", optionId);
+    setSelectedAnswers((prev) => {
+      const newAnswers = [...prev];
 
-    const selectedOption = currentQuestionData.options.find(
-      (opt) => Number(opt.id) === optionId
-    );
+      // Initialize answer if it doesn't exist
+      if (!newAnswers[currentQuestion]) {
+        newAnswers[currentQuestion] = {
+          questionId: currentQuestionData.id,
+          questionText: currentQuestionData.question_text,
+          questionType: currentQuestionData.questionType,
+          isCorrect: false,
+          marksAwarded: 0,
+          maxMarks: currentQuestionData.totalMarks,
+          negativeMarks: currentQuestionData.negativeMarks,
+          correctAnswers: currentQuestionData.correctAnswers,
+          ...(isMSQ ? { selectedOptionIds: [] } : { selectedOptionId: null }),
+        };
+      }
 
-    if (!selectedOption) {
-      console.error("Option not found");
-      return;
-    }
+      // Handle MSQ (multiple select)
+      if (isMSQ) {
+        const currentSelections =
+          newAnswers[currentQuestion].selectedOptionIds || [];
+        newAnswers[currentQuestion].selectedOptionIds =
+          currentSelections.includes(optionId)
+            ? currentSelections.filter((id) => id !== optionId)
+            : [...currentSelections, optionId];
+      }
+      // Handle MCQ (single select)
+      else {
+        newAnswers[currentQuestion].selectedOptionId =
+          newAnswers[currentQuestion].selectedOptionId === optionId
+            ? null
+            : optionId;
+      }
 
-    const isCorrect = currentQuestionData.correctAnswers.includes(optionId);
+      // Calculate correctness
+      const isCorrect = isMSQ
+        ? arraysEqual(
+            newAnswers[currentQuestion].selectedOptionIds?.sort(),
+            currentQuestionData.correctAnswers.sort()
+          )
+        : currentQuestionData.correctAnswers.includes(
+            newAnswers[currentQuestion].selectedOptionId
+          );
 
-    const newAnswer = {
-      questionId: currentQuestionData.id,
-      questionText: currentQuestionData.question_text,
-      selectedOptionId: optionId, // Use the numeric ID
-      selectedOptionText: selectedOption.option_text,
-      isCorrect,
-      marksAwarded: isCorrect
+      newAnswers[currentQuestion].isCorrect = isCorrect;
+      newAnswers[currentQuestion].marksAwarded = isCorrect
         ? currentQuestionData.totalMarks
-        : -currentQuestionData.negativeMarks,
-      maxMarks: currentQuestionData.totalMarks,
-      negativeMarks: currentQuestionData.negativeMarks,
-      correctAnswers: currentQuestionData.correctAnswers
-        .map(
-          (id) =>
-            currentQuestionData.options.find(
-              (opt) => Number(opt.id) === Number(id)
-            )?.option_text
-        )
-        .filter(Boolean),
-    };
+        : -currentQuestionData.negativeMarks;
 
-    const newAnswers = [...selectedAnswers];
-    newAnswers[currentQuestion] = newAnswer;
-    setSelectedAnswers(newAnswers);
+      return newAnswers;
+    });
 
     setQuestionStatus((prev) => ({
       ...prev,
       [currentQuestion + 1]: "answered",
     }));
-
-    saveAnswersToStorage({
-      quizId: quiz.QuizID,
-      groupId: quiz.group_id,
-      answers: newAnswers,
-    });
   };
 
   const handleSaveAndNext = () => {
@@ -588,8 +596,9 @@ const Quiz = () => {
                   <div
                     className="h-2 bg-blue-500 rounded-full"
                     style={{
-                      width: `${((currentQuestion + 1) / questions.length) * 100
-                        }%`,
+                      width: `${
+                        ((currentQuestion + 1) / questions.length) * 100
+                      }%`,
                     }}
                   ></div>
                 </div>
@@ -611,41 +620,48 @@ const Quiz = () => {
             </div>
 
             <div className="p-6 border-b border-gray-300">
-              <p className="text-lg mb-6">
-                {questions[currentQuestion]?.question_text}
-              </p>
+              <div className="flex items-center gap-3 mb-4">
+                <p className="text-lg flex-1">
+                  {questions[currentQuestion]?.question_text}
+                </p>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    isMCQ
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-purple-100 text-purple-800"
+                  }`}
+                >
+                  {isMCQ ? "MCQ" : "MSQ"}
+                </span>
+              </div>
               <div className="space-y-2">
                 {questions[currentQuestion]?.options?.map((option) => {
-                  const optionId = Number(option.id); // Ensure numeric ID
-                  const isSelected =
-                    Number(
-                      selectedAnswers[currentQuestion]?.selectedOptionId
-                    ) === optionId;
+                  const optionId = Number(option.id);
+                  const isSelected = isMSQ
+                    ? selectedAnswers[
+                        currentQuestion
+                      ]?.selectedOptionIds?.includes(optionId)
+                    : Number(
+                        selectedAnswers[currentQuestion]?.selectedOptionId
+                      ) === optionId;
 
                   return (
                     <label
                       key={optionId}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition
-          ${isSelected
+                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition ${
+                        isSelected
                           ? "bg-blue-100 border-2 border-blue-500"
                           : "hover:bg-gray-50 border border-transparent"
-                        }`}
+                      }`}
                     >
                       <input
-                        type="radio"
-                        name={`answer-${currentQuestion}`}
+                        type={isMSQ ? "checkbox" : "radio"}
+                        name={`question-${currentQuestion}`}
                         checked={isSelected}
                         onChange={() => handleAnswerClick(optionId)}
                         className="w-4 h-4"
                       />
                       <span>{option.option_text}</span>
-                      {isSelected && (
-                        <span className="ml-auto text-blue-600">
-                          {selectedAnswers[currentQuestion]?.isCorrect
-                            ? "✓"
-                            : "✗"}
-                        </span>
-                      )}
                     </label>
                   );
                 })}
@@ -677,10 +693,11 @@ const Quiz = () => {
               </div>
               <button
                 className={`px-6 py-2 text-white rounded transition
-                    ${currentQuestion + 1 === questions.length
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                    ${
+                      currentQuestion + 1 === questions.length
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    }`}
                 onClick={handleSaveAndNext}
               >
                 {currentQuestion + 1 === questions.length
@@ -704,4 +721,3 @@ const Quiz = () => {
 };
 
 export default Quiz;
- 

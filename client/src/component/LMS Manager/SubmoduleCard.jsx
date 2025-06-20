@@ -4,7 +4,6 @@ import ApiContext from "../../context/ApiContext";
 import ByteArrayImage from "../../utils/ByteArrayImage";
 import ProgressBar from "./ProgressBar";
 import { FaAngleDown, FaAngleUp } from "react-icons/fa";
-import BreadCrumb from "./BreadCrumb";
 
 const SubModuleCard = () => {
   const { moduleId } = useParams();
@@ -170,8 +169,6 @@ const SubModuleCard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Simplified BreadCrumb - no need for customPaths since we're already on the module page */}
-        <BreadCrumb />
 
         {/* Module Title Section */}
         {moduleName && (
