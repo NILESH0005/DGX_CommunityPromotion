@@ -52,9 +52,14 @@ const SubModuleDetails = ({
         setUploadedFile(file);
     };
 
-    const handleUploadSubmit = async () => {
-        if (!uploadedFile) {
+    const handleUploadSubmit = async (file, customFileName) => {
+        if (!file) {
             setErrors({ file: 'Please select a file to upload' });
+            return;
+        }
+
+        if (!customFileName) {
+            setErrors({ fileName: 'Please enter a file name' });
             return;
         }
 
@@ -64,7 +69,8 @@ const SubModuleDetails = ({
             const success = await onUploadFile(
                 subModule.id,
                 currentUnit.id,
-                uploadedFile
+                file,
+                customFileName
             );
 
             if (success) {
@@ -101,7 +107,7 @@ const SubModuleDetails = ({
             setIsSubmitting(false);
         }
     };
-
+    
     return (
         <>
             {/* Unit Details */}

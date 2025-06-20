@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import ApiContext from "../../context/ApiContext";
 import ByteArrayImage from "../../utils/ByteArrayImage";
 import { FaAngleDown, FaAngleUp } from "react-icons/fa";
+import Swal from "sweetalert2";
 
 const ModuleCard = () => {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { fetchData } = useContext(ApiContext);
+  const { fetchData, userToken } = useContext(ApiContext); // Assuming isAuthenticated is available in your ApiContext
   const navigate = useNavigate();
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
 
@@ -35,7 +36,35 @@ const ModuleCard = () => {
   }, [fetchData]);
 
   const handleModuleClick = (moduleId, moduleName) => {
-    navigate(`/module/${moduleId}?moduleName=${encodeURIComponent(moduleName)}`);
+    if (!userToken) {
+      Swal.fire({
+        title: 'Login Required',
+        text: 'You need to login to access this module',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Go to Login',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/SignInn');
+        }
+      });
+      return;
+    }
+    
+    // Store module name in localStorage for breadcrumb persistence
+    localStorage.setItem('moduleName', moduleName);
+    localStorage.setItem('moduleId', moduleId);
+    
+    // Navigate with state containing module name
+    navigate(`/module/${moduleId}`, {
+      state: { 
+        moduleName: moduleName,
+        moduleId: moduleId
+      }
+    });
   };
 
   const toggleDescription = (moduleId, event) => {
@@ -103,10 +132,11 @@ const ModuleCard = () => {
                 </h3>
 
                 <p
-                  className={`text-gray-600 text-base mb-4 hover:text-gray-800 transition-colors duration-200 break-words ${expandedDescriptions[module.ModuleID]
+                  className={`text-gray-600 text-base mb-4 hover:text-gray-800 transition-colors duration-200 break-words ${
+                    expandedDescriptions[module.ModuleID]
                       ? 'overflow-y-auto max-h-32'
                       : 'line-clamp-2'
-                    }`}
+                  }`}
                 >
                   {module.ModuleDescription || "No description available"}
                 </p>

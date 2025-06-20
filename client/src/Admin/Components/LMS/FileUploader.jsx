@@ -102,6 +102,8 @@ const FileUploader = ({
   };
 
   const getFileIcon = (fileName) => {
+    if (!fileName) return null; // Return null if fileName is not provided
+
     const extension = fileName.split(".").pop().toLowerCase();
     switch (extension) {
       case "pdf":
@@ -188,11 +190,10 @@ const FileUploader = ({
         </h3>
 
         <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            isDragging
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging
               ? "border-DGXblue bg-blue-50"
               : "border-gray-300 bg-gray-50"
-          }`}
+            }`}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
@@ -235,7 +236,7 @@ const FileUploader = ({
           </label>
         </div>
 
-        {selectedFile && (
+        {selectedFile && selectedFile.name && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}

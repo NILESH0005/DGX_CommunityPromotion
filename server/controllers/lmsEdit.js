@@ -1572,6 +1572,141 @@ export const deleteFile = (req, res) => {
   }
 };
 
+export const deleteMultipleFiles = (req, res) => {
+  const { fileIds } = req.body;
+
+  // Input validation
+  if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid file IDs provided - must be a non-empty array",
+    });
+  }
+
+  // Validate each file ID
+  const invalidIds = fileIds.filter(id => isNaN(id));
+  if (invalidIds.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid file IDs found: ${invalidIds.join(', ')}`,
+      invalidIds
+    });
+  }
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError(err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection error",
+        });
+      }
+
+      try {
+        await queryAsync(conn, "BEGIN TRANSACTION");
+
+        const adminId = req.user?.id; // Get current user ID
+        const currentTime = new Date().toISOString();
+
+        // 1. First check which files exist and aren't already deleted
+        const checkQuery = `
+          SELECT FileID, UnitID, FilesName 
+          FROM FilesDetails 
+          WHERE FileID IN (?) AND (delStatus IS NULL OR delStatus = 0)
+        `;
+        const existingFiles = await queryAsync(conn, checkQuery, [fileIds]);
+
+        if (existingFiles.length === 0) {
+          await queryAsync(conn, "ROLLBACK TRANSACTION");
+          closeConnection(conn);
+          return res.status(404).json({
+            success: false,
+            message: "No valid files found to delete",
+          });
+        }
+
+        const validFileIds = existingFiles.map(file => file.FileID);
+        const unitIds = [...new Set(existingFiles.map(file => file.UnitID))]; // Get unique unit IDs
+
+        // 2. Perform the soft delete for all valid files
+        const deleteQuery = `
+          UPDATE FilesDetails
+          SET 
+            delStatus = 1,
+            delOnDt = ?,
+            AddDel = ?
+          WHERE FileID IN (?)
+        `;
+        await queryAsync(conn, deleteQuery, [currentTime, adminId, validFileIds]);
+
+        // 3. For each affected unit, update percentages of remaining files
+        const results = {};
+
+        for (const unitId of unitIds) {
+          // Count remaining active files in the unit
+          const countQuery = `
+            SELECT COUNT(*) as remainingCount 
+            FROM FilesDetails 
+            WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)
+          `;
+          const [countResult] = await queryAsync(conn, countQuery, [unitId]);
+
+          // Update percentages if files remain
+          if (countResult.remainingCount > 0) {
+            const newPercentage = (100 / countResult.remainingCount).toFixed(2);
+            await queryAsync(
+              conn,
+              `UPDATE FilesDetails 
+               SET Percentage = ?
+               WHERE UnitID = ? AND (delStatus IS NULL OR delStatus = 0)`,
+              [newPercentage, unitId]
+            );
+          }
+
+          results[unitId] = {
+            remainingCount: countResult.remainingCount,
+            newPercentage: countResult.remainingCount > 0
+              ? (100 / countResult.remainingCount).toFixed(2)
+              : 0
+          };
+        }
+
+        await queryAsync(conn, "COMMIT TRANSACTION");
+        closeConnection(conn);
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            deletedFileIds: validFileIds,
+            deletedAt: currentTime,
+            deletedBy: adminId,
+            unitResults: results,
+            notFoundIds: fileIds.filter(id => !validFileIds.includes(id))
+          },
+          message: `Successfully deleted ${validFileIds.length} file(s)`,
+        });
+      } catch (error) {
+        await queryAsync(conn, "ROLLBACK TRANSACTION");
+        closeConnection(conn);
+        logError(`Error deleting multiple files: ${error.message}`);
+        return res.status(500).json({
+          success: false,
+          message: "Database error during bulk deletion",
+          details: error.message,
+        });
+      }
+    });
+  } catch (outerError) {
+    logError(`Unexpected error: ${outerError.message}`);
+    return res.status(500).json({
+      success: false,
+      message: "Unexpected server error during bulk deletion",
+      details: outerError.message,
+    });
+  }
+};
+
 export const addUnit = async (req, res) => {
   console.log("Incoming request body", req.body);
   let success = false;

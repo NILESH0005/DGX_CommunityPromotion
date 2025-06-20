@@ -718,7 +718,16 @@ const QuizMapping = () => {
                 <table className="min-w-full bg-white border">
                   <thead>
                     <tr className="bg-DGXgreen">
-                      <th className="py-2 px-4 border">Select</th>
+                      <th className="py-2 px-4 border w-10">
+                        <input
+                          type="checkbox"
+                          onChange={(e) => {
+                            const allIds = questions.map(q => q.question_id);
+                            setSelectedQuestions(e.target.checked ? allIds : []);
+                          }}
+                          checked={selectedQuestions.length === questions.length && questions.length > 0}
+                        />
+                      </th>
                       <th className="py-2 px-4 border">#</th>
                       <th className="py-2 px-4 border">Question Text</th>
                       <th className="py-2 px-4 border">Correct Answer</th>
@@ -731,7 +740,6 @@ const QuizMapping = () => {
                               inputMode="decimal"
                               value={allMarksValue}
                               onChange={(e) => {
-                                // Allow empty string or valid numbers
                                 const value = e.target.value;
                                 if (value === '' || !isNaN(value)) {
                                   setAllMarksValue(value);
@@ -783,7 +791,6 @@ const QuizMapping = () => {
                   </thead>
                   <tbody>
                     {questions.map((question, index) => {
-                      // Get current values or use defaults if undefined
                       const currentMarks = questionMarks[question.question_id]?.marks ?? 1;
                       const currentNegative = questionMarks[question.question_id]?.negative ?? 0;
 
@@ -816,15 +823,6 @@ const QuizMapping = () => {
                                   e.target.value
                                 );
                               }}
-                              onBlur={(e) => {
-                                if (e.target.value === '') {
-                                  handleMarksChange(
-                                    question.question_id,
-                                    'marks',
-                                    1
-                                  );
-                                }
-                              }}
                               className="w-20 p-1 border rounded"
                               disabled={!selectedQuestions.includes(question.question_id)}
                             />
@@ -843,15 +841,6 @@ const QuizMapping = () => {
                                     'negative',
                                     e.target.value
                                   );
-                                }}
-                                onBlur={(e) => {
-                                  if (e.target.value === '') {
-                                    handleMarksChange(
-                                      question.question_id,
-                                      'negative',
-                                      0
-                                    );
-                                  }
                                 }}
                                 className="w-20 p-1 border rounded"
                                 disabled={!selectedQuestions.includes(question.question_id)}

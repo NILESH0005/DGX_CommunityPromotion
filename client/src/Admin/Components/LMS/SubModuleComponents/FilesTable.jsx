@@ -19,7 +19,7 @@ const FilesTable = ({ files = [] }) => {
     }
 
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
@@ -45,14 +45,14 @@ const FilesTable = ({ files = [] }) => {
                     </thead>
                     <tbody className="bg-DGXwhite divide-y divide-DGXgray/20">
                         {files.map((file, index) => {
-                            const fileName = file.originalName || file.FilesName || 'Unknown file';
-                            const fileType = file.fileType || file.FileType || 'application/octet-stream';
-                            const filePath = file.filePath || file.FilePath || '';
-                            const uploadedAt = file.uploadedAt || new Date().toISOString();
+                            const isLink = file.FileType === 'link' || file.FileType === 'text/uri-list';
+                            const fileName = file.FilesName || 'Untitled';
+                            const filePath = file.FilePath;
+                            const fileType = file.FileType || 'application/octet-stream';
                             const isImage = fileType.startsWith('image/');
 
                             return (
-                                <motion.tr 
+                                <motion.tr
                                     key={file.id || uuidv4()}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -63,7 +63,9 @@ const FilesTable = ({ files = [] }) => {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-lg bg-DGXgray/10">
-                                                {isImage && filePath ? (
+                                                {isLink ? (
+                                                    <FaLink className="w-5 h-5 text-DGXblue" />
+                                                ) : isImage ? (
                                                     <Image className="w-5 h-5 text-DGXgreen" />
                                                 ) : (
                                                     <File className="w-5 h-5 text-DGXblue" />
@@ -73,46 +75,73 @@ const FilesTable = ({ files = [] }) => {
                                                 <div className="text-sm font-medium text-DGXblack truncate max-w-xs">
                                                     {fileName}
                                                 </div>
-                                                <div className="text-xs text-DGXgray">
-                                                    {Math.round((file.size || 0) / 1024)} KB
-                                                </div>
+                                                {isLink ? (
+                                                    <a
+                                                        href={filePath}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs text-DGXgray hover:underline"
+                                                    >
+                                                        {filePath}
+                                                    </a>
+                                                ) : (
+                                                    <div className="text-xs text-DGXgray">
+                                                        {Math.round((file.size || 0) / 1024)} KB
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm text-DGXblue capitalize">
-                                            {fileType.split('/')[1] || fileType}
+                                            {isLink ? 'Link' : fileType.split('/')[1] || fileType}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm text-DGXgray">
-                                            {new Date(uploadedAt).toLocaleDateString()}
+                                            {new Date(file.AddOnDt).toLocaleDateString()}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex justify-end space-x-2">
-                                            {filePath && (
-                                                <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    onClick={() => window.open(filePath, '_blank')}
-                                                    className="p-2 rounded-lg text-DGXwhite bg-DGXgreen hover:bg-[#68a600] transition-colors"
-                                                    title="View file"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </motion.button>
-                                            )}
-                                            {filePath && (
+                                            {isLink ? (
                                                 <motion.a
                                                     whileHover={{ scale: 1.05 }}
                                                     whileTap={{ scale: 0.95 }}
                                                     href={filePath}
-                                                    download={fileName}
-                                                    className="p-2 rounded-lg border border-DGXgray/30 hover:bg-DGXgray/10 text-DGXblue transition-colors"
-                                                    title="Download file"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="p-2 rounded-lg text-DGXwhite bg-DGXgreen hover:bg-[#68a600] transition-colors"
+                                                    title="Open link"
                                                 >
-                                                    <Download className="w-4 h-4" />
+                                                    <Eye className="w-4 h-4" />
                                                 </motion.a>
+                                            ) : (
+                                                <>
+                                                    {filePath && (
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            onClick={() => window.open(filePath, '_blank')}
+                                                            className="p-2 rounded-lg text-DGXwhite bg-DGXgreen hover:bg-[#68a600] transition-colors"
+                                                            title="View file"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </motion.button>
+                                                    )}
+                                                    {filePath && (
+                                                        <motion.a
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            href={filePath}
+                                                            download={fileName}
+                                                            className="p-2 rounded-lg border border-DGXgray/30 hover:bg-DGXgray/10 text-DGXblue transition-colors"
+                                                            title="Download file"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </motion.a>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </td>

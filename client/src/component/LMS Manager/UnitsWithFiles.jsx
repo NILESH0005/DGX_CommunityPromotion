@@ -130,10 +130,12 @@ const UnitsWithFiles = () => {
         }
 
         if (quizzesResponse?.success) {
-          const transformedQuizzes = quizzesResponse.data.map((quiz) => ({
-            ...quiz,
-            group_id: quiz.QuizGroupID,
-          }));
+          const transformedQuizzes = quizzesResponse.data
+            .map((quiz) => ({
+              ...quiz,
+              group_id: quiz.QuizGroupID,
+            }))
+            .sort((a, b) => a.QuizLevel - b.QuizLevel); 
           setQuizzes(transformedQuizzes);
         }
       } catch (error) {
@@ -199,21 +201,17 @@ const UnitsWithFiles = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  // Helper function to check if text needs "Read more" functionality
   const needsReadMore = (text) => {
     if (!text) return false;
     return text.split(" ").length > 10;
   };
 
-  // Helper function to get truncated text
   const getTruncatedText = (text, wordLimit = 10) => {
     if (!text) return "";
     const words = text.split(" ");
     if (words.length <= wordLimit) return text;
     return words.slice(0, wordLimit).join(" ") + "...";
   };
-
-  // Toggle expanded description
   const toggleDescription = (id) => {
     setExpandedDescriptions((prev) => {
       const newSet = new Set(prev);
@@ -281,9 +279,8 @@ const UnitsWithFiles = () => {
     return (
       <div className="flex h-screen bg-background text-foreground">
         <div
-          className={`${
-            isSidebarCollapsed ? "w-16" : "w-64 lg:w-80"
-          } bg-[#1f2937] text-white p-4 border-r border-gray-700 transition-all duration-300`}
+          className={`${isSidebarCollapsed ? "w-16" : "w-64 lg:w-80"
+            } bg-[#1f2937] text-white p-4 border-r border-gray-700 transition-all duration-300`}
         >
           <div className="h-8 bg-gray-700 rounded w-3/4 mb-6 animate-pulse"></div>
           {[...Array(4)].map((_, i) => (
@@ -334,9 +331,8 @@ const UnitsWithFiles = () => {
   return (
     <div className="flex h-screen bg-background text-foreground">
       <div
-        className={`${
-          isSidebarCollapsed ? "w-20" : "w-80"
-        } bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}
+        className={`${isSidebarCollapsed ? "w-20" : "w-80"
+          } bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}
       >
         {/* Toggle Button - Made Bigger and More Visible */}
         <div className="flex justify-center pt-4">
@@ -357,9 +353,8 @@ const UnitsWithFiles = () => {
           {quizzes.length > 0 && (
             <div className="mb-6">
               <h3
-                className={`font-bold ${
-                  isSidebarCollapsed ? "text-center" : "text-lg mb-2"
-                }`}
+                className={`font-bold ${isSidebarCollapsed ? "text-center" : "text-lg mb-2"
+                  }`}
               >
                 {isSidebarCollapsed ? "Q" : "Quizzes"}
               </h3>
@@ -367,11 +362,9 @@ const UnitsWithFiles = () => {
                 {quizzes.map((quiz) => (
                   <div
                     key={quiz.QuizID}
-                    className={`${
-                      isSidebarCollapsed ? "p-2 flex justify-center" : "p-2"
-                    } rounded hover:bg-gray-700 cursor-pointer ${
-                      selectedQuiz?.QuizID === quiz.QuizID ? "bg-blue-600" : ""
-                    }`}
+                    className={`${isSidebarCollapsed ? "p-2 flex justify-center" : "p-2"
+                      } rounded hover:bg-gray-700 cursor-pointer ${selectedQuiz?.QuizID === quiz.QuizID ? "bg-blue-600" : ""
+                      }`}
                     onClick={() => handleQuizSelect(quiz)}
                     title={isSidebarCollapsed ? quiz.QuizName : ""}
                   >
@@ -413,7 +406,6 @@ const UnitsWithFiles = () => {
                   key={unit.UnitID}
                   className={`${isSidebarCollapsed ? "p-3" : "p-2"}  
                   `}
-                  //  rounded-xl hover:bg-gray-700 hover:shadow-lg transition-all duration-200 cursor-pointer border border-gray-600 hover:border-gray-500 bg-gray-800/50 backdrop-blur-sm transform hover:scale-[1.02]
                   onClick={() => {
                     if (unit.files?.length > 0) {
                       setSelectedFile({
@@ -485,11 +477,10 @@ const UnitsWithFiles = () => {
 
                   {unit.files?.length > 0 && (
                     <div
-                      className={`${
-                        isSidebarCollapsed
+                      className={`${isSidebarCollapsed
                           ? "mt-3 space-y-1"
                           : "mt-4 ml-2 border-l-2 border-gray-600 pl-4 space-y-2"
-                      }`}
+                        }`}
                     >
                       {unit.files.map((file) => {
                         const isViewed = viewedFiles.has(file.FileID);
@@ -498,17 +489,15 @@ const UnitsWithFiles = () => {
                         return (
                           <div
                             key={file.FileID}
-                            className={`${
-                              isSidebarCollapsed
+                            className={`${isSidebarCollapsed
                                 ? "p-2 flex justify-center rounded-lg"
                                 : "py-3 px-3 rounded-lg"
-                            } flex items-center transition-all duration-200 ${
-                              isSelected
+                              } flex items-center transition-all duration-200 ${isSelected
                                 ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md transform scale-105"
                                 : isViewed
-                                ? "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-500 hover:to-green-600 shadow-sm"
-                                : "text-gray-300 hover:text-white hover:bg-gray-600/70 hover:shadow-sm"
-                            } cursor-pointer group`}
+                                  ? "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-500 hover:to-green-600 shadow-sm"
+                                  : "text-gray-300 hover:text-white hover:bg-gray-600/70 hover:shadow-sm"
+                              } cursor-pointer group`}
                             title={
                               isSidebarCollapsed
                                 ? removeFileExtension(file.FilesName)
@@ -621,12 +610,6 @@ const UnitsWithFiles = () => {
         ) : selectedFile ? (
           <>
             <div className="mb-6">
-              {/* <h1 className="text-3xl font-bold text-gray-800">
-                {selectedFile?.unitName || "Select a Unit"}
-              </h1>
-              <p className="text-gray-600 mt-2">
-                {selectedFile?.unitDescription || ""}
-              </p> */}
               <h2 className="text-xl font-semibold text-gray-700 mt-4">
                 {removeFileExtension(selectedFile.FilesName)}
               </h2>
@@ -669,11 +652,10 @@ const UnitsWithFiles = () => {
               </div>
             ) : (
               <div
-                className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${
-                  selectedFile?.fileType === "ipynb"
+                className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${selectedFile?.fileType === "ipynb"
                     ? "bg-[#f5f5f5] border border-gray-300"
                     : "bg-white border"
-                }`}
+                  }`}
               >
                 {selectedFile?.fileType === "ipynb" && (
                   <div className="absolute top-0 left-0 right-0 h-8 bg-gray-200 flex items-center px-4 border-b border-gray-300 z-10">
@@ -695,9 +677,8 @@ const UnitsWithFiles = () => {
                   }
                 >
                   <FileViewer
-                    fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${
-                      selectedFile?.FilePath
-                    }`}
+                    fileUrl={`${import.meta.env.VITE_API_UPLOADSURL}${selectedFile?.FilePath
+                      }`}
                     className="w-full h-full"
                   />
                 </div>

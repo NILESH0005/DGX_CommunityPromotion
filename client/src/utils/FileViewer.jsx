@@ -37,7 +37,7 @@ const loadExternalLibraries = () => {
         const hljsCSS = document.createElement('link');
         hljsCSS.rel = 'stylesheet';
         hljsCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
-        document.head.appendChild(hljsCSS); 
+        document.head.appendChild(hljsCSS);
         checkComplete();
       };
       document.head.appendChild(hljsScript);
@@ -58,11 +58,9 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
   const [error, setError] = useState(null);
   const [librariesLoaded, setLibrariesLoaded] = useState(false);
 
-  // Extract file extension and name safely
   const fileExtension = fileUrl?.split('.').pop()?.toLowerCase() || '';
   const fileName = filesName || fileUrl?.split('/').pop() || 'file';
 
-  // Load external libraries on component mount
   useEffect(() => {
     loadExternalLibraries().then(() => {
       setLibrariesLoaded(true);
@@ -112,8 +110,8 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
       <div className="notebook-container p-4 bg-white rounded-lg shadow">
         <h2 className="text-xl font-bold mb-4">{notebook.metadata?.name || 'Jupyter Notebook'}</h2>
         {notebook.cells.map((cell, index) => (
-          <div 
-            key={index} 
+          <div
+            key={index}
             className={`mb-4 p-3 rounded ${cell.cell_type === 'code' ? 'bg-gray-50' : 'bg-white'}`}
           >
             {cell.cell_type === 'code' ? (
@@ -122,9 +120,9 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
                   <span className="text-xs font-mono text-gray-600">In [{cell.execution_count || ' '}]:</span>
                 </div>
                 <pre className="p-2 bg-gray-100 text-gray-800 rounded-b overflow-x-auto">
-                  <code 
-                    dangerouslySetInnerHTML={{ 
-                      __html: window.hljs ? window.hljs.highlight(cell.source.join(''), { language: 'python' }).value : cell.source.join('') 
+                  <code
+                    dangerouslySetInnerHTML={{
+                      __html: window.hljs ? window.hljs.highlight(cell.source.join(''), { language: 'python' }).value : cell.source.join('')
                     }}
                   />
                 </pre>
@@ -139,13 +137,13 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
                           </pre>
                         ) : output.output_type === 'execute_result' || output.output_type === 'display_data' ? (
                           output.data?.['text/html'] ? (
-                            <div dangerouslySetInnerHTML={{ 
-                              __html: Array.isArray(output.data['text/html']) 
-                                ? output.data['text/html'].join('') 
-                                : output.data['text/html'] 
+                            <div dangerouslySetInnerHTML={{
+                              __html: Array.isArray(output.data['text/html'])
+                                ? output.data['text/html'].join('')
+                                : output.data['text/html']
                             }} />
                           ) : output.data?.['image/png'] ? (
-                            <img 
+                            <img
                               src={`data:image/png;base64,${output.data['image/png']}`}
                               alt="Output"
                               className="max-w-full h-auto"
@@ -174,7 +172,7 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
               <div className="prose max-w-none">
                 {cell.source.join('') ? (
                   window.marked ? (
-                    <div dangerouslySetInnerHTML={{ 
+                    <div dangerouslySetInnerHTML={{
                       __html: window.marked.parse(cell.source.join(''))
                     }} />
                   ) : (
@@ -201,9 +199,9 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
         setError(null);
         try {
           if (!fileUrl.startsWith('http://localhost') && !fileUrl.startsWith('file://')) {
-            return; 
+            return;
           }
-          
+
           // Fallback for local files
           const response = await fetch(fileUrl);
           if (!response.ok) throw new Error('Failed to fetch notebook');
@@ -258,9 +256,9 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
         {renderDownloadButton()}
         {renderSubmoduleHeader()}
         <div className="max-w-full max-h-[80vh] overflow-auto">
-          <img 
-            src={fileUrl} 
-            alt={fileName} 
+          <img
+            src={fileUrl}
+            alt={fileName}
             className="max-w-full max-h-full object-contain"
             onError={() => setIframeKey(prev => prev + 1)}
           />
@@ -299,8 +297,8 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
               <div className="overflow-y-auto max-h-[80vh]">
                 {Array.from(new Array(numPages), (el, index) => (
                   <div key={`page_${index + 1}`} className="mb-4 border-b border-gray-200 last:border-b-0">
-                    <Page 
-                      pageNumber={index + 1} 
+                    <Page
+                      pageNumber={index + 1}
                       width={800}
                       renderTextLayer={false}
                       loading={
@@ -342,56 +340,131 @@ const FileViewer = ({ fileUrl, submoduleName, fileType, filesName }) => {
   }
 
   // Handle Jupyter Notebook files (.ipynb)
-  if (fileExtension === 'ipynb') {
-    if (!fileUrl.startsWith('http://localhost') && !fileUrl.startsWith('file://')) {
-      return (
-        <div className="relative w-full h-full flex flex-col">
-          {renderDownloadButton()}
-          {renderSubmoduleHeader()}
-          <div className="flex-1">
-            <iframe
-              key={iframeKey}
-              src={`https://nbviewer.org/url/${encodeURIComponent(fileUrl)}`}
-              width="100%"
-              height="100%"
-              title="Jupyter Notebook Viewer"
-              className="border rounded-lg"
-              onError={() => setIframeKey(prev => prev + 1)}
-            />
-          </div>
-        </div>
-      );
-    }
+  // if (fileExtension === 'ipynb') {
+  //   if (!fileUrl.startsWith('http://localhost') && !fileUrl.startsWith('file://')) {
+  //     return (
+  //       <div className="relative w-full h-full flex flex-col">
+  //         {renderDownloadButton()}
+  //         {renderSubmoduleHeader()}
+  //         <div className="flex-1">
+  //           <iframe
+  //             key={iframeKey}
+  //             src={`https://nbviewer.org/url/${encodeURIComponent(fileUrl)}`}
+  //             width="100%"
+  //             height="100%"
+  //             title="Jupyter Notebook Viewer"
+  //             className="border rounded-lg"
+  //             onError={() => setIframeKey(prev => prev + 1)}
+  //           />
+  //         </div>
+  //       </div>
+  //     );
+  //   }
 
-    // Enhanced local notebook rendering
+  //   // Enhanced local notebook rendering
+  //   return (
+  //     <div className="relative w-full h-full flex flex-col p-4 overflow-auto">
+  //       {renderDownloadButton()}
+  //       {renderSubmoduleHeader()}
+  //       {loading ? (
+  //         <div className="flex justify-center items-center h-64">
+  //           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  //         </div>
+  //       ) : error ? (
+  //         <div className="text-center p-8">
+  //           <div className="text-red-500 mb-4">{error}</div>
+  //         </div>
+  //       ) : (
+  //         <>
+  //           {notebookContent}
+  //         </>
+  //       )}
+  //     </div>
+  //   );
+  // }
+
+  // Handle Jupyter Notebook files (.ipynb)
+if (fileExtension === 'ipynb') {
+  // For deployed environments, use a different approach
+  if (!fileUrl.startsWith('http://localhost') && !fileUrl.startsWith('file://')) {
     return (
-      <div className="relative w-full h-full flex flex-col p-4 overflow-auto">
+      <div className="relative w-full h-full flex flex-col">
         {renderDownloadButton()}
         {renderSubmoduleHeader()}
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="max-w-2xl w-full">
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : error ? (
+              <div className="text-center p-8">
+                <div className="text-red-500 mb-4">{error}</div>
+                <button 
+                  onClick={handleDownload}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Download Notebook
+                </button>
+              </div>
+            ) : notebookContent ? (
+              notebookContent
+            ) : (
+              <div className="text-center p-8">
+                <button 
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const response = await fetch(fileUrl);
+                      if (!response.ok) throw new Error('Failed to fetch notebook');
+                      const notebook = await response.json();
+                      setNotebookContent(renderNotebook(notebook));
+                    } catch (err) {
+                      setError('Could not load notebook. ' + err.message);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Load Notebook Content
+                </button>
+              </div>
+            )}
           </div>
-        ) : error ? (
-          <div className="text-center p-8">
-            <div className="text-red-500 mb-4">{error}</div>
-          </div>
-        ) : (
-          <>
-            {notebookContent}
-          </>
-        )}
+        </div>
       </div>
     );
   }
 
+  // Local notebook rendering remains the same
+  return (
+    <div className="relative w-full h-full flex flex-col p-4 overflow-auto">
+      {renderDownloadButton()}
+      {renderSubmoduleHeader()}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center p-8">
+          <div className="text-red-500 mb-4">{error}</div>
+        </div>
+      ) : (
+        <>
+          {notebookContent}
+        </>
+      )}
+    </div>
+  );
+}
   // Handle CSV files
   if (fileExtension === 'csv') {
     return (
       <div className="relative w-full h-full flex flex-col">
         {renderDownloadButton()}
         {renderSubmoduleHeader()}
-        <iframe 
+        <iframe
           key={iframeKey}
           src={`https://docs.google.com/spreadsheets/d/e/2PACX-1vR9xX9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ9ZQ/pubhtml?gid=0&single=true&output=csv&url=${encodeURIComponent(fileUrl)}`}
           width="100%"

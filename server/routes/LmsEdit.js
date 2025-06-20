@@ -2,7 +2,7 @@ import express from "express";
 import { fetchUser } from '../middleware/fetchUser.js';
 
 
-import { updateModule, deleteModule, deleteSubModule, updateSubModule, addSubmodule, deleteUnit, updateUnit, deleteFile, addUnit, recordFileView, updateModuleOrder, updateSubmoduleOrder, updateUnitOrder, updateFilesOrder } from "../controllers/lmsEdit.js";
+import { updateModule, deleteModule, deleteSubModule, updateSubModule, addSubmodule, deleteUnit, updateUnit, deleteFile, addUnit, recordFileView, updateModuleOrder, updateSubmoduleOrder, updateUnitOrder, updateFilesOrder, deleteMultipleFiles } from "../controllers/lmsEdit.js";
 
 const router = express.Router();
 
@@ -16,6 +16,8 @@ router.post('/updateFilesOrder', fetchUser, updateFilesOrder)
 router.post('/deleteModule', fetchUser, deleteModule)
 router.post('/deleteUnit', fetchUser, deleteUnit)
 router.post('/deleteFile', fetchUser, deleteFile)
+router.post('/deleteMultipleFiles', fetchUser, deleteMultipleFiles)
+
 router.post('/deleteSubModule', fetchUser, deleteSubModule)
 router.post('/addSubmodule', fetchUser, addSubmodule)
 router.post('/addUnit', fetchUser, addUnit)

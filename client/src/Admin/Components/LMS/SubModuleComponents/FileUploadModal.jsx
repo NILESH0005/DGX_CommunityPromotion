@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UploadCloud, FileText, Loader2 } from 'lucide-react';
 import FileUploader from '../FileUploader';
@@ -12,6 +12,32 @@ const FileUploadModal = ({
     isSubmitting, 
     uploadedFile 
 }) => {
+    const [customFileName, setCustomFileName] = useState('');
+    const [errors, setErrors] = useState({});
+
+    const handleSubmit = () => {
+        if (!uploadedFile) {
+            setErrors({ file: 'Please select a file to upload' });
+            return;
+        }
+        
+        if (!customFileName.trim()) {
+            setErrors({ fileName: 'Please enter a file name' });
+            return;
+        }
+        
+        // Pass both the file and custom name to the parent component
+        onSubmit(uploadedFile, customFileName.trim());
+    };
+
+    const handleFileSelected = (file) => {
+        onFileSelect(file);
+        // Set initial file name (without extension) as default
+        const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+        setCustomFileName(fileNameWithoutExt);
+        setErrors({ ...errors, file: null });
+    };
+
     return (
         <AnimatePresence>
             {show && (
@@ -54,9 +80,34 @@ const FileUploadModal = ({
                             <div className="mb-6">
                                 <FileUploader
                                     selectedFile={uploadedFile}
-                                    onFileSelect={onFileSelect}
+                                    onFileSelect={handleFileSelected}
                                 />
+                                {errors.file && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.file}</p>
+                                )}
                             </div>
+
+                            {uploadedFile && (
+                                <div className="mb-6">
+                                    <label htmlFor="fileName" className="block text-sm font-medium text-DGXgray mb-1">
+                                        File Display Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="fileName"
+                                        value={customFileName}
+                                        onChange={(e) => {
+                                            setCustomFileName(e.target.value);
+                                            setErrors({ ...errors, fileName: null });
+                                        }}
+                                        className="w-full px-3 py-2 border border-DGXgray/30 rounded-lg focus:ring-DGXgreen focus:border-DGXgreen"
+                                        placeholder="Enter a display name for the file"
+                                    />
+                                    {errors.fileName && (
+                                        <p className="mt-1 text-sm text-red-600">{errors.fileName}</p>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="flex justify-end gap-3 pt-4 border-t border-DGXgray/20">
                                 <motion.button
@@ -70,7 +121,7 @@ const FileUploadModal = ({
                                 <motion.button
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
-                                    onClick={onSubmit}
+                                    onClick={handleSubmit}
                                     disabled={!uploadedFile || isSubmitting}
                                     className={`px-6 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors ${
                                         !uploadedFile || isSubmitting
