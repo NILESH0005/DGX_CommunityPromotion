@@ -5,7 +5,7 @@ import ApiContext from "../../context/ApiContext";
 import FileViewer from "../../utils/FileViewer";
 import Quiz from "../quiz/Quiz";
 import Swal from "sweetalert2";
-import { FiFileText, FiFolder, FiX, FiMenu, FiBook } from "react-icons/fi";
+import { FiFileText, FiFolder, FiX, FiMenu, FiBook, FiArrowLeft } from "react-icons/fi";
 import BreadCrumb from "./BreadCrumb";
 import FetchQuizQuestions from "../quiz/DemoQuiz";
 
@@ -136,7 +136,7 @@ const UnitsWithFiles = () => {
               ...quiz,
               group_id: quiz.QuizGroupID,
             }))
-            .sort((a, b) => a.QuizLevel - b.QuizLevel); 
+            .sort((a, b) => a.QuizLevel - b.QuizLevel);
           setQuizzes(transformedQuizzes);
         }
       } catch (error) {
@@ -200,6 +200,22 @@ const UnitsWithFiles = () => {
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
+  const handleBackToSubmodules = () => {
+    const moduleId = localStorage.getItem("moduleId");
+    const moduleName = localStorage.getItem("moduleName");
+    
+    if (moduleId && moduleName) {
+      navigate(`/module/${moduleId}`, {
+        state: {
+          moduleName: moduleName,
+          moduleId: moduleId
+        }
+      });
+    } else {
+      navigate(-1); // Fallback to browser back if no module info is available
+    }
   };
 
   const needsReadMore = (text) => {
@@ -331,12 +347,21 @@ const UnitsWithFiles = () => {
 
   return (
     <div className="flex h-screen bg-background text-foreground">
+      <button
+        onClick={handleBackToSubmodules}
+        className="fixed left-6 top-18 z-50 flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:bg-gray-50 border border-gray-200 group"
+      >
+        <FiArrowLeft className="text-blue-600 group-hover:text-blue-800 transition-colors" />
+        <span className="font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+          Back to Submodules
+        </span>
+      </button>
       <div
         className={`${isSidebarCollapsed ? "w-20" : "w-80"
           } bg-[#1f2937] text-white border-r border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out relative`}
       >
         {/* Toggle Button - Made Bigger and More Visible */}
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center pt-14">
           <button
             onClick={toggleSidebar}
             className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-3 border-2 border-blue-500 hover:from-blue-700 hover:to-blue-800 hover:border-blue-400 transition-all duration-200 z-20 shadow-lg hover:shadow-xl transform hover:scale-110 group"
@@ -351,51 +376,7 @@ const UnitsWithFiles = () => {
         </div>
 
         <div className="p-4">
-          {quizzes.length > 0 && (
-            <div className="mb-6">
-              <h3
-                className={`font-bold ${isSidebarCollapsed ? "text-center" : "text-lg mb-2"
-                  }`}
-              >
-                {isSidebarCollapsed ? "Q" : "Quizzes"}
-              </h3>
-              <div className="space-y-2">
-                {quizzes.map((quiz) => (
-                  <div
-                    key={quiz.QuizID}
-                    className={`${isSidebarCollapsed ? "p-2 flex justify-center" : "p-2"
-                      } rounded hover:bg-gray-700 cursor-pointer ${selectedQuiz?.QuizID === quiz.QuizID ? "bg-blue-600" : ""
-                      }`}
-                    onClick={() => handleQuizSelect(quiz)}
-                    title={isSidebarCollapsed ? quiz.QuizName : ""}
-                  >
-                    {isSidebarCollapsed ? (
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                        <path
-                          fillRule="evenodd"
-                          d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    ) : (
-                      <div>
-                        <h4 className="font-medium">{quiz.QuizName}</h4>
-                        <p className="text-xs text-gray-300">
-                          {quiz.QuizDuration} min • {quiz.PassingPercentage}% to
-                          pass
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          
           <div className="space-y-2">
             {filteredUnits.map((unit) => {
               const needsReadMoreUnit = needsReadMore(unit.UnitDescription);
@@ -479,8 +460,8 @@ const UnitsWithFiles = () => {
                   {unit.files?.length > 0 && (
                     <div
                       className={`${isSidebarCollapsed
-                          ? "mt-3 space-y-1"
-                          : "mt-4 ml-2 border-l-2 border-gray-600 pl-4 space-y-2"
+                        ? "mt-3 space-y-1"
+                        : "mt-4 ml-2 border-l-2 border-gray-600 pl-4 space-y-2"
                         }`}
                     >
                       {unit.files.map((file) => {
@@ -491,8 +472,8 @@ const UnitsWithFiles = () => {
                           <div
                             key={file.FileID}
                             className={`${isSidebarCollapsed
-                                ? "p-2 flex justify-center rounded-lg"
-                                : "py-3 px-3 rounded-lg"
+                              ? "p-2 flex justify-center rounded-lg"
+                              : "py-3 px-3 rounded-lg"
                               } flex items-center transition-all duration-200 ${isSelected
                                 ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md transform scale-105"
                                 : isViewed
@@ -568,6 +549,51 @@ const UnitsWithFiles = () => {
               );
             })}
           </div>
+          {quizzes.length > 0 && (
+            <div className="mb-6">
+              <h3
+                className={`font-bold ${isSidebarCollapsed ? "text-center" : "text-lg mb-2"
+                  }`}
+              >
+                {isSidebarCollapsed ? "Q" : "Quizzes"}
+              </h3>
+              <div className="space-y-2">
+                {quizzes.map((quiz) => (
+                  <div
+                    key={quiz.QuizID}
+                    className={`${isSidebarCollapsed ? "p-2 flex justify-center" : "p-2"
+                      } rounded hover:bg-gray-700 cursor-pointer ${selectedQuiz?.QuizID === quiz.QuizID ? "bg-blue-600" : ""
+                      }`}
+                    onClick={() => handleQuizSelect(quiz)}
+                    title={isSidebarCollapsed ? quiz.QuizName : ""}
+                  >
+                    {isSidebarCollapsed ? (
+                      <svg
+                        className="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                        <path
+                          fillRule="evenodd"
+                          d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    ) : (
+                      <div>
+                        <h4 className="font-medium">{quiz.QuizName}</h4>
+                        <p className="text-xs text-gray-300">
+                          {quiz.QuizDuration} min • {quiz.PassingPercentage}% to
+                          pass
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -654,8 +680,8 @@ const UnitsWithFiles = () => {
             ) : (
               <div
                 className={`flex-1 w-full rounded-xl shadow-lg relative overflow-hidden ${selectedFile?.fileType === "ipynb"
-                    ? "bg-[#f5f5f5] border border-gray-300"
-                    : "bg-white border"
+                  ? "bg-[#f5f5f5] border border-gray-300"
+                  : "bg-white border"
                   }`}
               >
                 {selectedFile?.fileType === "ipynb" && (

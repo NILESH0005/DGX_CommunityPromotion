@@ -143,45 +143,67 @@ const Discussion = () => {
     }
   }, [fetchData]);
 
-
+  const checkAuthAndNavigate = () => {
+    if (!userToken) {
+      Swal.fire({
+        title: 'Login Required',
+        text: 'You need to login to perform this action',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Go to Login',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/SignInn');
+        }
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleAddLike = async (id, userLike) => {
     // console.log(id, userLike)
-    if (userToken) {
-      const endpoint = "discussion/discussionpost";
-      const method = "POST";
-      const headers = {
-        'Content-Type': 'application/json',
-        'auth-token': userToken
-      };
-      const like = userLike == 1 ? 0 : 1
-      const body = {
-        "reference": id,
-        "likes": like
-      };
-      console.log(body)
-      try {
-        const data = await fetchData(endpoint, method, body, headers)
-        if (!data.success) {
-          // console.log(data)
-          console.log("Error occured while liking the post")
-        } else if (data.success) {
-          // console.log(data);
-          const updatedData = demoDiscussions.map((item) =>
-            item.DiscussionID === id ? { ...item, userLike: like, likeCount: like === 1 ? item.likeCount + 1 : item.likeCount - 1 } : item
-          );
-          setDemoDiscussions(updatedData)
-          console.log(updatedData)
-          console.log(demoDiscussions)
-        }
-      } catch (error) {
-        console.log(error);
+    if (!checkAuthAndNavigate()) return;
+
+    const endpoint = "discussion/discussionpost";
+    const method = "POST";
+    const headers = {
+      'Content-Type': 'application/json',
+      'auth-token': userToken
+    };
+    const like = userLike == 1 ? 0 : 1
+    const body = {
+      "reference": id,
+      "likes": like
+    };
+    console.log(body)
+    try {
+      const data = await fetchData(endpoint, method, body, headers)
+      if (!data.success) {
+        // console.log(data)
+        console.log("Error occured while liking the post")
+      } else if (data.success) {
+        // console.log(data);
+        const updatedData = demoDiscussions.map((item) =>
+          item.DiscussionID === id ? { ...item, userLike: like, likeCount: like === 1 ? item.likeCount + 1 : item.likeCount - 1 } : item
+        );
+        setDemoDiscussions(updatedData)
+        console.log(updatedData)
+        console.log(demoDiscussions)
       }
+    } catch (error) {
+      console.log(error);
     }
+
   };
   const toggleNav = () => setIsNavOpen(!isNavOpen);
   const handleLike = () => setLikeCount(likeCount + 1);
   const handleComment = (discussion) => {
+    if (!checkAuthAndNavigate()) return;
+
     setCommentCount(prevCount => prevCount + 1);
     openModal(discussion);
   };
@@ -212,8 +234,8 @@ const Discussion = () => {
           <div className="sm:order-4 flex items-center w-full sm:w-auto mt-0 sm:mt-0 sm:ml-4 ">
             {isLoading ? (
               <Skeleton
-                height="2.16rem" 
-                width={250} 
+                height="2.16rem"
+                width={250}
                 className="w-full sm:w-1/2 bg-gray-500 rounded-lg mb-1"
               />
             ) : (
@@ -223,8 +245,8 @@ const Discussion = () => {
                   className="w-full py-2 pl-10 pr-4 bg-white border border-gray-200 rounded-lg shadow-sm text-gray-800 focus:border-DGXgreen focus:ring-DGXgreen"
                   placeholder="Search..."
                   value={searchQuery}
-                  onChange={handleSearchChange} 
-                  onKeyDown={handleKeyDown} 
+                  onChange={handleSearchChange}
+                  onKeyDown={handleKeyDown}
                   data-tooltip-id="search-tooltip"
                 />
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -241,7 +263,7 @@ const Discussion = () => {
           </div>
           {isLoading ? (
             <Skeleton
-              height={35} 
+              height={35}
               width={150}
               className="w-full xs:w-full sm:w-64 bg-lime-500 rounded-lg mb-1 sm:mt-4"
             />
