@@ -10,22 +10,21 @@ import Skeleton from 'react-loading-skeleton';
 // import 'react-loading-skeleton/dist/skeleton.css';
 import { Tooltip } from 'react-tooltip';
 import AddDiscussion from '../component/discussion/AddDiscussion.jsx';
+import Swal from 'sweetalert2';
+
 
 const Discussion = () => {
   const { fetchData, userToken, user } = useContext(ApiContext);
   const [demoDiscussions, setDemoDiscussions] = useState([]);
-  // const [loading, setLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Loading state
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [likeCount, setLikeCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState('all');
-  // const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [discussions, setDiscussions] = useState([]);
-  // const [privacy, setPrivacy] = useState('private');
   const [selectedDiscussion, setSelectedDiscussion] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [communityHighlights, setCommunityHighlights] = useState([])
@@ -80,6 +79,7 @@ const Discussion = () => {
       setLoading(true);
       fetchData(endpoint, method, body, headers)
         .then(result => {
+          console.log("result is", result)
           if (result && result.data) {
             return result.data;
           } else {
@@ -95,7 +95,6 @@ const Discussion = () => {
             const users = getTopUsersByDiscussions(data.updatedDiscussions);
             setTopUsers(users)
           } else {
-            // return
             throw new Error("Missing updatedDiscussions in response data");
           }
           setLoading(false);
@@ -150,13 +149,12 @@ const Discussion = () => {
         text: 'You need to login to perform this action',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Go to Login',
         cancelButtonText: 'Cancel',
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
       }).then((result) => {
         if (result.isConfirmed) {
-          navigate('/SignInn');
+          navigate('./SignInn');
         }
       });
       return false;

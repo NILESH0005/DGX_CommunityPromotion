@@ -220,7 +220,7 @@ const FileUploader = ({
               : "Drag & drop your file here or click to browse"}
           </p>
           <p className="text-sm text-gray-500 mb-4">
-            Supported formats: PDF, PPT, DOC, MP4 (Max 10MB)
+            Supported formats: PDF, PPT, DOC, MP4 
           </p>
           <input
             type="file"

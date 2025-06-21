@@ -41,6 +41,12 @@ const ViewContent = ({ submodule, onBack }) => {
   const [linkName, setLinkName] = useState("");
   const [linkDescription, setLinkDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [editingFile, setEditingFile] = useState(null);
+  const [editedFileData, setEditedFileData] = useState({
+    fileName: "",
+    description: "",
+    link: "",
+  });
 
   const { fetchData, userToken } = useContext(ApiContext);
 
@@ -161,16 +167,12 @@ const ViewContent = ({ submodule, onBack }) => {
       ) {
         throw new Error("No files to update");
       }
-
-      // Prepare files with their new order positions and equal percentage distribution
       const equalPercentage = (100 / orderedFiles.length).toFixed(2);
       const filesWithOrder = orderedFiles.map((file, index) => ({
         FileID: file.FileID,
         Percentage: equalPercentage, // Distribute percentage equally
         SortingOrder: index + 1, // 1-based index
       }));
-
-      // Filter out any files with invalid IDs (like temporary IDs)
       const validFiles = filesWithOrder.filter(
         (file) =>
           file.FileID && Number.isInteger(file.FileID) && file.FileID > 0
@@ -187,7 +189,6 @@ const ViewContent = ({ submodule, onBack }) => {
       );
 
       if (response?.success) {
-        // Update local state with new order and percentages
         const updatedFiles = files
           .map((file) => {
             const updatedFile = validFiles.find(
@@ -204,7 +205,7 @@ const ViewContent = ({ submodule, onBack }) => {
           .sort((a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0));
 
         setFiles(updatedFiles);
-        setShowFilesOrder(false); // Close the modal after successful save
+        setShowFilesOrder(false);
 
         Swal.fire(
           "Success!",
@@ -221,6 +222,79 @@ const ViewContent = ({ submodule, onBack }) => {
         err.message || "Failed to update files order",
         "error"
       );
+    }
+  };
+
+  const handleEditFile = (file) => {
+    setEditingFile(file);
+    setEditedFileData({
+      fileName: file.FilesName,
+      description: file.Description || "",
+      link: file.FileType === "link" ? file.FilePath : "",
+    });
+  };
+
+  const handleCancelEditFile = () => {
+    setEditingFile(null);
+    setEditedFileData({
+      fileName: "",
+      description: "",
+      link: "",
+    });
+    resetForm();
+  };
+
+  const handleUpdateFile = async () => {
+    if (!editingFile) return;
+
+    try {
+      setIsUploading(true);
+
+      const payload = {
+        fileId: editingFile.FileID,
+        fileName: editedFileData.fileName,
+        description: editedFileData.description,
+      };
+
+      if (editingFile.FileType === "link") {
+        payload.link = editedFileData.link;
+      }
+
+      const response = await fetchData(
+        "lmsEdit/updateFile",
+        "POST",
+        payload,
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        }
+      );
+
+      if (response?.success) {
+        setFiles(prevFiles =>
+          prevFiles.map(file =>
+            file.FileID === editingFile.FileID
+              ? {
+                ...file,
+                FilesName: editedFileData.fileName,
+                Description: editedFileData.description,
+                ...(editingFile.FileType === "link" && {
+                  FilePath: editedFileData.link,
+                }),
+              }
+              : file
+          )
+        );
+        handleCancelEditFile();
+        Swal.fire("Success!", "File updated successfully", "success");
+      } else {
+        throw new Error(response?.message || "Failed to update file");
+      }
+    } catch (err) {
+      console.error("Error updating file:", err);
+      Swal.fire("Error!", err.message || "Failed to update file", "error");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -428,8 +502,12 @@ const ViewContent = ({ submodule, onBack }) => {
   };
 
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files); // Convert FileList to array
-    setNewFiles((prevFiles) => [...prevFiles, ...selectedFiles]);
+    const selected = Array.from(e.target.files).map(file => ({
+      file,
+      name: file.name,
+      customName: file.name,
+    }));
+    setNewFiles((prevFiles) => [...prevFiles, ...selected]);
   };
 
   const handleUploadFiles = async () => {
@@ -470,14 +548,14 @@ const ViewContent = ({ submodule, onBack }) => {
       }));
 
       // Upload all files
-      const uploadPromises = newFiles.map(async (file, index) => {
+      const uploadPromises = newFiles.map(async (fileObj, index) => {
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", fileObj.file);
         formData.append("unitId", selectedUnit.UnitID);
         formData.append("percentage", equalPercentage);
-        formData.append("fileName", file.name);
+        formData.append("fileName", fileObj.customName);
         formData.append("description", "");
-        formData.append("sortingOrder", currentFileCount + index + 1); // Add sorting order
+        formData.append("sortingOrder", currentFileCount + index + 1);
 
         try {
           const response = await fetch(
@@ -499,7 +577,6 @@ const ViewContent = ({ submodule, onBack }) => {
         }
       });
 
-      // Add link if provided
       if (fileLink.trim()) {
         uploadPromises.push(
           fetchData(
@@ -512,7 +589,7 @@ const ViewContent = ({ submodule, onBack }) => {
               description: linkDescription || "",
               percentage: equalPercentage,
               fileType: "link",
-              sortingOrder: currentFileCount + newFiles.length + 1 // Add sorting order
+              sortingOrder: currentFileCount + newFiles.length + 1
             },
             {
               "Content-Type": "application/json",
@@ -963,30 +1040,35 @@ const ViewContent = ({ submodule, onBack }) => {
                           {/* Selected File Preview */}
                           {newFiles.length > 0 && (
                             <div className="space-y-2">
-                              {newFiles.map((file, index) => (
-                                <div
-                                  key={index}
-                                  className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded"
-                                >
-                                  <span className="text-sm text-gray-800 dark:text-gray-200 flex items-center">
-                                    <FaFile className="mr-2" />
-                                    {file.name}
-                                  </span>
-                                  <button
-                                    onClick={() =>
-                                      setNewFiles((prev) =>
-                                        prev.filter((_, i) => i !== index)
-                                      )
+                              {newFiles.map((fileObj, index) => (
+                                <div key={index} className="flex flex-col bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-800 dark:text-gray-200 flex items-center">
+                                      <FaFile className="mr-2" />
+                                      {fileObj.name}
+                                    </span>
+                                    <button
+                                      onClick={() => setNewFiles(prev => prev.filter((_, i) => i !== index))}
+                                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                                    >
+                                      <FaTimes />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={fileObj.customName}
+                                    onChange={(e) =>
+                                      setNewFiles(prev => prev.map((f, i) =>
+                                        i === index ? { ...f, customName: e.target.value } : f
+                                      ))
                                     }
-                                    className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                                  >
-                                    <FaTimes />
-                                  </button>
+                                    placeholder="Custom file name"
+                                    className="mt-2 w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md"
+                                  />
                                 </div>
                               ))}
                             </div>
                           )}
-                          {/* Save Button */}
                           <button
                             onClick={handleUploadFiles}
                             disabled={

@@ -139,7 +139,20 @@ export const getdiscussion = async (req, res) => {
                     rows.push({ UserID: null });
                 }
 
-                const discussionGetQuery = `SELECT DiscussionID, UserID, AuthAdd as UserName, Title, Content, Image, Tag, ResourceUrl, AddOnDt as timestamp FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND Visibility = '2' AND Reference = 0 ORDER BY AddOnDt DESC`;
+                const discussionGetQuery = `SELECT 
+                        *
+                    FROM 
+                        Community_Discussion d
+                    JOIN 
+                        tblDDReferences r ON d.Visibility = r.idCode
+                    WHERE 
+                        ISNULL(d.delStatus, 0) = 0
+                        AND r.ddCategory = 'Privacy'
+                        AND r.ddValue = 'Public'
+                        AND d.Reference = 0
+                    ORDER BY 
+                        d.AddOnDt DESC;
+                    `;
                 const discussionGet = await queryAsync(conn, discussionGetQuery);
                 // console.log("Discussion Get Result:", discussionGet); // Log discussionGet
 
