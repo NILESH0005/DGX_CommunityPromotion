@@ -48,7 +48,7 @@ const Home = () => {
   
   return (
     <div>
-       <ParallaxSectionEdit data={getSectionData("parallaxText", "Parallax")} />
+      <ParallaxSectionEdit data={getSectionData("parallaxText", "Parallax")} />
       <ContentManager data={getSectionData("contentSection", "ContentSection")} />
       <NewSectionEdit data={getSectionData("news_section", "Latest News")} />
       <ProjectShowcaseEdit data={getSectionData("project_showcase", "ProjectShowcase")}/>

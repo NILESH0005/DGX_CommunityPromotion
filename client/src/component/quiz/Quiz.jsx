@@ -425,9 +425,9 @@ const Quiz = () => {
     const savedData = loadSavedAnswers();
     if (!savedData) {
       Swal.fire({
-        icon: "error",
-        title: "Submission Error",
-        text: "No quiz data found to submit",
+        icon: "warning",
+        title: "Nothing to Submit",
+        text: "Please select at least one quiz before submitting.",
       });
       return;
     }
@@ -625,15 +625,18 @@ const Quiz = () => {
               <p className="text-lg mb-6">
                 {questions[currentQuestion]?.question_text}
               </p>
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  isMCQ
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-purple-100 text-purple-800"
-                }`}
-              >
-                {isMCQ ? "MCQ" : "MSQ"}
-              </span>
+              <div className="flex  font-bold">
+                <span
+                  className={`px-3 py-1 mb-4 rounded-full text-sm ${
+                    isMCQ
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-purple-100 text-purple-800"
+                  }`}
+                >
+                  {isMCQ ? "MCQ" : "MSQ"}
+                </span>
+              </div>
+
               <div className="space-y-2">
                 {questions[currentQuestion]?.options?.map((option) => {
                   const optionId = Number(option.id);

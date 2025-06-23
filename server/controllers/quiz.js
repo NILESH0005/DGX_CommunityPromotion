@@ -973,6 +973,37 @@ export const getUserQuizCategory = async (req, res) => {
         console.log("Found user ID:", userId);
 
         // Main query with user-specific attempt count
+        //         const query = `SELECT
+        //     QuizDetails.QuizID,
+        //     QuizDetails.QuizName,
+        //     QuizDetails.QuizImage,
+        //     QuizDetails.StartDateAndTime,
+        //     QuizDetails.EndDateTime,
+        //     GroupMaster.group_name,
+        //     GroupMaster.group_id,
+        //     SUM(QuizMapping.totalMarks) AS MaxScore,
+        //     COUNT(DISTINCT QuizMapping.QuestionsID) AS Total_Question_No,
+        //     ISNULL(UserAttempts.noOfAttempts, 0) AS userAttempts
+        // FROM QuizMapping
+        // LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
+        // LEFT JOIN GroupMaster ON QuizDetails.QuizCategory = GroupMaster.group_id
+        // LEFT JOIN (
+        //     SELECT quizID, MAX(noOfAttempts) AS noOfAttempts
+        //     FROM quiz_score
+        //     WHERE userID = ?
+        //     GROUP BY quizID
+        // ) AS UserAttempts ON QuizMapping.quizId = UserAttempts.quizID
+        // WHERE ISNULL(QuizMapping.delStatus, 0) = 0
+        // GROUP BY
+        //     QuizDetails.QuizID,
+        //     QuizDetails.QuizImage,
+        //     QuizDetails.QuizName,
+        //     GroupMaster.group_id,
+        //     GroupMaster.group_name,
+        //     QuizDetails.StartDateAndTime,
+        //     QuizDetails.EndDateTime,
+        //     UserAttempts.noOfAttempts`;
+
         const query = `SELECT 
     QuizDetails.QuizID,
     QuizDetails.QuizName,
@@ -983,7 +1014,7 @@ export const getUserQuizCategory = async (req, res) => {
     GroupMaster.group_id, 
     SUM(QuizMapping.totalMarks) AS MaxScore,
     COUNT(DISTINCT QuizMapping.QuestionsID) AS Total_Question_No,
-    ISNULL(UserAttempts.noOfAttempts, 0) AS userAttempts
+    MAX(ISNULL(UserAttempts.noOfAttempts, 0)) AS userAttempts
 FROM QuizMapping
 LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
 LEFT JOIN GroupMaster ON QuizDetails.QuizCategory = GroupMaster.group_id
@@ -1001,9 +1032,7 @@ GROUP BY
     GroupMaster.group_id, 
     GroupMaster.group_name, 
     QuizDetails.StartDateAndTime, 
-    QuizDetails.EndDateTime,
-    UserAttempts.noOfAttempts`;
-
+    QuizDetails.EndDateTime`;
         const quizzes = await queryAsync(conn, query, [userId, userId]);
 
         const validQuizzes = quizzes.filter(
@@ -2191,7 +2220,7 @@ export const getQuizQuestionsByQuizId = async (req, res) => {
               QuestionsID: q.QuestionsID,
               QuestionTxt: q.QuestionTxt,
               Ques_level: q.Ques_level,
-              question_type: q.question_type, 
+              question_type: q.question_type,
               negativeMarks: q.negativeMarks,
               negativeMarking: q.NegativeMarking,
               totalMarks: q.totalMarks,

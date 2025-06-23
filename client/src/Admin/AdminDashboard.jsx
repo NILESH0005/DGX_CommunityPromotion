@@ -274,7 +274,7 @@ const AdminDashboard = (props) => {
               </ul>
             </li>
 
-            <li>
+            {/* <li>
               <div
                 className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "guidelines"
                   ? "bg-gray-700 text-yellow-300"
@@ -285,7 +285,7 @@ const AdminDashboard = (props) => {
                 <FaBook className="mr-4" />
                 Guidelines
               </div>
-            </li>
+            </li> */}
             <li>
               <div
                 className={`py-3 px-4 cursor-pointer flex items-center text-lg md:text-xl ${activeComp === "Home" ? "bg-gray-700 text-yellow-300" : ""
