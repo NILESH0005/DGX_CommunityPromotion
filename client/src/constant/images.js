@@ -20,12 +20,12 @@ import ABESIT from '../../public/ABESIT.png'
 // import KIET from '../../public/KIET.png'
 // import SHARDA from '../../public/SHARDA.png'
 // import GLBAJAJ from '../../public/GLBAJAJ.png'
-// import SharadSir from '../../public/SharadSir.png'  
+import SharadSir from '../../public/SharadSir.png'  
 import PatrickSir from '../../public/PatrickSir.png'
 
 import AshwiniSir from '../../public/AshwiniSir.png'
 
-// import SugandhMaam from '../../public/SugandhMaam.png'
+import SugandhMaam from '../../public/SugandhMaam.png'
 
 import Event1 from '../../public/Event1.jpeg'
 import Event2 from '../../public/Event2.jpeg'
@@ -48,15 +48,15 @@ import Design from '../../public/Design.png'
 
 
 
-// import us1 from '../../public/us1.jpg'
-// // import us2 from '../../public/us2.jpg'
-// import us3 from '../../public/us3.jpg'
-// import us4 from '../../public/us4.jpeg'
-// import us5 from '../../public/us5.jpg'
-// import us6 from '../../public/us6.jpg'
-// import us7 from '../../public/us7.jpg'
-// import us8 from '../../public/us8.jpg'
-// import us9 from '../../public/us9.jpg'
+import us1 from '../../public/us1.jpg'
+import us2 from '../../public/us2.jpg'
+import us3 from '../../public/us3.jpg'
+import us4 from '../../public/us4.jpeg'
+import us5 from '../../public/us5.jpg'
+import us6 from '../../public/us6.jpg'
+import us7 from '../../public/us7.jpg'
+import us8 from '../../public/us8.jpg'
+import us9 from '../../public/us9.jpg'
 
 
 
@@ -76,6 +76,8 @@ export default {
     ABESIT,
     PatrickSir,
     AshwiniSir,
+    SharadSir,
+    SugandhMaam,
     Event1,
     Event2,
     Event3,
@@ -88,14 +90,14 @@ export default {
     gilogowhite,
     aisummit,
     Design,
-    // us1,
-    // us2,
-    // us3,
-    // us4,
-    // us5,
-    // us6,
-    // us7,
-    // us8,
-    // us9,
+    us1,
+    us2,
+    us3,
+    us4,
+    us5,
+    us6,
+    us7,
+    us8,
+    us9,
 
 } 

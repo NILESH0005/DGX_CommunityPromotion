@@ -1043,7 +1043,6 @@ GROUP BY
   }
 };
 
-
 export const getQuizQuestions = async (req, res) => {
   let success = false;
   const errors = validationResult(req);
@@ -1239,7 +1238,7 @@ export const getQuizQuestions = async (req, res) => {
 //       }
 
 //       try {
-//         const query = `SELECT 
+//         const query = `SELECT
 //     QuizMapping.idCode,
 //     QuizMapping.quizGroupID,
 //     GroupMaster.group_name,
@@ -1247,7 +1246,7 @@ export const getQuizQuestions = async (req, res) => {
 //     QuizMapping.QuestionsID,
 //     Questions.question_text AS QuestionTxt,
 //     Questions.Ques_level,
-//     Questions.question_type,               
+//     Questions.question_type,
 //     QuizMapping.negativeMarks,
 //     QuizMapping.totalMarks,
 //     QuizMapping.AuthAdd,
@@ -1267,9 +1266,9 @@ export const getQuizQuestions = async (req, res) => {
 // LEFT JOIN tblDDReferences ON Questions.Ques_level = tblDDReferences.idCode
 // LEFT JOIN QuestionOptions ON Questions.id = QuestionOptions.question_id
 // LEFT JOIN GroupMaster ON QuizMapping.quizGroupID = GroupMaster.group_id
-// WHERE 
-//     QuizMapping.quizId = ? 
-//     AND QuizMapping.delStatus = 0 
+// WHERE
+//     QuizMapping.quizId = ?
+//     AND QuizMapping.delStatus = 0
 //     AND QuestionOptions.delStatus = 0
 // `;
 
@@ -2147,6 +2146,7 @@ export const getQuizQuestionsByQuizId = async (req, res) => {
             QuizMapping.QuestionsID,
             Questions.question_text AS QuestionTxt,
             Questions.Ques_level,
+            Questions.question_type,  
             QuizMapping.negativeMarks,
             QuizMapping.totalMarks,
             QuizMapping.AuthAdd,
@@ -2191,6 +2191,7 @@ export const getQuizQuestionsByQuizId = async (req, res) => {
               QuestionsID: q.QuestionsID,
               QuestionTxt: q.QuestionTxt,
               Ques_level: q.Ques_level,
+              question_type: q.question_type, 
               negativeMarks: q.negativeMarks,
               negativeMarking: q.NegativeMarking,
               totalMarks: q.totalMarks,

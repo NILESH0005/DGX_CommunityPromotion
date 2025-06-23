@@ -14,6 +14,8 @@ const Quiz = () => {
 
   const STORAGE_KEY = `quiz_attempt_${quiz.QuizID}`;
   const { userToken, fetchData } = useContext(ApiContext);
+
+  // Move all state declarations first
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -26,10 +28,12 @@ const Quiz = () => {
   const [showScore, setShowScore] = useState(false);
   const [timer, setTimer] = useState({ hours: 0, minutes: 30, seconds: 0 });
   const [questionStatus, setQuestionStatus] = useState({});
+  // const [selectedAnswers, setSelectedAnswers] = useState([]);
+
+  // Now you can safely access questions
   const currentQuestionData = questions[currentQuestion];
   const isMCQ = currentQuestionData?.questionType === 0;
   const isMSQ = currentQuestionData?.questionType === 1;
-
   const loadSavedAnswers = () => {
     try {
       const savedData = localStorage.getItem(STORAGE_KEY);
@@ -192,7 +196,7 @@ const Quiz = () => {
       });
 
       console.log("API Response:", data);
-      console.log("Raw API questions data:", data.data.questions);
+
       if (!data) {
         throw new Error("No data received from server");
       }
@@ -242,20 +246,21 @@ const Quiz = () => {
     return apiQuestions.map((item) => {
       const optionsWithIds = item.options.map((option, index) => ({
         ...option,
-        id: option.id ? Number(option.id) : index + 1,
+        id: option.id ? Number(option.id) : index + 1, // Fallback to index if ID is missing
       }));
 
+      // Then find correct answers
       const correctAnswers = optionsWithIds
         .filter(
           (option) => option.is_correct === true || option.is_correct === 1
         )
         .map((option) => Number(option.id));
+      const questionType = correctAnswers.length > 1 ? 1 : 0; // 1 for MSQ, 0 for MCQ
 
       return {
         id: Number(item.QuestionsID),
         question_text: item.QuestionTxt,
-        // MISSING THIS CRUCIAL FIELD:
-        questionType: Number(item.question_type) || 0, // Add this line
+        questionType,
         totalMarks: Number(item.totalMarks) || 1,
         negativeMarks: Number(item.negativeMarks) || 0,
         duration: Number(item.QuizDuration) || 30,
@@ -317,70 +322,62 @@ const Quiz = () => {
     }
     setCurrentQuestion(nextQuestion);
   };
-
-  const handleAnswerClick = (selectedOptionId) => {
-    const optionId = Number(selectedOptionId);
+  const handleAnswerClick = (optionId) => {
+    const optionIdNum = Number(optionId);
     const currentQuestionData = questions[currentQuestion];
-
-    if (!currentQuestionData) return;
+    const isMSQ = currentQuestionData?.questionType === 1;
 
     setSelectedAnswers((prev) => {
       const newAnswers = [...prev];
+      const currentAnswer = newAnswers[currentQuestion] || {};
 
-      // Initialize answer if it doesn't exist
-      if (!newAnswers[currentQuestion]) {
+      if (isMSQ) {
+        // MSQ Logic
+        const currentSelections = currentAnswer.selectedOptionIds || [];
+        const newSelections = currentSelections.includes(optionIdNum)
+          ? currentSelections.filter((id) => id !== optionIdNum)
+          : [...currentSelections, optionIdNum];
+
+        // Calculate correctness for MSQ
+        const correctSelected = newSelections.filter((id) =>
+          currentQuestionData.correctAnswers.includes(id)
+        ).length;
+        const isFullyCorrect =
+          correctSelected === currentQuestionData.correctAnswers.length &&
+          newSelections.length === currentQuestionData.correctAnswers.length;
+
         newAnswers[currentQuestion] = {
+          ...currentAnswer,
           questionId: currentQuestionData.id,
-          questionText: currentQuestionData.question_text,
-          questionType: currentQuestionData.questionType,
-          isCorrect: false,
-          marksAwarded: 0,
-          maxMarks: currentQuestionData.totalMarks,
-          negativeMarks: currentQuestionData.negativeMarks,
-          correctAnswers: currentQuestionData.correctAnswers,
-          ...(isMSQ ? { selectedOptionIds: [] } : { selectedOptionId: null }),
+          selectedOptionIds: newSelections,
+          isCorrect: isFullyCorrect,
+          marksAwarded: isFullyCorrect
+            ? currentQuestionData.totalMarks
+            : -currentQuestionData.negativeMarks,
+        };
+      } else {
+        // MCQ Logic (existing)
+        const isCorrect =
+          currentQuestionData.correctAnswers.includes(optionIdNum);
+        newAnswers[currentQuestion] = {
+          ...currentAnswer,
+          questionId: currentQuestionData.id,
+          selectedOptionId: optionIdNum,
+          isCorrect,
+          marksAwarded: isCorrect
+            ? currentQuestionData.totalMarks
+            : -currentQuestionData.negativeMarks,
         };
       }
 
-      // Handle MSQ (multiple select)
-      if (isMSQ) {
-        const currentSelections =
-          newAnswers[currentQuestion].selectedOptionIds || [];
-        newAnswers[currentQuestion].selectedOptionIds =
-          currentSelections.includes(optionId)
-            ? currentSelections.filter((id) => id !== optionId)
-            : [...currentSelections, optionId];
-      }
-      // Handle MCQ (single select)
-      else {
-        newAnswers[currentQuestion].selectedOptionId =
-          newAnswers[currentQuestion].selectedOptionId === optionId
-            ? null
-            : optionId;
-      }
-
-      // Calculate correctness
-      const isCorrect = isMSQ
-        ? arraysEqual(
-            newAnswers[currentQuestion].selectedOptionIds?.sort(),
-            currentQuestionData.correctAnswers.sort()
-          )
-        : currentQuestionData.correctAnswers.includes(
-            newAnswers[currentQuestion].selectedOptionId
-          );
-
-      newAnswers[currentQuestion].isCorrect = isCorrect;
-      newAnswers[currentQuestion].marksAwarded = isCorrect
-        ? currentQuestionData.totalMarks
-        : -currentQuestionData.negativeMarks;
+      saveAnswersToStorage({
+        quizId: quiz.QuizID,
+        groupId: quiz.group_id,
+        answers: newAnswers,
+      });
 
       return newAnswers;
     });
-
-    setQuestionStatus((prev) => ({
-      ...prev,
-      [currentQuestion + 1]: "answered",
-    }));
   };
 
   const handleSaveAndNext = () => {
@@ -493,18 +490,23 @@ const Quiz = () => {
 
       const preparedAnswers = savedData.answers
         .filter((a) => a !== null)
-        .map((answer) => ({
-          questionId: Number(answer.questionId),
-          selectedOptionId: Number(answer.selectedOptionId),
-          isCorrect: Boolean(answer.isCorrect),
-          marksAwarded: Number(answer.marksAwarded),
-          maxMarks: Number(answer.maxMarks),
-          negativeMarks: Number(answer.negativeMarks),
-        }));
+        .map((answer) => {
+          const base = {
+            questionId: Number(answer.questionId),
+            isCorrect: Boolean(answer.isCorrect),
+            marksAwarded: Number(answer.marksAwarded),
+            maxMarks: Number(answer.maxMarks),
+            negativeMarks: Number(answer.negativeMarks),
+          };
+
+          return answer.selectedOptionIds
+            ? { ...base, selectedOptionIds: answer.selectedOptionIds } // MSQ
+            : { ...base, selectedOptionId: Number(answer.selectedOptionId) }; // MCQ
+        });
 
       const body = {
         quizId: Number(savedData.quizId),
-        groupId: Number(savedData.groupId),
+        groupId: savedData.groupId ? Number(savedData.groupId) : null,
         answers: preparedAnswers,
       };
 
@@ -620,20 +622,18 @@ const Quiz = () => {
             </div>
 
             <div className="p-6 border-b border-gray-300">
-              <div className="flex items-center gap-3 mb-4">
-                <p className="text-lg flex-1">
-                  {questions[currentQuestion]?.question_text}
-                </p>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    isMCQ
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-purple-100 text-purple-800"
-                  }`}
-                >
-                  {isMCQ ? "MCQ" : "MSQ"}
-                </span>
-              </div>
+              <p className="text-lg mb-6">
+                {questions[currentQuestion]?.question_text}
+              </p>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  isMCQ
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-purple-100 text-purple-800"
+                }`}
+              >
+                {isMCQ ? "MCQ" : "MSQ"}
+              </span>
               <div className="space-y-2">
                 {questions[currentQuestion]?.options?.map((option) => {
                   const optionId = Number(option.id);
@@ -641,9 +641,8 @@ const Quiz = () => {
                     ? selectedAnswers[
                         currentQuestion
                       ]?.selectedOptionIds?.includes(optionId)
-                    : Number(
-                        selectedAnswers[currentQuestion]?.selectedOptionId
-                      ) === optionId;
+                    : selectedAnswers[currentQuestion]?.selectedOptionId ===
+                      optionId;
 
                   return (
                     <label
@@ -659,9 +658,16 @@ const Quiz = () => {
                         name={`question-${currentQuestion}`}
                         checked={isSelected}
                         onChange={() => handleAnswerClick(optionId)}
-                        className="w-4 h-4"
+                        className={isMSQ ? "rounded" : ""}
                       />
                       <span>{option.option_text}</span>
+                      {/* {isSelected && !isMSQ && (
+                        <span className="ml-auto text-blue-600">
+                          {selectedAnswers[currentQuestion]?.isCorrect
+                            ? "✓"
+                            : "✗"}
+                        </span>
+                      )} */}
                     </label>
                   );
                 })}

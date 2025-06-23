@@ -41,6 +41,12 @@ const ViewContent = ({ submodule, onBack }) => {
   const [linkName, setLinkName] = useState("");
   const [linkDescription, setLinkDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [editingFile, setEditingFile] = useState(null);
+  const [editedFileData, setEditedFileData] = useState({
+    fileName: "",
+    description: "",
+    link: "",
+  });
 
   const { fetchData, userToken } = useContext(ApiContext);
 
@@ -117,7 +123,7 @@ const ViewContent = ({ submodule, onBack }) => {
 
     try {
       // Optimistically update UI
-      setFiles(prev => prev.filter(file => !fileIds.includes(file.FileID)));
+      setFiles((prev) => prev.filter((file) => !fileIds.includes(file.FileID)));
       setSelectedFiles([]);
 
       // Call API to delete files
@@ -144,7 +150,11 @@ const ViewContent = ({ submodule, onBack }) => {
         throw new Error(response?.message || "Failed to delete files");
       }
 
-      Swal.fire("Deleted!", `${fileIds.length} files have been deleted.`, "success");
+      Swal.fire(
+        "Deleted!",
+        `${fileIds.length} files have been deleted.`,
+        "success"
+      );
     } catch (err) {
       console.error("Delete error:", err);
       Swal.fire("Error!", `Failed to delete files: ${err.message}`, "error");
@@ -161,16 +171,12 @@ const ViewContent = ({ submodule, onBack }) => {
       ) {
         throw new Error("No files to update");
       }
-
-      // Prepare files with their new order positions and equal percentage distribution
       const equalPercentage = (100 / orderedFiles.length).toFixed(2);
       const filesWithOrder = orderedFiles.map((file, index) => ({
         FileID: file.FileID,
         Percentage: equalPercentage, // Distribute percentage equally
         SortingOrder: index + 1, // 1-based index
       }));
-
-      // Filter out any files with invalid IDs (like temporary IDs)
       const validFiles = filesWithOrder.filter(
         (file) =>
           file.FileID && Number.isInteger(file.FileID) && file.FileID > 0
@@ -187,7 +193,6 @@ const ViewContent = ({ submodule, onBack }) => {
       );
 
       if (response?.success) {
-        // Update local state with new order and percentages
         const updatedFiles = files
           .map((file) => {
             const updatedFile = validFiles.find(
@@ -195,16 +200,16 @@ const ViewContent = ({ submodule, onBack }) => {
             );
             return updatedFile
               ? {
-                ...file,
-                SortingOrder: updatedFile.SortingOrder,
-                Percentage: updatedFile.Percentage,
-              }
+                  ...file,
+                  SortingOrder: updatedFile.SortingOrder,
+                  Percentage: updatedFile.Percentage,
+                }
               : file;
           })
           .sort((a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0));
 
         setFiles(updatedFiles);
-        setShowFilesOrder(false); // Close the modal after successful save
+        setShowFilesOrder(false);
 
         Swal.fire(
           "Success!",
@@ -224,10 +229,78 @@ const ViewContent = ({ submodule, onBack }) => {
     }
   };
 
+  const handleEditFile = (file) => {
+    setEditingFile(file);
+    setEditedFileData({
+      fileName: file.FilesName,
+      description: file.Description || "",
+      link: file.FileType === "link" ? file.FilePath : "",
+    });
+  };
+
+  const handleCancelEditFile = () => {
+    setEditingFile(null);
+    setEditedFileData({
+      fileName: "",
+      description: "",
+      link: "",
+    });
+    resetForm();
+  };
+
+  const handleUpdateFile = async () => {
+    if (!editingFile) return;
+
+    try {
+      setIsUploading(true);
+
+      const payload = {
+        fileId: editingFile.FileID,
+        fileName: editedFileData.fileName,
+        description: editedFileData.description,
+      };
+
+      if (editingFile.FileType === "link") {
+        payload.link = editedFileData.link;
+      }
+
+      const response = await fetchData("lmsEdit/updateFile", "POST", payload, {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      });
+
+      if (response?.success) {
+        setFiles((prevFiles) =>
+          prevFiles.map((file) =>
+            file.FileID === editingFile.FileID
+              ? {
+                  ...file,
+                  FilesName: editedFileData.fileName,
+                  Description: editedFileData.description,
+                  ...(editingFile.FileType === "link" && {
+                    FilePath: editedFileData.link,
+                  }),
+                }
+              : file
+          )
+        );
+        handleCancelEditFile();
+        Swal.fire("Success!", "File updated successfully", "success");
+      } else {
+        throw new Error(response?.message || "Failed to update file");
+      }
+    } catch (err) {
+      console.error("Error updating file:", err);
+      Swal.fire("Error!", err.message || "Failed to update file", "error");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const toggleFileSelection = (fileId) => {
-    setSelectedFiles(prev =>
+    setSelectedFiles((prev) =>
       prev.includes(fileId)
-        ? prev.filter(id => id !== fileId)
+        ? prev.filter((id) => id !== fileId)
         : [...prev, fileId]
     );
   };
@@ -428,8 +501,12 @@ const ViewContent = ({ submodule, onBack }) => {
   };
 
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files); // Convert FileList to array
-    setNewFiles((prevFiles) => [...prevFiles, ...selectedFiles]);
+    const selected = Array.from(e.target.files).map((file) => ({
+      file,
+      name: file.name,
+      customName: file.name,
+    }));
+    setNewFiles((prevFiles) => [...prevFiles, ...selected]);
   };
 
   const handleUploadFiles = async () => {
@@ -464,20 +541,20 @@ const ViewContent = ({ submodule, onBack }) => {
       const equalPercentage = (100 / totalFiles).toFixed(2);
 
       // Update existing files' percentages first
-      const updatedExistingFiles = files.map(file => ({
+      const updatedExistingFiles = files.map((file) => ({
         ...file,
-        Percentage: equalPercentage
+        Percentage: equalPercentage,
       }));
 
       // Upload all files
-      const uploadPromises = newFiles.map(async (file, index) => {
+      const uploadPromises = newFiles.map(async (fileObj, index) => {
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", fileObj.file);
         formData.append("unitId", selectedUnit.UnitID);
         formData.append("percentage", equalPercentage);
-        formData.append("fileName", file.name);
+        formData.append("fileName", fileObj.customName);
         formData.append("description", "");
-        formData.append("sortingOrder", currentFileCount + index + 1); // Add sorting order
+        formData.append("sortingOrder", currentFileCount + index + 1);
 
         try {
           const response = await fetch(
@@ -499,7 +576,6 @@ const ViewContent = ({ submodule, onBack }) => {
         }
       });
 
-      // Add link if provided
       if (fileLink.trim()) {
         uploadPromises.push(
           fetchData(
@@ -512,7 +588,7 @@ const ViewContent = ({ submodule, onBack }) => {
               description: linkDescription || "",
               percentage: equalPercentage,
               fileType: "link",
-              sortingOrder: currentFileCount + newFiles.length + 1 // Add sorting order
+              sortingOrder: currentFileCount + newFiles.length + 1,
             },
             {
               "Content-Type": "application/json",
@@ -538,12 +614,12 @@ const ViewContent = ({ submodule, onBack }) => {
         const newFileData = successfulUploads.map((result, index) => ({
           ...result.data,
           Percentage: equalPercentage,
-          SortingOrder: currentFileCount + index + 1
+          SortingOrder: currentFileCount + index + 1,
         }));
 
         // Combine with existing files (already updated with new percentages)
-        const allFiles = [...updatedExistingFiles, ...newFileData].sort((a, b) =>
-          (a.SortingOrder || 0) - (b.SortingOrder || 0)
+        const allFiles = [...updatedExistingFiles, ...newFileData].sort(
+          (a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0)
         );
 
         // Update state
@@ -552,7 +628,8 @@ const ViewContent = ({ submodule, onBack }) => {
 
         Swal.fire(
           "Success!",
-          `Uploaded ${successfulUploads.length} items successfully${failedUploads.length > 0 ? ` (${failedUploads.length} failed)` : ""
+          `Uploaded ${successfulUploads.length} items successfully${
+            failedUploads.length > 0 ? ` (${failedUploads.length} failed)` : ""
           }`,
           "success"
         );
@@ -728,10 +805,11 @@ const ViewContent = ({ submodule, onBack }) => {
                     .map((unit) => (
                       <div
                         key={unit.UnitID}
-                        className={`p-4 cursor-pointer transition-colors duration-200 ${selectedUnit?.UnitID === unit.UnitID
-                          ? "bg-blue-50 dark:bg-gray-700"
-                          : "hover:bg-gray-50 dark:hover:bg-gray-700"
-                          }`}
+                        className={`p-4 cursor-pointer transition-colors duration-200 ${
+                          selectedUnit?.UnitID === unit.UnitID
+                            ? "bg-blue-50 dark:bg-gray-700"
+                            : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                        }`}
                         onClick={() => setSelectedUnit(unit)}
                       >
                         <div className="flex justify-between items-start">
@@ -963,30 +1041,49 @@ const ViewContent = ({ submodule, onBack }) => {
                           {/* Selected File Preview */}
                           {newFiles.length > 0 && (
                             <div className="space-y-2">
-                              {newFiles.map((file, index) => (
+                              {newFiles.map((fileObj, index) => (
                                 <div
                                   key={index}
-                                  className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded"
+                                  className="flex flex-col bg-gray-50 dark:bg-gray-700 p-2 rounded"
                                 >
-                                  <span className="text-sm text-gray-800 dark:text-gray-200 flex items-center">
-                                    <FaFile className="mr-2" />
-                                    {file.name}
-                                  </span>
-                                  <button
-                                    onClick={() =>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-800 dark:text-gray-200 flex items-center">
+                                      <FaFile className="mr-2" />
+                                      {fileObj.name}
+                                    </span>
+                                    <button
+                                      onClick={() =>
+                                        setNewFiles((prev) =>
+                                          prev.filter((_, i) => i !== index)
+                                        )
+                                      }
+                                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                                    >
+                                      <FaTimes />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={fileObj.customName}
+                                    onChange={(e) =>
                                       setNewFiles((prev) =>
-                                        prev.filter((_, i) => i !== index)
+                                        prev.map((f, i) =>
+                                          i === index
+                                            ? {
+                                                ...f,
+                                                customName: e.target.value,
+                                              }
+                                            : f
+                                        )
                                       )
                                     }
-                                    className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                                  >
-                                    <FaTimes />
-                                  </button>
+                                    placeholder="Custom file name"
+                                    className="mt-2 w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md"
+                                  />
                                 </div>
                               ))}
                             </div>
                           )}
-                          {/* Save Button */}
                           <button
                             onClick={handleUploadFiles}
                             disabled={
@@ -1033,7 +1130,9 @@ const ViewContent = ({ submodule, onBack }) => {
                       </div>
                       {selectedFiles.length > 0 && (
                         <button
-                          onClick={() => handleDeleteMultipleFiles(selectedFiles)}
+                          onClick={() =>
+                            handleDeleteMultipleFiles(selectedFiles)
+                          }
                           className="flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
                         >
                           <FaTrash />
@@ -1056,12 +1155,19 @@ const ViewContent = ({ submodule, onBack }) => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                   <input
                                     type="checkbox"
-                                    checked={selectedFiles.length === files.length && files.length > 0}
+                                    checked={
+                                      selectedFiles.length === files.length &&
+                                      files.length > 0
+                                    }
                                     onChange={() => {
-                                      if (selectedFiles.length === files.length) {
+                                      if (
+                                        selectedFiles.length === files.length
+                                      ) {
                                         setSelectedFiles([]);
                                       } else {
-                                        setSelectedFiles(files.map(file => file.FileID));
+                                        setSelectedFiles(
+                                          files.map((file) => file.FileID)
+                                        );
                                       }
                                     }}
                                     className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
@@ -1083,46 +1189,181 @@ const ViewContent = ({ submodule, onBack }) => {
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                               {files.map((file) => (
-                                <tr
-                                  key={file.FileID}
-                                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedFiles.includes(file.FileID)}
-                                      onChange={() => toggleFileSelection(file.FileID)}
-                                      className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                                    />
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                      {file.FilesName}
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                      {file.FileType}
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                      {file.AuthAdd}
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button
-                                      onClick={() =>
-                                        handleDeleteFile(file.FileID)
-                                      }
-                                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                      data-tooltip-id="delete-file-tooltip"
-                                      data-tooltip-content="Delete File"
-                                    >
-                                      <FaTrash />
-                                    </button>
-                                  </td>
-                                </tr>
+                                <React.Fragment key={file.FileID}>
+                                  {/* Normal View Row */}
+                                  <tr
+                                    className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                                      editingFile?.FileID === file.FileID
+                                        ? "hidden"
+                                        : ""
+                                    }`}
+                                  >
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedFiles.includes(
+                                          file.FileID
+                                        )}
+                                        onChange={() =>
+                                          toggleFileSelection(file.FileID)
+                                        }
+                                        className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                                      />
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                        {file.FilesName}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        {file.FileType}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        {file.AuthAdd}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                      <div className="flex space-x-3">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditFile(file);
+                                          }}
+                                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                          data-tooltip-id="edit-file-tooltip"
+                                          data-tooltip-content="Edit File"
+                                        >
+                                          <FaEdit />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteFile(file.FileID);
+                                          }}
+                                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                          data-tooltip-id="delete-file-tooltip"
+                                          data-tooltip-content="Delete File"
+                                        >
+                                          <FaTrash />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+
+                                  {/* Edit View Row (only shown when editing this file) */}
+                                  {editingFile?.FileID === file.FileID && (
+                                    <tr className="bg-blue-50 dark:bg-gray-700">
+                                      <td colSpan="5" className="px-6 py-4">
+                                        <div className="space-y-4">
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                {file.FileType === "link"
+                                                  ? "Link Title"
+                                                  : "File Name"}
+                                              </label>
+                                              <input
+                                                type="text"
+                                                value={editedFileData.fileName}
+                                                onChange={(e) =>
+                                                  setEditedFileData({
+                                                    ...editedFileData,
+                                                    fileName: e.target.value,
+                                                  })
+                                                }
+                                                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                              />
+                                            </div>
+                                            {file.FileType === "link" && (
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                  Link URL
+                                                </label>
+                                                <input
+                                                  type="url"
+                                                  value={editedFileData.link}
+                                                  onChange={(e) =>
+                                                    setEditedFileData({
+                                                      ...editedFileData,
+                                                      link: e.target.value,
+                                                    })
+                                                  }
+                                                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                                />
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {file.FileType === "link" && (
+                                            <div>
+                                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Description
+                                              </label>
+                                              <textarea
+                                                value={
+                                                  editedFileData.description
+                                                }
+                                                onChange={(e) =>
+                                                  setEditedFileData({
+                                                    ...editedFileData,
+                                                    description: e.target.value,
+                                                  })
+                                                }
+                                                rows={3}
+                                                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                              />
+                                            </div>
+                                          )}
+
+                                          <div className="flex justify-end space-x-3">
+                                            <button
+                                              onClick={handleCancelEditFile}
+                                              className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                                            >
+                                              Cancel
+                                            </button>
+                                            <button
+                                              onClick={handleUpdateFile}
+                                              disabled={isUploading}
+                                              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center"
+                                            >
+                                              {isUploading ? (
+                                                <>
+                                                  <svg
+                                                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                  >
+                                                    <circle
+                                                      className="opacity-25"
+                                                      cx="12"
+                                                      cy="12"
+                                                      r="10"
+                                                      stroke="currentColor"
+                                                      strokeWidth="4"
+                                                    ></circle>
+                                                    <path
+                                                      className="opacity-75"
+                                                      fill="currentColor"
+                                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                    ></path>
+                                                  </svg>
+                                                  Saving...
+                                                </>
+                                              ) : (
+                                                "Save Changes"
+                                              )}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
                               ))}
                             </tbody>
                           </table>

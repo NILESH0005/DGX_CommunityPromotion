@@ -32,7 +32,7 @@ const FilesOrder = ({ files, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 sm:w-full md:w-3/4 lg:w-1/2">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Manage Files Order</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -41,15 +41,15 @@ const FilesOrder = ({ files, onClose, onSave }) => {
             </svg>
           </button>
         </div>
-        
+
         {orderedFiles.length > 0 ? (
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="files">
               {(provided) => (
-                <div 
-                  {...provided.droppableProps} 
+                <div
+                  {...provided.droppableProps}
                   ref={provided.innerRef}
-                  className="space-y-2"
+                  className="space-y-2 max-h-96 overflow-y-auto"
                 >
                   {orderedFiles.map((file, index) => (
                     <Draggable 
@@ -108,8 +108,8 @@ const FilesOrder = ({ files, onClose, onSave }) => {
             onClick={handleSave}
             disabled={orderedFiles.length === 0}
             className={`px-4 py-2 rounded-md ${
-              orderedFiles.length === 0 
-                ? 'bg-gray-300 cursor-not-allowed' 
+              orderedFiles.length === 0
+                ? 'bg-gray-300 cursor-not-allowed'
                 : 'bg-blue-500 text-white hover:bg-blue-600'
             }`}
           >

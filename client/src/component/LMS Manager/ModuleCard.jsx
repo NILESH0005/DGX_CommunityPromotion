@@ -35,6 +35,8 @@ const ModuleCard = () => {
     fetchModules();
   }, [fetchData]);
 
+  
+
   const handleModuleClick = (moduleId, moduleName) => {
     if (!userToken) {
       Swal.fire({

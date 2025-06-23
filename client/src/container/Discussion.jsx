@@ -8,11 +8,12 @@ import { useCallback } from 'react';
 import Skeleton from 'react-loading-skeleton';
 import { Tooltip } from 'react-tooltip';
 import AddDiscussion from '../component/discussion/AddDiscussion.jsx';
+import Swal from 'sweetalert2';
+import { useNavigate } from 'react-router-dom';
 
 const Discussion = () => {
   const { fetchData, userToken, user } = useContext(ApiContext);
-  const [allDiscussions, setAllDiscussions] = useState([]); // Store all discussions
-  const [filteredDiscussions, setFilteredDiscussions] = useState([]); // Store filtered discussions
+  const [demoDiscussions, setDemoDiscussions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [likeCount, setLikeCount] = useState(0);
@@ -28,6 +29,9 @@ const Discussion = () => {
   const [topUsers, setTopUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [allDiscussions, setAllDiscussions] = useState([]);
+  const [filteredDiscussions, setFilteredDiscussions] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -77,6 +81,7 @@ const Discussion = () => {
       setLoading(true);
       fetchData(endpoint, method, body, headers)
         .then(result => {
+          console.log("result is", result)
           if (result && result.data) {
             return result.data;
           } else {
@@ -148,37 +153,55 @@ const Discussion = () => {
     }
   };
 
-  const handleAddLike = async (id, userLike) => {
-    if (userToken) {
-      const endpoint = "discussion/discussionpost";
-      const method = "POST";
-      const headers = {
-        'Content-Type': 'application/json',
-        'auth-token': userToken
-      };
-      const like = userLike == 1 ? 0 : 1;
-      const body = {
-        "reference": id,
-        "likes": like
-      };
-
-      try {
-        const data = await fetchData(endpoint, method, body, headers);
-        if (!data.success) {
-          console.log("Error occurred while liking the post");
-          toast.error("Failed to like post");
-        } else if (data.success) {
-          const updatedAllDiscussions = allDiscussions.map((item) =>
-            item.DiscussionID === id ? { ...item, userLike: like, likeCount: like === 1 ? item.likeCount + 1 : item.likeCount - 1 } : item
-          );
-          setAllDiscussions(updatedAllDiscussions);
-          filterDiscussions(searchQuery); // Re-apply current search filter
-          toast.success(like === 1 ? "Post liked!" : "Post unliked");
+  const checkAuthAndNavigate = () => {
+    if (!userToken) {
+      Swal.fire({
+        title: 'Login Required',
+        text: 'You need to login to perform this action',
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/SignInn');
         }
-      } catch (error) {
-        console.log(error);
-        toast.error("Failed to update like");
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleAddLike = async (id, userLike) => {
+    if (!checkAuthAndNavigate()) return;
+
+    const endpoint = "discussion/discussionpost";
+    const method = "POST";
+    const headers = {
+      'Content-Type': 'application/json',
+      'auth-token': userToken
+    };
+    const like = userLike == 1 ? 0 : 1
+    const body = {
+      "reference": id,
+      "likes": like
+    };
+    console.log(body)
+    try {
+      const data = await fetchData(endpoint, method, body, headers)
+      if (!data.success) {
+        console.log("Error occured while liking the post")
+      } else if (data.success) {
+        const updatedData = demoDiscussions.map((item) =>
+          item.DiscussionID === id ? { ...item, userLike: like, likeCount: like === 1 ? item.likeCount + 1 : item.likeCount - 1 } : item
+        );
+        setDemoDiscussions(updatedData)
+        console.log(updatedData)
+        console.log(demoDiscussions)
       }
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -186,6 +209,8 @@ const Discussion = () => {
   const handleLike = () => setLikeCount(likeCount + 1);
 
   const handleComment = (discussion) => {
+    if (!checkAuthAndNavigate()) return;
+
     setCommentCount(prevCount => prevCount + 1);
     openModal(discussion);
   };
@@ -207,8 +232,8 @@ const Discussion = () => {
           <div className="sm:order-4 flex items-center w-full sm:w-auto mt-0 sm:mt-0 sm:ml-4">
             {isLoading ? (
               <Skeleton
-                height="2.16rem" 
-                width={250} 
+                height="2.16rem"
+                width={250}
                 className="w-full sm:w-1/2 bg-gray-500 rounded-lg mb-1"
               />
             ) : (
@@ -250,7 +275,7 @@ const Discussion = () => {
           
           {isLoading ? (
             <Skeleton
-              height={35} 
+              height={35}
               width={150}
               className="w-full xs:w-full sm:w-64 bg-lime-500 rounded-lg mb-1 sm:mt-4"
             />

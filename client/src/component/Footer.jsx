@@ -60,7 +60,7 @@ const Footer = () => {
           </div>
 
           {/* Latest Blog Section */}
-          <div>
+          {/* <div>
             <h4 className="text-lg font-semibold mb-4">Latest Blog</h4>
             <div className="space-y-4">
               <div className="flex space-x-3">
@@ -72,7 +72,7 @@ const Footer = () => {
                 <a href="#" className="text-sm hover:underline">Recognizing the need is the primary...</a>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 

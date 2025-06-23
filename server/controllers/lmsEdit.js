@@ -809,8 +809,8 @@ export const updateUnitOrder = async (req, res) => {
 //         // Update each file's percentage and order
 //         for (const file of files) {
 //           const updateQuery = `
-//                         UPDATE FilesDetails 
-//                         SET 
+//                         UPDATE FilesDetails
+//                         SET
 //                             Percentage = ?,
 //                             editOnDt = CURRENT_TIMESTAMP
 //                         WHERE FileID = ?
@@ -1018,7 +1018,7 @@ export const updateFilesOrder = async (req, res) => {
           await queryAsync(conn, updateQuery, [
             index + 1, // 1-based sorting order
             file.Percentage || 0, // Keep existing percentage logic
-            file.FileID
+            file.FileID,
           ]);
         }
 
@@ -1584,12 +1584,12 @@ export const deleteMultipleFiles = (req, res) => {
   }
 
   // Validate each file ID
-  const invalidIds = fileIds.filter(id => isNaN(id));
+  const invalidIds = fileIds.filter((id) => isNaN(id));
   if (invalidIds.length > 0) {
     return res.status(400).json({
       success: false,
-      message: `Invalid file IDs found: ${invalidIds.join(', ')}`,
-      invalidIds
+      message: `Invalid file IDs found: ${invalidIds.join(", ")}`,
+      invalidIds,
     });
   }
 
@@ -1626,8 +1626,8 @@ export const deleteMultipleFiles = (req, res) => {
           });
         }
 
-        const validFileIds = existingFiles.map(file => file.FileID);
-        const unitIds = [...new Set(existingFiles.map(file => file.UnitID))]; // Get unique unit IDs
+        const validFileIds = existingFiles.map((file) => file.FileID);
+        const unitIds = [...new Set(existingFiles.map((file) => file.UnitID))]; // Get unique unit IDs
 
         // 2. Perform the soft delete for all valid files
         const deleteQuery = `
@@ -1638,7 +1638,11 @@ export const deleteMultipleFiles = (req, res) => {
             AddDel = ?
           WHERE FileID IN (?)
         `;
-        await queryAsync(conn, deleteQuery, [currentTime, adminId, validFileIds]);
+        await queryAsync(conn, deleteQuery, [
+          currentTime,
+          adminId,
+          validFileIds,
+        ]);
 
         // 3. For each affected unit, update percentages of remaining files
         const results = {};
@@ -1666,9 +1670,10 @@ export const deleteMultipleFiles = (req, res) => {
 
           results[unitId] = {
             remainingCount: countResult.remainingCount,
-            newPercentage: countResult.remainingCount > 0
-              ? (100 / countResult.remainingCount).toFixed(2)
-              : 0
+            newPercentage:
+              countResult.remainingCount > 0
+                ? (100 / countResult.remainingCount).toFixed(2)
+                : 0,
           };
         }
 
@@ -1682,7 +1687,7 @@ export const deleteMultipleFiles = (req, res) => {
             deletedAt: currentTime,
             deletedBy: adminId,
             unitResults: results,
-            notFoundIds: fileIds.filter(id => !validFileIds.includes(id))
+            notFoundIds: fileIds.filter((id) => !validFileIds.includes(id)),
           },
           message: `Successfully deleted ${validFileIds.length} file(s)`,
         });
@@ -1907,6 +1912,191 @@ export const recordFileView = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error",
+    });
+  }
+};
+
+export const updateFile = async (req, res) => {
+  console.log("incoming req body", req.body);
+  let success = false;
+
+  const userId = req.user?.UserID || req.user?.id;
+  console.log(userId);
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const warningMessage = "Data is not in the right format";
+    logWarning(warningMessage);
+    res
+      .status(400)
+      .json({ success, data: errors.array(), message: warningMessage });
+    return;
+  }
+
+  try {
+    console.log(req.body);
+    const { fileId, fileName, description, link } = req.body; // Extract fileId from body
+
+    if (!fileId) {
+      const warningMessage = "File ID is required";
+      logWarning(warningMessage);
+      res.status(400).json({ success, message: warningMessage });
+      return;
+    }
+
+    // Connect to the database
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        const errorMessage = "Failed to connect to database";
+        logError(err);
+        res
+          .status(500)
+          .json({ success: false, data: err, message: errorMessage });
+        return;
+      }
+
+      try {
+        // Get user details (same as before)
+        let userQuery, userRows;
+        if (!isNaN(Number(userId))) {
+          userQuery = `SELECT UserID, Name FROM Community_User WHERE isnull(delStatus,0) = 0 AND UserID = ?`;
+          userRows = await queryAsync(conn, userQuery, [Number(userId)]);
+        }
+
+        if (
+          (!userRows || userRows.length === 0) &&
+          typeof userId === "string" &&
+          userId.includes("@")
+        ) {
+          userQuery = `SELECT UserID, Name FROM Community_User WHERE isnull(delStatus,0) = 0 AND EmailId = ?`;
+          userRows = await queryAsync(conn, userQuery, [userId]);
+        }
+
+        if (!userRows || userRows.length === 0) {
+          closeConnection();
+          const warningMessage = "User not found - please login first";
+          logWarning(warningMessage);
+          res
+            .status(200)
+            .json({ success: false, data: {}, message: warningMessage });
+          return;
+        }
+
+        const user = userRows[0];
+
+        // Get current file details to determine type
+        const getFileQuery = `SELECT FileType FROM FilesDetails WHERE FileID = ? AND ISNULL(delStatus, 0) = 0`;
+        const fileRows = await queryAsync(conn, getFileQuery, [fileId]); // Use fileId from body
+
+        if (!fileRows || fileRows.length === 0) {
+          closeConnection();
+          const warningMessage = "File not found or already deleted";
+          logWarning(warningMessage);
+          res
+            .status(200)
+            .json({ success: false, data: {}, message: warningMessage });
+          return;
+        }
+
+        const fileType = fileRows[0].FileType;
+
+        // Build update query based on file type
+        let updateQuery, updateParams;
+        if (fileType === "link") {
+          updateQuery = `
+            UPDATE FilesDetails
+            SET 
+              FilesName = ?,
+              Description = ?,
+              FilePath = ?,
+              AuthLstEdit = ?,
+              editOnDt = GETDATE()
+            WHERE FileID = ? AND ISNULL(delStatus, 0) = 0
+          `;
+          updateParams = [
+            fileName ?? null,
+            description ?? null,
+            link ?? null,
+            user.Name,
+            fileId, // Use fileId from body
+          ];
+        } else {
+          updateQuery = `
+            UPDATE FilesDetails
+            SET 
+              FilesName = ?,
+              Description = ?,
+              AuthLstEdit = ?,
+              editOnDt = GETDATE()
+            WHERE FileID = ? AND ISNULL(delStatus, 0) = 0
+          `;
+          updateParams = [
+            fileName ?? null,
+            description ?? null,
+            user.Name,
+            fileId, // Use fileId from body
+          ];
+        }
+
+        // Execute update
+        const result = await queryAsync(conn, updateQuery, updateParams);
+
+        if (result.affectedRows === 0) {
+          closeConnection();
+          const warningMessage =
+            "File not updated - may not exist or already deleted";
+          logWarning(warningMessage);
+          res
+            .status(200)
+            .json({ success: false, data: {}, message: warningMessage });
+          return;
+        }
+
+        // Get updated file details
+        const fetchQuery = `
+          SELECT 
+            FileID,
+            FilesName,
+            FilePath,
+            FileType,
+            Description,
+            AuthLstEdit, 
+            editOnDt
+          FROM FilesDetails
+          WHERE FileID = ? AND ISNULL(delStatus, 0) = 0
+        `;
+        const updatedFile = await queryAsync(conn, fetchQuery, [fileId]);
+
+        success = true;
+        closeConnection();
+        const infoMessage = "File updated successfully";
+        logInfo(infoMessage);
+        res.status(200).json({
+          success,
+          data: updatedFile[0],
+          message: infoMessage,
+        });
+        return;
+      } catch (queryErr) {
+        closeConnection();
+        console.error("Database Query Error:", queryErr);
+        logError(queryErr);
+        res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: queryErr.message.includes("Conversion failed")
+            ? "Invalid data type in database operation"
+            : "Something went wrong please try again",
+        });
+        return;
+      }
+    });
+  } catch (error) {
+    logError(error);
+    return res.status(500).json({
+      success: false,
+      data: {},
+      message: "Something went wrong please try again",
     });
   }
 };
