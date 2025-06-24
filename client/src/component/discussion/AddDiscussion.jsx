@@ -259,7 +259,7 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
                 </div>
 
                 <div className="mb-4 pt-8">
-                    <label className="block text-gray-700 font-bold mb-2">Tags</label>
+                    <label className="block text-gray-700 font-bold mb-2">Tags<span className="text-red-500">*</span></label>
                     <input type="text" className="w-full px-3 py-2 border rounded-lg" value={tagInput} onChange={handleTagInputChange} onKeyPress={handleTagInputKeyPress} placeholder="Press Enter to add a tag" />
                     <div className="mt-2 flex flex-wrap">
                         {tags.split(',').filter(tag => tag).map((tag, index) => (
@@ -276,6 +276,7 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
                 <div className="mb-4">
                     <label className="block text-gray-700 font-bold mb-2">
                         Links
+                        <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
@@ -302,7 +303,7 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
                 </div>
 
                 <div className="mb-4 relative">
-                    <label className="block text-gray-700 font-bold mb-2">Image</label>
+                    <label className="block text-gray-700 font-bold mb-2">Image<span className="text-red-500">*</span></label>
 
                     <input
                         type="file"
@@ -329,6 +330,7 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
                 <div className="mb-4">
                     <label className="block text-gray-700 font-bold mb-2">
                         Privacy
+                        <span className="text-red-500">*</span>
                     </label>
                     <select
                         value={privacy.value}
