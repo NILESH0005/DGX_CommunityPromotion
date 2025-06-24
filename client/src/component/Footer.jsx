@@ -28,7 +28,7 @@ const Footer = () => {
         </div>
 
         {/* Middle Sections */}
-        <div className="lg:w-3/4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {/* <div className="lg:w-3/4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <div>
             <h4 className="text-lg font-semibold mb-4">Company</h4>
             <ul className="text-sm space-y-2">
@@ -60,7 +60,7 @@ const Footer = () => {
           </div>
 
           {/* Latest Blog Section */}
-          <div>
+          {/* <div>
             <h4 className="text-lg font-semibold mb-4">Latest Blog</h4>
             <div className="space-y-4">
               <div className="flex space-x-3">
@@ -73,7 +73,7 @@ const Footer = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */} */}
       </div>
 
       {/* Footer Bottom Section */}

@@ -213,7 +213,7 @@ const Home = () => {
       </section>
       <TextParallax />
       {/* Leadership Section */}
-      <div className="bg-DGXgray/50 py-24 sm:py-32">
+      {/* <div className="bg-DGXgray/50 py-24 sm:py-32">
         <div className="mx-auto grid max-w-7xl gap-x-8 gap-y-20 px-6 lg:px-8 xl:grid-cols-3">
           <div className="max-w-2xl">
             <h2 className="text-3xl font-bold tracking-tight text-[#111827] sm:text-4xl">
@@ -250,7 +250,7 @@ const Home = () => {
             ))}
           </ul>
         </div>
-      </div>
+      </div> */}
 
       {/* Partners Section */}
       <div className="bg-white py-24 sm:py-32 w-full">
