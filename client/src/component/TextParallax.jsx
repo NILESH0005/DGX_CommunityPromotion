@@ -1,29 +1,33 @@
 import React, { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-// import { FiArrowUpRight } from "react-icons/fi";
+import images from "../../public/images.js";
+import { useNavigate } from 'react-router-dom';
+
 
 export const TextParallax = () => {
   return (
     <div className="bg-white">
       <TextParallaxContent
-        imgUrl="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2671&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-        heading="Connect"
-        subheading="Bridging Communities for Greater Impact"
-
+        id="lms-section"
+        imgUrl={images.LMS}
+        heading="Learning Management System"
+        subheading="Built to Teach. Designed to Learn."
       >
         <Connect />
       </TextParallaxContent>
       <TextParallaxContent
-        imgUrl="https://images.unsplash.com/photo-1530893609608-32a9af3aa95c?q=80&w=2564&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-        heading="Quality"
-        subheading="Never compromise."
+        id="discussions-section"
+        imgUrl={images.Discussion}
+        heading="Discussions"
+        subheading="Where Queries Spark Ideas"
       >
         <Quality />
       </TextParallaxContent>
       <TextParallaxContent
-        imgUrl="https://images.unsplash.com/photo-1504610926078-a1611febcad3?q=80&w=2416&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-        heading="Insight"
-        subheading="Where Expertise Meets Vision"
+        id="blog-section"
+        imgUrl={images.blog}
+        heading="Blog"
+        subheading="Voices That Build Vision"
       >
         <Insight />
       </TextParallaxContent>
@@ -33,9 +37,10 @@ export const TextParallax = () => {
 
 const IMG_PADDING = 12;
 
-const TextParallaxContent = ({ imgUrl, heading, subheading, children }) => {
+const TextParallaxContent = ({ id, imgUrl, heading, subheading, children }) => {
   return (
     <div
+      id={id}
       style={{
         paddingLeft: IMG_PADDING,
         paddingRight: IMG_PADDING,
@@ -102,7 +107,6 @@ const OverlayCopy = ({ heading, subheading }) => {
       ref={targetRef}
       className="absolute left-0 top-0 flex h-screen w-full flex-col items-center justify-center text-white"
     >
-
       <p className="text-center text-4xl font-bold md:text-7xl">{heading}</p>
       <p className="mt-6 text-center text-xl md:mb-4 md:text-3xl">
         {subheading}
@@ -111,58 +115,86 @@ const OverlayCopy = ({ heading, subheading }) => {
   );
 };
 
-const Connect = () => (
-  <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-4 pb-24 pt-12 md:grid-cols-12">
-    <h2 className="col-span-1 text-6xl font-bold md:col-span-4">
-      Connect
-    </h2>
-    <div className="col-span-1 md:col-span-8">
-      <p className="mb-4 text-xl text-neutral-600 md:text-2xl font-mono text-justify">
-        The DGX Community unites developers, researchers, and AI enthusiasts
-        to foster collaboration and shared growth. By connecting minds, we
-        inspire innovation, spark partnerships, and expand knowledge through
-        meaningful discussions and collaborative efforts.
-      </p>
-      <p className="mb-8 text-xl text-neutral-600 md:text-2xl font-mono text-justify">
-        Together, we bridge gaps and create a stronger, more impactful AI ecosystem.
-      </p>
-      {/* <button className="w-full rounded bg-neutral-900 px-9 py-4 text-xl text-white transition-colors hover:bg-neutral-700 md:w-fit">
-        Learn more <FiArrowUpRight className="inline" />
-      </button> */}
+const Connect = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-4 pb-24 pt-12 md:grid-cols-12">
+      <div className="col-span-1 md:col-span-4">
+        <h2 className="text-6xl font-bold">LMS</h2>
+        <div className="mt-8">
+          <button
+            onClick={() => navigate('/LearningPath')} // Change to your actual route
+            className="w-full rounded bg-neutral-900 px-6 py-3 text-lg text-white transition-colors hover:bg-neutral-700"
+          >
+            Explore LMS →
+          </button>
+        </div>
+      </div>
+      <div className="col-span-1 md:col-span-8">
+        <p className="mb-4 text-xl text-neutral-600 md:text-2xl font-mono text-justify">
+          LMS offers a dynamic environment to both consume and create knowledge.
+          Learners can dive deep into technical foundations with curated lessons and hands-on implementation
+          workbooks. Admins and educators can seamlessly upload videos, notebooks, PDFs,
+          and structured learning modules transforming the DGX Community into a self-sustained learning hub.
+        </p>
+        <p className="text-xl text-neutral-600 md:text-2xl font-mono text-justify">
+          Your Complete Hub for Interactive Learning and Implementation.
+        </p>
+      </div>
     </div>
-  </div>
-); const Quality = () => (
-  <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-4 pb-24 pt-12 md:grid-cols-12">
-    <h2 className="col-span-1 text-6xl font-bold md:col-span-4">
-      Quality
-    </h2>
-    <div className="col-span-1 md:col-span-8">
-      <p className="mb-4 text-xl text-neutral-600 md:text-2xl font-mono text-justify">
-        At the DGX Community, we never compromise on quality. Every project, every initiative, and every collaboration is guided by a commitment to excellence. We strive to provide the best resources and solutions, ensuring the highest standards in all our endeavors.
-      </p>
-      <p className="mb-8 text-xl text-neutral-600 md:text-2xl font-mono text-justify">
-        With unwavering dedication, we maintain our reputation as a trusted hub for AI and technological advancements.
-      </p>
-      {/* <button className="w-full rounded bg-neutral-900 px-9 py-4 text-xl text-white transition-colors hover:bg-neutral-700 md:w-fit">
-        Learn more <FiArrowUpRight className="inline" />
-      </button> */}
+  );
+}
+
+const Quality = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-4 pb-24 pt-12 md:grid-cols-12">
+      <div className="col-span-1 md:col-span-4">
+        <h2 className="text-6xl font-bold">Discussions</h2>
+        <div className="mt-8 space-y-4">
+          <button
+            onClick={() => navigate('/Discussion')} // Change to your actual route
+            className="w-full rounded bg-neutral-900 px-6 py-3 text-lg text-white transition-colors hover:bg-neutral-700"
+          >
+            Explore Discussions →
+          </button>
+        </div>
+      </div>
+      <div className="col-span-1 md:col-span-8">
+        <p className="mb-4 text-xl text-neutral-600 md:text-2xl font-mono text-justify">
+          This module is where ideas meet impact. Whether it's solving bugs,
+          brainstorming new features, or debating the ethical challenges of AI, this is your space to grow.
+          Engage in bold conversations—from real-world applications to future disruptions—and shape the evolving
+          landscape of tech together.
+        </p>
+      </div>
     </div>
-  </div>
-); const Insight = () => (
-  <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-4 pb-24 pt-12 md:grid-cols-12">
-    <h2 className="col-span-1 text-6xl font-bold md:col-span-4">
-      Insight
-    </h2>
-    <div className="col-span-1 md:col-span-8">
-      <p className="mb-4 text-xl text-neutral-600 md:text-2xl font-mono text-justify">
-        The DGX Community is where expertise meets vision. Our members bring a wealth of knowledge and experience, pushing the boundaries of AI and technology. Through collaboration and the exchange of ideas, we create forward-thinking solutions that shape the future of the industry.
-      </p>
-      <p className="mb-8 text-xl text-neutral-600 md:text-2xl font-mono text-justify">
-        Together, we unlock new possibilities and inspire a future driven by innovation.
-      </p>
-      {/* <button className="w-full rounded bg-neutral-900 px-9 py-4 text-xl text-white transition-colors hover:bg-neutral-700 md:w-fit">
-        Learn more <FiArrowUpRight className="inline" />
-      </button> */}
+  );
+}
+
+const Insight = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-4 pb-24 pt-12 md:grid-cols-12">
+      <div className="col-span-1 md:col-span-4">
+        <h2 className="text-6xl font-bold">Blog</h2>
+        <div className="mt-8">
+          <button
+            onClick={() => navigate('/Blog')} // Change to your actual route
+            className="w-full rounded bg-neutral-900 px-6 py-3 text-lg text-white transition-colors hover:bg-neutral-700"
+          >
+            Explore Blogs →
+          </button>
+        </div>
+      </div>
+      <div className="col-span-1 md:col-span-8">
+        <p className="mb-4 text-xl text-neutral-600 md:text-2xl font-mono text-justify">
+          The Blog page is your gateway to insights from innovators, educators, and peers.
+          Whether you're writing your own thoughts or reading updates from community leaders,
+          this space keeps you connected to the latest in AI, ML, and beyond. Share perspectives,
+          publish breakthroughs, and stay ahead with every post.
+        </p>
+      </div>
     </div>
-  </div>
-);
+  );
+}

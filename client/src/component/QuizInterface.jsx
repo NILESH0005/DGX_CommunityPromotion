@@ -89,7 +89,7 @@ const QuizInterface = () => {
               </div>
             </div>
 
-            <div className="mt-8 w-screen w-full">
+            <div className="mt-8 `w-screen` w-full">
               <Carousel
                 showThumbs={false}
                 showStatus={false}

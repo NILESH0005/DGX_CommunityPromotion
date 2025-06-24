@@ -13,7 +13,6 @@ import LogoMarquee from "../component/LogoMarquee";
 import { TextParallax } from "../component/TextParallax.jsx";
 import Swal from "sweetalert2";
 
-
 const Home = () => {
   const { user, userToken } = useContext(ApiContext);
   const navigate = useNavigate();
@@ -21,14 +20,7 @@ const Home = () => {
   const [currentIndexUS, setCurrentIndexUS] = useState(0);
 
   // Slides data
-  const slides = [
-    images.Event1,
-    images.Event2,
-    images.Event3,
-    images.Event4,
-    images.Event5,
-    images.Event6,
-  ];
+  // const slides = [images.us2, images.us3, images.us4, images.us5];
 
   const usSlides = [
     images.us1,
@@ -68,7 +60,7 @@ const Home = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) =>
-        prevIndex === slides.length - 1 ? 0 : prevIndex + 1
+        prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
       );
       setCurrentIndexUS((prevIndex) =>
         prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
@@ -76,7 +68,7 @@ const Home = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [slides.length, usSlides.length]);
+  }, [usSlides .length, usSlides.length]);
 
   const handleRedirect = () => navigate("/EventWorkshopPage");
   const handleRedirect01 = () => navigate("/Discussion");
@@ -149,7 +141,7 @@ const Home = () => {
           {/* About Us Carousel */}
           <div className="relative w-full h-52 md:h-[400px] lg:h-[400px] rounded-lg overflow-hidden">
             <div className="relative h-full">
-              {usSlides.map((slide, index) => (
+              {usSlides.map((usSlides, index) => (
                 <div
                   key={index}
                   className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
@@ -157,7 +149,7 @@ const Home = () => {
                   }`}
                 >
                   <img
-                    src={slide}
+                    src={usSlides}
                     alt={`US Slide ${index}`}
                     className="object-fill w-full h-full"
                   />
@@ -193,7 +185,7 @@ const Home = () => {
           {/* Events Carousel */}
           <div className="relative w-full h-64 md:h-[500px] lg:h-[500px] rounded-lg overflow-hidden">
             <div className="relative h-full">
-              {slides.map((slide, index) => (
+              {usSlides.map((usSlides, index) => (
                 <div
                   key={index}
                   className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
@@ -201,7 +193,7 @@ const Home = () => {
                   }`}
                 >
                   <img
-                    src={slide}
+                    src={usSlides}
                     alt={`Slide ${index}`}
                     className="w-full h-full object-cover"
                   />

@@ -1,9 +1,8 @@
-import React from 'react'
+import react from "react";
+import { Link } from "react-router-dom";
 
-const BreadCrumb = () => {
-  return (
-    <div></div>
-  )
+const breadcrumb=()=>{
+    return{};
 }
 
-export default BreadCrumb
+export default breadcrumb;

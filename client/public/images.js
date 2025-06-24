@@ -45,8 +45,13 @@ import us7 from '../public/us7.jpg'
 import us8 from '../public/us8.jpg'
 import us9 from '../public/us9.jpg'
 import bg1 from '../public/bg1.jpg'
+import bg2 from '../public/bg2.jpg'
 import defaultProfile from '../public/defaultProfile.jpeg'
 import teachingKit from '../public/LMS/Teaching Kit/teachingkit.jpg'
+import blog from '../public/blog.jpg'
+import LMS from '../public/LMS.jpg'
+import Discussion from '../public/Discussion.png'
+
 
 
 
@@ -61,6 +66,7 @@ export default {
     robot,
     secure,
     bg1,
+    bg2,
     nvbackground,
     NvidiaBackground,
     giventures,
@@ -110,5 +116,11 @@ export default {
 
 
     //LMS
-    teachingKit
+    teachingKit,
+
+
+    //home
+    blog,
+    LMS,
+    Discussion
 }   

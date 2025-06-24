@@ -4,14 +4,17 @@ import ApiContext from "../../context/ApiContext";
 
 const ContentManager = () => {
   const [contentData, setContentData] = useState([]);
-  const [formData, setFormData] = useState({ title: "", text: "", image: null });
+  const [formData, setFormData] = useState({ 
+    title: "", 
+    text: "", 
+    image: null,
+    idCode: null // Add idCode to formData
+  });
   const [charCount, setCharCount] = useState(800);
   const [isTableView, setIsTableView] = useState(true);
   const { fetchData, userToken } = useContext(ApiContext);
   const [isLoading, setIsLoading] = useState(true);
   const isMounted = useRef(true);
-
-
 
   const fetchContentData = async (attempt = 0, maxRetries = 3) => {
     if (!isMounted.current) return;
@@ -68,13 +71,13 @@ const ContentManager = () => {
     };
   }, []);
 
-
   const toggleView = () => {
     if (contentData.length > 0 && isTableView) {
       setFormData({
         title: contentData[0].title,
         text: contentData[0].text,
         image: contentData[0].image,
+        idCode: contentData[0].id // Set the idCode when switching to edit mode
       });
     }
     setIsTableView(!isTableView);
@@ -120,6 +123,11 @@ const ContentManager = () => {
       return;
     }
 
+    if (!formData.idCode) {
+      Swal.fire("Error", "Content ID is missing!", "error");
+      return;
+    }
+
     Swal.fire({
       title: "Are you sure?",
       text: "You are about to save the content!",
@@ -137,18 +145,16 @@ const ContentManager = () => {
           "auth-token": userToken
         };
 
-        const contentId = contentData[0]?.id;
-
         const body = {
-          id: contentId,
-          title: formData.title,
-          text: formData.text,
-          image: formData.image,
+          idCode: formData.idCode, // Use the correct field name expected by the API
+          Title: formData.title,   // Match API expected field names
+          Content: formData.text,
+          Image: formData.image,
         };
 
         try {
           const response = await fetchData(endpoint, method, body, headers);
-          if (response.success) {
+          if (response?.success) { // Add optional chaining
             Swal.fire({
               icon: "success",
               title: "Updated!",
@@ -159,7 +165,7 @@ const ContentManager = () => {
             fetchContentData();
             setIsTableView(true);
           } else {
-            Swal.fire("Error", response.message, "error");
+            Swal.fire("Error", response?.message || "Update failed", "error");
           }
         } catch (error) {
           console.error("API Request Error:", error);
@@ -168,7 +174,6 @@ const ContentManager = () => {
       }
     });
   };
-
 
   return (
     <div className="container mx-auto p-6 bg-white rounded-2xl shadow-lg">

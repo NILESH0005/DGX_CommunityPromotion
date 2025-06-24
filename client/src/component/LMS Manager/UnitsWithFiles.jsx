@@ -6,7 +6,6 @@ import FileViewer from "../../utils/FileViewer";
 import Quiz from "../quiz/Quiz";
 import Swal from "sweetalert2";
 import { FiFileText, FiFolder, FiX, FiMenu, FiBook, FiArrowLeft } from "react-icons/fi";
-import BreadCrumb from "./BreadCrumb";
 import FetchQuizQuestions from "../quiz/DemoQuiz";
 
 const UnitsWithFiles = () => {
@@ -598,9 +597,7 @@ const UnitsWithFiles = () => {
       </div>
 
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
-        {/* Add BreadCrumb component here - position it above the sidebar */}
-        <BreadCrumb />
-
+  
         {selectedQuiz ? (
           // Render Quiz component when a quiz is selected
 

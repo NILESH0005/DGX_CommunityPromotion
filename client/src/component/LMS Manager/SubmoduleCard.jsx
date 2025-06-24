@@ -4,7 +4,6 @@ import ApiContext from "../../context/ApiContext";
 import ByteArrayImage from "../../utils/ByteArrayImage";
 import ProgressBar from "./ProgressBar";
 import { FaAngleDown, FaAngleUp, FaArrowLeft } from "react-icons/fa";
-import BreadCrumb from "./BreadCrumb";
 
 const SubModuleCard = () => {
   const { moduleId } = useParams();
@@ -173,7 +172,6 @@ const SubModuleCard = () => {
       </button>
 
       <div className="max-w-7xl mx-auto pt-2">
-        <BreadCrumb className="mb-8" />
 
         {/* Module Title Section */}
         {moduleName && (
