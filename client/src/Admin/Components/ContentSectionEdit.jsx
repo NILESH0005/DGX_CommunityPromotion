@@ -1,125 +1,179 @@
-import React, { useState, useContext, useEffect, useRef } from "react";
+import React, { useState, useContext, useEffect } from "react";
+import PropTypes from 'prop-types';
 import Swal from "sweetalert2";
 import ApiContext from "../../context/ApiContext";
 
-const ContentManager = () => {
+const ContentManager = ({ data }) => {
   const [contentData, setContentData] = useState([]);
   const [formData, setFormData] = useState({ 
     title: "", 
-    text: "", 
+    content: "", 
     image: null,
-    idCode: null // Add idCode to formData
+    idCode: null,
+    componentName: "ContentSection",
+    componentIdName: "contentSection"
   });
   const [charCount, setCharCount] = useState(800);
-  const [isTableView, setIsTableView] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { fetchData, userToken } = useContext(ApiContext);
-  const [isLoading, setIsLoading] = useState(true);
-  const isMounted = useRef(true);
 
-  const fetchContentData = async (attempt = 0, maxRetries = 3) => {
-    if (!isMounted.current) return;
-
-    if (attempt >= maxRetries) {
-      setIsLoading(false);
-      Swal.fire("Error", "Failed to fetch content after multiple attempts.", "error");
-      return;
+  // Initialize data
+  useEffect(() => {
+    if (data && data.length > 0) {
+      const firstItem = data[0];
+      setContentData([{
+        id: firstItem.idCode,
+        title: firstItem.Title,
+        content: firstItem.Content,
+        image: firstItem.Image
+      }]);
+      
+      setCharCount(800 - firstItem.Content.length);
     }
+    setIsLoading(false);
+  }, [data]);
 
-    const endpoint = "home/getContent";
-    const headers = { "Content-Type": "application/json" };
-    const controller = new AbortController();
+  const handleAddClick = () => {
+    setFormData({
+      title: "",
+      content: "",
+      image: null,
+      idCode: null,
+      componentName: "ContentSection",
+      componentIdName: "contentSection"
+    });
+    setIsAdding(true);
+    setIsEditing(false);
+  };
 
-    try {
-      const timeoutDuration = 10000;
-      const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
-
-      const response = await fetchData(endpoint, "GET", {}, headers, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (isMounted.current) {
-        if (response?.success && Array.isArray(response.data) && response.data.length > 0) {
-          setContentData(response.data.map((item) => ({
-            id: item.idCode,
-            title: item.Title,
-            text: item.Content,
-            image: item.Image,
-          })));
-          setIsLoading(false);
-        } else {
-          console.warn(`Attempt ${attempt + 1}: Empty response. Retrying...`);
-          setTimeout(() => fetchContentData(attempt + 1, maxRetries), 2000);
-        }
-      }
-    } catch (error) {
-      if (isMounted.current) {
-        if (error.name === "AbortError") {
-          Swal.fire("Error", "Request timed out. Please try again.", "error");
-        } else {
-          Swal.fire("Error", "Failed to fetch content", "error");
-        }
-        setIsLoading(false);
-      }
+  const handleEditClick = () => {
+    if (contentData.length > 0) {
+      setFormData({
+        title: contentData[0].title,
+        content: contentData[0].content,
+        image: contentData[0].image,
+        idCode: contentData[0].id,
+        componentName: "ContentSection",
+        componentIdName: "contentSection"
+      });
+      setIsEditing(true);
+      setIsAdding(false);
     }
   };
 
-  useEffect(() => {
-    isMounted.current = true;
-    fetchContentData();
-
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
-  const toggleView = () => {
-    if (contentData.length > 0 && isTableView) {
-      setFormData({
-        title: contentData[0].title,
-        text: contentData[0].text,
-        image: contentData[0].image,
-        idCode: contentData[0].id // Set the idCode when switching to edit mode
-      });
-    }
-    setIsTableView(!isTableView);
+  const handleCancel = () => {
+    setIsEditing(false);
+    setIsAdding(false);
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === "title" && value.length > 100) return;
-    if (name === "text" && value.length > 800) return;
-    setFormData({ ...formData, [name]: value });
-    if (name === "text") setCharCount(800 - value.length);
+    const maxLength = name === "title" ? 100 : 800;
+    
+    if (value.length > maxLength) return;
+    
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    if (name === "content") {
+      setCharCount(800 - value.length);
+    }
   };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const fileType = file.type;
+    if (!file) return;
 
-      if (fileType === "image/gif") {
-        setFormData({ ...formData, image: file });
+    if (file.type === "image/gif") {
+      setFormData(prev => ({ ...prev, image: file }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 500;
+        canvas.height = 500;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setFormData(prev => ({ ...prev, image: canvas.toDataURL("image/jpeg") }));
+      };
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddContent = async () => {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      Swal.fire("Error", "Title and Content fields cannot be empty!", "error");
+      return;
+    }
+
+    try {
+      const result = await Swal.fire({
+        title: 'Add New Content',
+        text: "Are you sure you want to add this content?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, add it!'
+      });
+
+      if (!result.isConfirmed) return;
+
+      setIsLoading(true);
+      const endpoint = "home/addContentSection";
+      const response = await fetchData(
+        endpoint,
+        "POST",
+        {
+          componentName: formData.componentName,
+          componentIdName: formData.componentIdName,
+          title: formData.title,
+          text: formData.content,
+          image: formData.image
+        },
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken
+        }
+      );
+
+      if (response?.success) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Added!',
+          text: 'New content has been added successfully.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+        
+        // Update local state with new content
+        setContentData([{
+          id: response.data.id,
+          title: formData.title,
+          content: formData.content,
+          image: formData.image
+        }]);
+        setIsAdding(false);
       } else {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const img = new Image();
-          img.src = reader.result;
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            canvas.width = 500;
-            canvas.height = 500;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            setFormData({ ...formData, image: canvas.toDataURL("image/jpeg") });
-          };
-        };
-        reader.readAsDataURL(file);
+        throw new Error(response?.message || "Add failed");
       }
+    } catch (error) {
+      console.error("Add error:", error);
+      Swal.fire('Error!', error.message, 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSave = async () => {
-    if (!formData.title || !formData.text) {
-      Swal.fire("Error", "Title and Text fields cannot be empty!", "error");
+  const handleUpdateContent = async () => {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      Swal.fire("Error", "Title and Content fields cannot be empty!", "error");
       return;
     }
 
@@ -128,153 +182,217 @@ const ContentManager = () => {
       return;
     }
 
-    Swal.fire({
-      title: "Are you sure?",
-      text: "You are about to save the content!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        const endpoint = "home/updateContentSection";
-        const method = "POST";
-        const headers = {
+    try {
+      const result = await Swal.fire({
+        title: 'Update Content',
+        text: "Are you sure you want to update this content?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, update it!'
+      });
+
+      if (!result.isConfirmed) return;
+
+      setIsLoading(true);
+      const endpoint = "home/updateContentSection";
+      const response = await fetchData(
+        endpoint,
+        "POST",
+        {
+          id: formData.idCode,
+          Title: formData.title,
+          Content: formData.content,
+          Image: formData.image,
+          ComponentName: formData.componentName,
+          ComponentIdName: formData.componentIdName
+        },
+        {
           "Content-Type": "application/json",
           "auth-token": userToken
-        };
-
-        const body = {
-          idCode: formData.idCode, // Use the correct field name expected by the API
-          Title: formData.title,   // Match API expected field names
-          Content: formData.text,
-          Image: formData.image,
-        };
-
-        try {
-          const response = await fetchData(endpoint, method, body, headers);
-          if (response?.success) { // Add optional chaining
-            Swal.fire({
-              icon: "success",
-              title: "Updated!",
-              text: "Content has been updated successfully.",
-              timer: 1500,
-              showConfirmButton: false,
-            });
-            fetchContentData();
-            setIsTableView(true);
-          } else {
-            Swal.fire("Error", response?.message || "Update failed", "error");
-          }
-        } catch (error) {
-          console.error("API Request Error:", error);
-          Swal.fire("Error", "Something went wrong!", "error");
         }
+      );
+
+      if (response?.success) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Updated!',
+          text: 'Content has been updated successfully.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+        
+        // Update local state
+        setContentData([{
+          id: formData.idCode,
+          title: formData.title,
+          content: formData.content,
+          image: formData.image
+        }]);
+        setIsEditing(false);
+      } else {
+        throw new Error(response?.message || "Update failed");
       }
-    });
+    } catch (error) {
+      console.error("Update error:", error);
+      Swal.fire('Error!', error.message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 bg-white rounded-2xl shadow-lg">
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="text-gray-700 text-lg font-bold">Loading...</div>
-        </div>
-      ) : (
-        <>
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold text-gray-800">
-              {isTableView ? "Content Section" : "Edit Content"}
-            </h1>
-            <button
-              onClick={toggleView}
-              className="bg-blue-600 text-white py-2 px-4 rounded-full shadow-lg hover:bg-blue-700 transition"
-            >
-              {isTableView ? "Edit Content" : "View Content"}
-            </button>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-gray-800">
+          {isEditing ? "Edit Content" : isAdding ? "Add New Content" : "Content Section"}
+        </h1>
+        
+        {/* Only show action buttons when not in edit/add mode */}
+        {!isEditing && !isAdding && (
+          <div className="flex gap-2">
+            {/* Show Edit button only when there is content */}
+            {contentData.length > 0 ? (
+              <button
+                onClick={handleEditClick}
+                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-full shadow-lg transition"
+              >
+                Edit Content
+              </button>
+            ) : (
+              // Show Add button only when there is no content
+              <button
+                onClick={handleAddClick}
+                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-full shadow-lg transition"
+              >
+                Add Content
+              </button>
+            )}
           </div>
-          {isTableView ? (
-            <div className="flex flex-col md:flex-row items-center bg-white p-6 rounded-xl shadow-lg">
-              {contentData.length > 0 ? (
-                <>
-                  <div className="w-full md:w-1/2 p-4">
-                    <h2 className="text-xl font-bold text-gray-800">{contentData[0].title}</h2>
-                    <p className="text-gray-700 mt-2">{contentData[0].text}</p>
-                  </div>
-                  <div className="w-full md:w-1/2 p-4 flex justify-center">
-                    {contentData[0].image ? (
-                      <img
-                        src={contentData[0].image}
-                        alt="Content"
-                        className="w-80 h-80 object-cover rounded-lg shadow-2xl"
-                      />
-                    ) : (
-                      <div className="w-80 h-80 bg-gray-200 flex items-center justify-center text-gray-500 rounded-lg shadow-2xl">
-                        No Image
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <p className="text-gray-700">No content available.</p>
-              )
-              }
-            </div>
-          ) : (
-            <div className="p-6 bg-white rounded-xl shadow-lg">
-              <div className="mb-4">
-                <label className="block mb-1 font-bold text-gray-700">Title:</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:ring focus:ring-blue-200"
-                  maxLength={100}
-                />
+        )}
+      </div>
+
+      {!isEditing && !isAdding ? (
+        <div className="flex flex-col md:flex-row items-center bg-white p-6 rounded-xl shadow-lg">
+          {contentData.length > 0 ? (
+            <>
+              <div className="w-full md:w-1/2 p-4">
+                <h2 className="text-xl font-bold text-gray-800">{contentData[0].title}</h2>
+                <p className="text-gray-700 mt-2 whitespace-pre-line">{contentData[0].content}</p>
               </div>
-              <div className="mb-4">
-                <label className="block mb-1 font-bold text-gray-700">Text:</label>
-                <textarea
-                  name="text"
-                  value={formData.text}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 px-4 py-2 rounded-lg h-32 focus:ring focus:ring-blue-200"
-                  maxLength={800}
-                />
-                <p className="text-sm text-gray-500">Characters remaining: {charCount}</p>
-              </div>
-              <div className="mb-4">
-                <label className="block mb-1 font-bold text-gray-700">Upload Image:</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="w-full border border-gray-300 px-4 py-2 rounded-lg shadow-2xl"
-                />
-              </div>
-              {formData.image && (
-                <div className="mb-4 flex justify-center">
+              <div className="w-full md:w-1/2 p-4 flex justify-center">
+                {contentData[0].image ? (
                   <img
-                    src={formData.image}
-                    alt="Preview"
+                    src={contentData[0].image}
+                    alt="Content"
                     className="w-80 h-80 object-cover rounded-lg shadow-2xl"
                   />
-                </div>
-              )}
-              <button
-                onClick={handleSave}
-                className="bg-green-500 text-white px-4 py-2 rounded-full shadow-lg hover:bg-green-600 transition w-full"
-              >
-                Save
-              </button>
+                ) : (
+                  <div className="w-80 h-80 bg-gray-200 flex items-center justify-center text-gray-500 rounded-lg shadow-2xl">
+                    No Image Available
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="text-center w-full py-8">
+              <p className="text-gray-500 mb-4">No content available</p>
             </div>
           )}
-        </>
+        </div>
+      ) : (
+        <div className="p-6 bg-white rounded-xl shadow-lg">
+          <div className="mb-4">
+            <label className="block mb-1 font-bold text-gray-700">Title*:</label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              maxLength={100}
+              placeholder="Enter title (max 100 characters)"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">{formData.title.length}/100 characters</p>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block mb-1 font-bold text-gray-700">Content*:</label>
+            <textarea
+              name="content"
+              value={formData.content}
+              onChange={handleChange}
+              className="w-full border border-gray-300 px-4 py-2 rounded-lg h-32 focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              maxLength={800}
+              placeholder="Enter content (max 800 characters)"
+              required
+            />
+            <p className="text-sm text-gray-500">
+              Characters remaining: {charCount} | {formData.content.length}/800 characters
+            </p>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block mb-1 font-bold text-gray-700">Image:</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="w-full border border-gray-300 px-4 py-2 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+          </div>
+          
+          {formData.image && (
+            <div className="mb-6 flex justify-center">
+              <img
+                src={formData.image}
+                alt="Preview"
+                className="w-80 h-80 object-contain rounded-lg border border-gray-200 shadow-md"
+              />
+            </div>
+          )}
+          
+          <div className="flex gap-4">
+            <button
+              onClick={handleCancel}
+              className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-full shadow-lg transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={isAdding ? handleAddContent : handleUpdateContent}
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full shadow-lg transition"
+            >
+              {isAdding ? "Add Content" : "Save Changes"}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
+};
+
+ContentManager.propTypes = {
+  data: PropTypes.arrayOf(
+    PropTypes.shape({
+      idCode: PropTypes.number.isRequired,
+      Title: PropTypes.string.isRequired,
+      Content: PropTypes.string.isRequired,
+      Image: PropTypes.string,
+      ComponentName: PropTypes.string,
+      ComponentIdName: PropTypes.string
+    })
+  ),
 };
 
 export default ContentManager;

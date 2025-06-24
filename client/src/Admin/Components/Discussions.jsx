@@ -50,17 +50,23 @@ const Discussions = () => {
 
   useEffect(() => {
     fetchDiscussions();
-  }, [fetchData]);
+  }, []);
 
   // Filter discussions based on search term
   useEffect(() => {
+    if (!searchTerm) {
+      setFilteredDiscussions(discussions);
+      return;
+    }
+
     const results = discussions.filter((discussion) => {
+      const searchLower = searchTerm.toLowerCase();
       return (
-        discussion.Title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        discussion.UserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        stripHtmlTags(discussion.Content).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        discussion.likeCount.toString().includes(searchTerm) ||
-        discussion.comment.length.toString().includes(searchTerm)
+        (discussion.Title && discussion.Title.toLowerCase().includes(searchLower)) ||
+        (discussion.UserName && discussion.UserName.toLowerCase().includes(searchLower)) ||
+        (discussion.Content && stripHtmlTags(discussion.Content).toLowerCase().includes(searchLower)) ||
+        (discussion.likeCount && discussion.likeCount.toString().includes(searchTerm)) ||
+        (discussion.comment && discussion.comment.length.toString().includes(searchTerm))
       );
     });
     setFilteredDiscussions(results);

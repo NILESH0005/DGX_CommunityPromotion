@@ -3,11 +3,11 @@ import Swal from "sweetalert2";
 import ApiContext from "../../context/ApiContext";
 import { FaTrash } from "react-icons/fa";
 
-
 const ParallaxSection = () => {
   const [parallaxTexts, setParallaxTexts] = useState([]);
   const [activeText, setActiveText] = useState("");
   const [newText, setNewText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { fetchData, userToken } = useContext(ApiContext);
 
   useEffect(() => {
@@ -20,7 +20,6 @@ const ParallaxSection = () => {
     const method = "POST";
     const headers = {
       "Content-Type": "application/json",
-      
     };
     const body = {};
 
@@ -50,39 +49,70 @@ const ParallaxSection = () => {
       return;
     }
 
-    if (parallaxTexts.length < 10) {
-      const endpoint = "home/addParallaxText";
-      const method = "POST";
-      const headers = {
-        "Content-Type": "application/json",
-        "auth-token": userToken,
-      };
+    if (parallaxTexts.length >= 10) {
+      Swal.fire({ 
+        icon: "error", 
+        title: "Limit Reached", 
+        text: "You can only add up to 10 parallax texts." 
+      });
+      return;
+    }
 
-      const body = { componentName: "Parallax", componentIdName: "parallaxText", content: newText };
+    if (!newText.trim()) {
+      Swal.fire("Error", "Please enter some text before adding.", "error");
+      return;
+    }
 
-      try {
-        const response = await fetchData(endpoint, method, body, headers);
+    setIsLoading(true);
 
-        if (response.success) {
-          const newTextObj = { Content: newText, isActive: false, idCode: response.data.id };
-          console.log("idcode:", response.data.id);
-          setParallaxTexts([...parallaxTexts, newTextObj]);
-          setNewText("");
+    const endpoint = "home/addParallaxText";
+    const method = "POST";
+    const headers = {
+      "Content-Type": "application/json",
+      "auth-token": userToken,
+    };
 
+    const body = { 
+      componentName: "Parallax", 
+      componentIdName: "parallaxText", 
+      content: newText.trim() 
+    };
+
+    try {
+      const response = await fetchData(endpoint, method, body, headers);
+
+      if (response.success) {
+        // Clear the input
+        setNewText("");
+        
+        // Show success message
+        Swal.fire({ 
+          icon: "success", 
+          title: "Added!", 
+          text: "New parallax text has been added.", 
+          timer: 1500, 
+          showConfirmButton: false 
+        });
+
+        // Refresh the data from server to get the complete updated list
+        await fetchParallaxTexts();
+        
+        // Now set the newly added text as active
+        // Use the ID from the response
+        if (response.data && response.data.id) {
           await handleSetActiveText(response.data.id);
-
-          Swal.fire({ icon: "success", title: "Added!", text: "New parallax text has been added.", timer: 1500, showConfirmButton: false });
-        } else {
-          Swal.fire("Error", response.message, "error");
         }
-      } catch (error) {
-        console.error("API Request Error:", error);
-        Swal.fire("Error", "Something went wrong!", "error");
+      } else {
+        Swal.fire("Error", response.message, "error");
       }
-    } else {
-      Swal.fire({ icon: "error", title: "Limit Reached", text: "You can only add up to 10 parallax texts." });
+    } catch (error) {
+      console.error("API Request Error:", error);
+      Swal.fire("Error", "Something went wrong!", "error");
+    } finally {
+      setIsLoading(false);
     }
   };
+
   const handleDeleteText = async (idCode) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
@@ -95,7 +125,7 @@ const ParallaxSection = () => {
     });
 
     if (confirm.isConfirmed) {
-      const endpoint = "home/deleteParallaxText"; 
+      const endpoint = "home/deleteParallaxText";
       const method = "POST";
       const headers = {
         "Content-Type": "application/json",
@@ -108,7 +138,7 @@ const ParallaxSection = () => {
 
         if (response.success) {
           Swal.fire("Deleted!", "The text has been removed.", "success");
-          fetchParallaxTexts();
+          await fetchParallaxTexts(); // Refresh data after deletion
         } else {
           Swal.fire("Error", response.message, "error");
         }
@@ -119,9 +149,14 @@ const ParallaxSection = () => {
     }
   };
 
-
   const handleSetActiveText = async (idCode) => {
-    console.log("Setting active text with idCode:", idCode); // Debug
+    console.log("Setting active text with idCode:", idCode);
+    
+    if (!idCode) {
+      console.error("idCode is missing for setting active text");
+      return;
+    }
+
     const endpoint = "home/setActiveParallaxText";
     const method = "POST";
     const headers = {
@@ -134,8 +169,16 @@ const ParallaxSection = () => {
       const response = await fetchData(endpoint, method, body, headers);
 
       if (response.success) {
-        fetchParallaxTexts();
-        Swal.fire({ icon: "success", title: "Updated!", text: "Active parallax text has been updated.", timer: 1500, showConfirmButton: false });
+        // Refresh data to get updated active status
+        await fetchParallaxTexts();
+        
+        Swal.fire({ 
+          icon: "success", 
+          title: "Updated!", 
+          text: "Active parallax text has been updated.", 
+          timer: 1500, 
+          showConfirmButton: false 
+        });
       } else {
         Swal.fire("Error", response.message, "error");
       }
@@ -148,10 +191,12 @@ const ParallaxSection = () => {
   return (
     <div className="w-full flex flex-col items-center p-6">
       <div className="w-full bg-gray-900 text-white text-center py-10 text-2xl font-bold">
-        {activeText}
+        {activeText || "No active parallax text"}
       </div>
+      
       <div className="mt-6 w-full">
         <h2 className="text-lg font-semibold mb-2">Edit Parallax Text</h2>
+        
         <div className="bg-gray-100 p-4 rounded-lg shadow w-full">
           <table className="w-full border-collapse border border-gray-300">
             <thead>
@@ -162,33 +207,43 @@ const ParallaxSection = () => {
               </tr>
             </thead>
             <tbody>
-              {parallaxTexts.map((text, index) => (
-                <tr key={index} className="border">
-                  <td className="border p-2 text-center">{index + 1}</td>
-                  <td className="border p-2">{text.Content}</td>
-                  <td className="border p-2 text-center flex items-center justify-center gap-2">
-                    <button
-                      className={`px-3 py-1 rounded ${activeText === text.Content
-                          ? "bg-gray-400 cursor-not-allowed"
-                          : "bg-green-500 hover:bg-green-600 text-white"
-                        }`}
-                      onClick={() => handleSetActiveText(text.idCode)}
-                      disabled={activeText === text.Content}
-                    >
-                      {activeText === text.Content ? "Active" : "Set as Active"}
-                    </button>
-
-                    <button
-                      className="text-red-600 hover:text-red-800 text-lg px-3"
-                      onClick={() => handleDeleteText(text.idCode)}
-                      title="Delete"
-                    >
-                      <FaTrash />
-                    </button>
+              {parallaxTexts.length === 0 ? (
+                <tr>
+                  <td colSpan="3" className="border p-4 text-center text-gray-500">
+                    No parallax texts available
                   </td>
-
                 </tr>
-              ))}
+              ) : (
+                parallaxTexts.map((text, index) => (
+                  <tr key={text.idCode || index} className="border">
+                    <td className="border p-2 text-center">{index + 1}</td>
+                    <td className="border p-2">{text.Content}</td>
+                    <td className="border p-2 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          className={`px-3 py-1 rounded ${
+                            activeText === text.Content
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-green-500 hover:bg-green-600 text-white"
+                          }`}
+                          onClick={() => handleSetActiveText(text.idCode)}
+                          disabled={activeText === text.Content}
+                        >
+                          {activeText === text.Content ? "Active" : "Set as Active"}
+                        </button>
+
+                        <button
+                          className="text-red-600 hover:text-red-800 text-lg px-3"
+                          onClick={() => handleDeleteText(text.idCode)}
+                          title="Delete"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -200,12 +255,18 @@ const ParallaxSection = () => {
             placeholder="Enter new parallax text..."
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
+            disabled={isLoading}
           />
           <button
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            className={`px-4 py-2 rounded text-white ${
+              isLoading 
+                ? "bg-gray-400 cursor-not-allowed" 
+                : "bg-blue-500 hover:bg-blue-600"
+            }`}
             onClick={addParallaxText}
+            disabled={isLoading}
           >
-            Add Text
+            {isLoading ? "Adding..." : "Add Text"}
           </button>
         </div>
       </div>
