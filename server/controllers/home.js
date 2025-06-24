@@ -89,42 +89,59 @@ export const addParallaxText = async (req, res) => {
 
 export const deleteParallaxText = async (req, res) => {
   let success = false;
+  const userId = req.user.id;
   const { idCode } = req.body;
-  const adminName = req.user?.id;
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    console.error("Validation errors", errors.array());
+    logWarning("Data is not in the right format");
     return res.status(400).json({
       success,
-      errors: errors.array(),
-      message: "Invalid data format",
+      data: errors.array(),
+      message: "Data is not in the right format",
     });
   }
 
   try {
     connectToDatabase(async (err, conn) => {
       if (err) {
-        console.error("Database connection error", err);
+        logError("Failed to connect to database");
         return res.status(500).json({
           success: false,
-          message: "Database connection failed",
+          data: err,
+          message: "Failed to connect to database",
         });
       }
 
       try {
+        // Fetch user details
+        const userQuery = `SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+
+        if (userRows.length === 0) {
+          closeConnection();
+          logWarning("User not found, please login first.");
+          return res.status(400).json({
+            success: false,
+            data: {},
+            message: "User not found, please login first.",
+          });
+        }
+
+        const user = userRows[0];
+
         // 1. Verify the content exists
         const verifyQuery = `SELECT idCode, isActive 
                            FROM tblCMSContent 
                            WHERE idCode = ? 
                            AND ComponentName = 'Parallax'
-                           AND (delStatus IS NULL OR delStatus = 0)`;
+                           AND ISNULL(delStatus, 0) = 0`;
 
-        // For msnodesqlv8, parameters need to be passed as an array of values
         const verifyResult = await queryAsync(conn, verifyQuery, [parseInt(idCode)]);
 
         if (verifyResult.length === 0) {
-          conn.close();
+          closeConnection();
+          logWarning("Content not found or already deleted");
           return res.status(404).json({
             success: false,
             message: "Content not found or already deleted",
@@ -133,7 +150,8 @@ export const deleteParallaxText = async (req, res) => {
 
         // 2. Check if active
         if (verifyResult[0].isActive === 1) {
-          conn.close();
+          closeConnection();
+          logWarning("Deactivate before deleting");
           return res.status(400).json({
             success: false,
             message: "Deactivate before deleting",
@@ -146,47 +164,38 @@ export const deleteParallaxText = async (req, res) => {
                                delOnDt = GETDATE(), 
                                AuthDel = ?,
                                isActive = 0
-                      
                            WHERE idCode = ?`;
 
-        // Parameters must be in the exact order of the placeholders
-        const params = [adminName, parseInt(idCode)];
-        const rows = await queryAsync(conn, deleteQuery, params);
+        const deleteResult = await queryAsync(conn, deleteQuery, [user.Name, parseInt(idCode)]);
 
-        if (rows.length > 0) {
-          success = true;
-          console.log("Parallax text deleted successfully");
-          return res.status(200).json({
-            success,
-            data: {
-              idCode: rows[0].idCode,
-              AuthDel: rows[0].AuthDel,
-              delOnDt: rows[0].delOnDt,
-              delStatus: rows[0].delStatus,
-            },
-            message: "Deleted successfully",
-          });
-        } else {
-          console.log("Failed to delete parallax text");
-          return res.status(404).json({
-            success: false,
-            message: "Failed to delete content",
-          });
-        }
+        success = true;
+        closeConnection();
+        logInfo("Parallax text deleted successfully");
+
+        return res.status(200).json({
+          success,
+          data: {
+            idCode: parseInt(idCode),
+            AuthDel: user.Name
+          },
+          message: "Deleted successfully",
+        });
       } catch (queryErr) {
-        conn.close();
-        console.error("Query error", queryErr);
+        closeConnection();
+        logError("Database Query Error: ", queryErr);
         return res.status(500).json({
           success: false,
-          message: "Database operation failed",
+          data: queryErr,
+          message: "Database Query Error",
         });
       }
     });
   } catch (error) {
-    console.error("Unexpected error", error);
+    logError("Unexpected Error: ", error);
     return res.status(500).json({
       success: false,
-      message: "Server error",
+      data: error,
+      message: "Unexpected Error, check logs",
     });
   }
 };
@@ -272,6 +281,187 @@ export const addContentSection = async (req, res) => {
       success: false,
       data: error,
       message: "Unexpected Error, check logs",
+    });
+  }
+};
+
+export const getContent = async (req, res) => {
+  console.log("Received request for getContent");
+
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        console.error("Database connection failed:", err);
+        return res
+          .status(500)
+          .json({ success: false, message: "Failed to connect to database" });
+      }
+
+      try {
+        const contentQuery = `
+                  SELECT idCode, ComponentName, ComponentIdName, Title, Content, Image, isActive  
+                  FROM tblCMSContent  
+                  WHERE ComponentName = 'ContentSection' AND ISNULL(delStatus, 0) = 0
+              `;
+        const contentResults = await queryAsync(conn, contentQuery);
+
+        if (!contentResults.length) {
+          return res
+            .status(200)
+            .json({ success: true, data: [], message: "No content found" });
+        }
+
+        return res.status(200).json({
+          success: true,
+          data: contentResults,
+          message: "Content fetched successfully",
+        });
+      } catch (queryErr) {
+        console.error("Database query error:", queryErr);
+        return res
+          .status(500)
+          .json({ success: false, message: "Database Query Error" });
+      } finally {
+        closeConnection(); // Ensure DB connection is closed
+      }
+    });
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Unexpected error occurred" });
+  }
+};
+export const updateContentSection = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get user email from authentication
+    console.log("User ID:", userId);
+
+    // Validate request
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array(),
+        message: "Validation failed"
+      });
+    }
+
+    // Destructure with type checking
+    const {
+      id,
+      Title,
+      Content,
+      Image = null,
+      ComponentName = "ContentSection",
+      ComponentIdName = "contentSection"
+    } = req.body;
+
+    // Validate required fields
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid numeric Content ID is required"
+      });
+    }
+
+    if (!Title || !Content) {
+      return res.status(400).json({
+        success: false,
+        message: "Title and Content are required fields"
+      });
+    }
+
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        console.error("DB connection error:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Database connection failed"
+        });
+      }
+
+      try {
+        // First, get the user's name from the database using email ID
+        const userQuery = 'SELECT UserID, Name, isAdmin FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?';
+        const userRows = await queryAsync(conn, userQuery, [userId]);
+        console.log("User Rows:", userRows);
+
+        if (userRows.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: "User not found, please login first.",
+          });
+        }
+
+        const user = userRows[0];
+        const authLstEdit = user.Name; // Get the username for AuthLstEdit
+
+        // 1. Check if content exists
+        const checkQuery = `SELECT idCode FROM tblCMSContent WHERE idCode = ? AND ISNULL(delStatus, 0) = 0`;
+        const [content] = await queryAsync(conn, checkQuery, [Number(id)]);
+        
+        if (!content) {
+          return res.status(404).json({
+            success: false,
+            message: "Content not found"
+          });
+        }
+
+        // 2. Perform update with AuthLstEdit username
+        const updateQuery = `
+          UPDATE tblCMSContent 
+          SET 
+            Title = ?, 
+            Content = ?, 
+            Image = ?, 
+            ComponentName = ?, 
+            ComponentIdName = ?, 
+            AuthLstEdit = ?,
+            editOnDt = GETDATE()
+          WHERE idCode = ?
+        `;
+
+        const result = await queryAsync(conn, updateQuery, [
+          Title,
+          Content,
+          Image,
+          ComponentName,
+          ComponentIdName,
+          authLstEdit, // Username for AuthLstEdit column
+          Number(id)
+        ]);
+
+        if (result.affectedRows === 0) {
+          return res.status(400).json({
+            success: false,
+            message: "No changes were made"
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "Content updated successfully"
+        });
+
+      } catch (error) {
+        console.error("Query error:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Database operation failed",
+          error: error.message
+        });
+      } finally {
+        closeConnection(conn);
+      }
+    });
+
+  } catch (error) {
+    console.error("Server error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
     });
   }
 };
@@ -594,11 +784,11 @@ export const getParallaxContent = async (req, res) => {
         const query = `SELECT idCode, ComponentName, ComponentIdName, Content, isActive  FROM tblCMSContent  WHERE ComponentName = 'Parallax' AND ISNULL(delStatus, 0) = 0 `;
         const results = await queryAsync(conn, query);
         console.log("Query result:", results);
-
+        
         success = true;
         closeConnection();
         logInfo("Parallax content fetched successfully!");
-
+        
         return res.status(200).json({
           success,
           data: results,
@@ -624,139 +814,95 @@ export const getParallaxContent = async (req, res) => {
   }
 };
 
-export const getContent = async (req, res) => {
-  console.log("Received request for getContent");
 
-  try {
-    connectToDatabase(async (err, conn) => {
-      if (err) {
-        console.error("Database connection failed:", err);
-        return res
-          .status(500)
-          .json({ success: false, message: "Failed to connect to database" });
-      }
 
-      try {
-        const contentQuery = `
-                  SELECT idCode, ComponentName, ComponentIdName, Title, Content, Image, isActive  
-                  FROM tblCMSContent  
-                  WHERE ComponentName = 'ContentSection' AND ISNULL(delStatus, 0) = 0
-              `;
-        const contentResults = await queryAsync(conn, contentQuery);
+// export const updateContentSection = async (req, res) => {
+//   let success = false;
+//   console.log("Headers:", req.headers);
+//   const userId = req.user.id;
+//   console.log("User Object:", req.user);
+//   console.log("User ID:", userId);
 
-        if (!contentResults.length) {
-          return res
-            .status(200)
-            .json({ success: true, data: [], message: "No content found" });
-        }
+//   const errors = validationResult(req);
+//   if (!errors.isEmpty()) {
+//     return res.status(400).json({
+//       success,
+//       data: errors.array(),
+//       message: "Data is not in the right format",
+//     });
+//   }
 
-        return res.status(200).json({
-          success: true,
-          data: contentResults,
-          message: "Content fetched successfully",
-        });
-      } catch (queryErr) {
-        console.error("Database query error:", queryErr);
-        return res
-          .status(500)
-          .json({ success: false, message: "Database Query Error" });
-      } finally {
-        closeConnection(); // Ensure DB connection is closed
-      }
-    });
-  } catch (error) {
-    console.error("Unexpected error:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Unexpected error occurred" });
-  }
-};
+//   try {
+//     const { id, title, text, image } = req.body;
+//     console.log("Request Body:", req.body);
 
-export const updateContentSection = async (req, res) => {
-  let success = false;
-  console.log("Headers:", req.headers);
-  const userId = req.user.id;
-  console.log("User Object:", req.user);
-  console.log("User ID:", userId);
+//     if (!id) {
+//       return res
+//         .status(400)
+//         .json({ success, message: "Content ID is required" });
+//     }
 
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success,
-      data: errors.array(),
-      message: "Data is not in the right format",
-    });
-  }
+//     connectToDatabase(async (err, conn) => {
+//       if (err) {
+//         return res.status(500).json({
+//           success: false,
+//           data: err,
+//           message: "Failed to connect to database",
+//         });
+//       }
 
-  try {
-    const { id, title, text, image } = req.body;
-    console.log("Request Body:", req.body);
+//       try {
+//         // Check if the content exists
+//         const checkQuery = `SELECT * FROM tblCMSContent WHERE idCode = ? AND ISNULL(delStatus, 0) = 0`;
+//         const checkRows = await queryAsync(conn, checkQuery, [id]);
+//         console.log("Existing content check result:", checkRows);
 
-    if (!id) {
-      return res
-        .status(400)
-        .json({ success, message: "Content ID is required" });
-    }
+//         if (checkRows.length === 0) {
+//           return res
+//             .status(404)
+//             .json({ success, message: "Content not found or already deleted" });
+//         }
+//         const updateQuery = `UPDATE tblCMSContent SET Title = ?, [Content] = ?, Image = ?, editOnDt = GETDATE() 
+//           WHERE idCode = ?`;
+//         console.log("Update query:", updateQuery);
+//         console.log("Parameters:", [title, text, image, id]);
 
-    connectToDatabase(async (err, conn) => {
-      if (err) {
-        return res.status(500).json({
-          success: false,
-          data: err,
-          message: "Failed to connect to database",
-        });
-      }
+//         const updateResult = await queryAsync(conn, updateQuery, [
+//           title,
+//           text,
+//           image,
+//           id,
+//         ]);
+//         console.log("Update result:", updateResult);
 
-      try {
-        // Check if the content exists
-        const checkQuery = `SELECT * FROM tblCMSContent WHERE idCode = ? AND ISNULL(delStatus, 0) = 0`;
-        const checkRows = await queryAsync(conn, checkQuery, [id]);
-        console.log("Existing content check result:", checkRows);
+//         if ((success = true)) {
+//           return res
+//             .status(200)
+//             .json({ success, message: "Content updated successfully" });
+//         } else {
+//           return res.status(400).json({
+//             success,
+//             message: "Failed to update content. No rows affected.",
+//           });
+//         }
+//       } catch (error) {
+//         console.error("Database Query Error:", error);
+//         return res
+//           .status(500)
+//           .json({ success: false, message: "Internal server error", error });
+//       } finally {
+//         closeConnection();
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Server Error:", error);
+//     return res
+//       .status(500)
+//       .json({ success: false, message: "Something went wrong", error });
+//   }
+// };
 
-        if (checkRows.length === 0) {
-          return res
-            .status(404)
-            .json({ success, message: "Content not found or already deleted" });
-        }
-        const updateQuery = `UPDATE tblCMSContent SET Title = ?, [Content] = ?, Image = ?, editOnDt = GETDATE() 
-          WHERE idCode = ?`;
-        console.log("Update query:", updateQuery);
-        console.log("Parameters:", [title, text, image, id]);
 
-        const updateResult = await queryAsync(conn, updateQuery, [
-          title,
-          text,
-          image,
-          id,
-        ]);
-        console.log("Update result:", updateResult);
-
-        if ((success = true)) {
-          return res
-            .status(200)
-            .json({ success, message: "Content updated successfully" });
-        } else {
-          return res.status(400).json({
-            success,
-            message: "Failed to update content. No rows affected.",
-          });
-        }
-      } catch (error) {
-        console.error("Database Query Error:", error);
-        return res
-          .status(500)
-          .json({ success: false, message: "Internal server error", error });
-      } finally {
-        closeConnection();
-      }
-    });
-  } catch (error) {
-    console.error("Server Error:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Something went wrong", error });
-  }
-};
 
 export const getProjectShowcase = async (req, res) => {
   let success = false;

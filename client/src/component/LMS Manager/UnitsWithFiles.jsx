@@ -352,7 +352,7 @@ const UnitsWithFiles = () => {
       >
         <FiArrowLeft className="text-blue-600 group-hover:text-blue-800 transition-colors" />
         <span className="font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
-          Back to Submodules
+          Back
         </span>
       </button>
       <div

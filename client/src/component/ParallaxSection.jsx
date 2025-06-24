@@ -2,16 +2,13 @@ import React, { useEffect, useState, useContext } from "react";
 import ApiContext from "../context/ApiContext";
 
 const ParallaxSection = () => {
-  const [activeText, setActiveText] = useState(""); // State to store the active text
+  const [activeText, setActiveText] = useState("");
   const { fetchData, userToken } = useContext(ApiContext);
-  console.log("usertoken:", userToken)
+
   useEffect(() => {
-
     fetchActiveParallaxText();
-
   }, []);
-
-
+console.log(typeof yourParam)
   const fetchActiveParallaxText = async () => {
     const endpoint = "home/getParallaxContent";
     const method = "POST";
@@ -19,41 +16,20 @@ const ParallaxSection = () => {
       "Content-Type": "application/json",
       // "auth-token": userToken,
     };
-
-    console.log("headers", headers);
     const body = {};
 
     try {
       const response = await fetchData(endpoint, method, body, headers);
-      console.log("Response:", response);
-
       if (response.success) {
         const active = response.data.find((text) => text.isActive);
         if (active) {
           setActiveText(active.Content);
         }
-      } else {
-        console.error("Error:", response.message);
       }
     } catch (error) {
-      console.error("API Request Error:", error);
+      // Optional: silently handle error or display to user
     }
   };
-  console.log("parallex content :", activeText);
-
-  // // useEffect(() => {
-  // //   const handleScroll = () => {
-  // //     const value = window.scrollY;
-  // //     document.getElementById("circuit_board").style.left = value * 0.5 + "px";
-  // //     document.getElementById("text").style.marginRight = value * 4 + "px";
-  // //     document.getElementById("text").style.marginTop = value * 1.5 + "px";
-  // //     document.getElementById("btn").style.marginTop = value * 1.5 + "px";
-  // //     document.querySelector("header").style.top = value * 0.5 + "px";
-  // //   };
-
-  //   window.addEventListener("scroll", handleScroll);
-  //   return () => window.removeEventListener("scroll", handleScroll);
-  // }, []);
 
   return (
     <section className="relative w-full h-screen flex justify-center items-center overflow-hidden">
