@@ -7,38 +7,35 @@ dotenv.config()
 
 
 export const discussionpost = async (req, res) => {
-    console.log("invoming req body", req.body);
+    console.log("incoming req body", req.body);
     let success = false;
-
     const userId = req.user.id;
-    console.log(userId)
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         const warningMessage = "Data is not in the right format";
-        logWarning(warningMessage); // Log the warning
+        logWarning(warningMessage);
         res.status(400).json({ success, data: errors.array(), message: warningMessage });
         return;
     }
 
     try {
-        console.log(req.body)
         let { title, content, image, likes, comment, tags, url, visibility, reference } = req.body;
         const threadReference = reference ?? 0;
-        title = title ?? null
-        content = content ?? null
-        image = image ?? null
-        likes = likes ?? null
-        comment = comment ?? null
-        tags = tags ?? null
-        url = url ?? null
-        visibility = visibility ?? null
+        title = title ?? null;
+        content = content ?? null;
+        image = image ?? null;
+        likes = likes ?? null;
+        comment = comment ?? null;
+        tags = tags ?? null;
+        url = url ?? null;
+        visibility = visibility ?? null;
 
         // Connect to the database
         connectToDatabase(async (err, conn) => {
             if (err) {
                 const errorMessage = "Failed to connect to database";
-                logError(err); // Log the error
+                logError(err);
                 res.status(500).json({ success: false, data: err, message: errorMessage });
                 return;
             }
@@ -46,67 +43,97 @@ export const discussionpost = async (req, res) => {
             try {
                 const query = `SELECT UserID, Name FROM Community_User WHERE isnull(delStatus,0) = 0 AND EmailId = ?`;
                 const rows = await queryAsync(conn, query, [userId]);
-                // console.log(rows)
 
                 if (rows.length > 0) {
-
-                    if (likes !== null) {
-                        const likeExistsQuery = `select DiscussionID from Community_Discussion where ISNULL(delStatus,0)=0 and Reference= ? and UserID = ? and Likes is not null;`
-                        const likeExists = await queryAsync(conn, likeExistsQuery, [threadReference, rows[0].UserID])
-                        if (likeExists.length > 0) {
-                            // console.log(likeExists[0].DiscussionID)
-                            const updateLikeQuery = `UPDATE Community_Discussion SET Likes = ?, AuthLstEdit= ?, editOnDt= GETDATE() WHERE ISNULL(delStatus, 0) = 0 AND DiscussionID = ?`
-                            const updateLike = await queryAsync(conn, updateLikeQuery, [likes, rows[0].Name, likeExists[0].DiscussionID])
-                            const infoMessage = "like Posted Successfully"
-                            closeConnection();
-                            res.status(200).json({ success: true, data: {}, message: infoMessage });
-                            return
+                    // Get visibility ID from tblDDReferences
+                    let visibilityId = null;
+                    if (visibility) {
+                        const visibilityQuery = `SELECT idCode FROM tblDDReferences WHERE ddCategory = 'Privacy' AND ddValue = ? AND ISNULL(delStatus,0) = 0`;
+                        const visibilityResult = await queryAsync(conn, visibilityQuery, [visibility]);
+                        if (visibilityResult.length > 0) {
+                            visibilityId = visibilityResult[0].idCode;
                         }
                     }
+
+                    if (likes !== null) {
+                        const likeExistsQuery = `SELECT DiscussionID FROM Community_Discussion WHERE ISNULL(delStatus,0)=0 AND Reference=? AND UserID=? AND Likes IS NOT NULL;`;
+                        const likeExists = await queryAsync(conn, likeExistsQuery, [threadReference, rows[0].UserID]);
+                        if (likeExists.length > 0) {
+                            const updateLikeQuery = `UPDATE Community_Discussion SET Likes=?, AuthLstEdit=?, editOnDt=GETDATE() WHERE ISNULL(delStatus,0)=0 AND DiscussionID=?`;
+                            await queryAsync(conn, updateLikeQuery, [likes, rows[0].Name, likeExists[0].DiscussionID]);
+                            closeConnection();
+                            res.status(200).json({ success: true, data: {}, message: "Like Posted Successfully" });
+                            return;
+                        }
+                    }
+
                     const discussionPostQuery = `
-                    INSERT INTO Community_Discussion 
-                    (UserID, Title, Content, Image, Likes, Comment, Tag, Visibility, Reference, ResourceUrl, AuthAdd, AddOnDt, delStatus) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?); 
+                        INSERT INTO Community_Discussion 
+                        (UserID, Title, Content, Image, Likes, Comment, Tag, Visibility, Reference, ResourceUrl, AuthAdd, AddOnDt, delStatus) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?); 
                     `;
-                    const discussionPost = await queryAsync(conn, discussionPostQuery, [rows[0].UserID, title, content, image, likes, comment, tags, visibility, threadReference, url, rows[0].Name, 0])
-                    const lastInsertedIdQuerry = `select top 1 DiscussionID, Visibility from Community_Discussion where ISNULL(delStatus,0)=0 order by DiscussionID desc;`
-                    const lastInsertedId = await queryAsync(conn, lastInsertedIdQuerry)
-                    const lstInsertedvisibilityValue = `SELECT ddValue FROM tblDDReferences WHERE idCode = 1 AND ISNULL(delStatus,0) = 0`;
-                    // const lstInserterterVal = await queryAsync(conn, lstInsertedvisibilityValue, [lastInsertedId[0].Visibility])
-                    const lstInserterterVal = await queryAsync(conn, lstInsertedvisibilityValue, [lastInsertedId[0].Visibility]);
-                    console.log("val", lstInserterterVal[0].ddValue)
+                    await queryAsync(conn, discussionPostQuery, [
+                        rows[0].UserID,
+                        title,
+                        content,
+                        image,
+                        likes,
+                        comment,
+                        tags,
+                        visibilityId,  // Store the ID instead of the string
+                        threadReference,
+                        url,
+                        rows[0].Name,
+                        0
+                    ]);
+
+                    const lastInsertedIdQuery = `SELECT TOP 1 DiscussionID, Visibility FROM Community_Discussion WHERE ISNULL(delStatus,0)=0 ORDER BY DiscussionID DESC;`;
+                    const lastInsertedId = await queryAsync(conn, lastInsertedIdQuery);
+
+                    const lstInsertedVisibilityValue = `SELECT ddValue FROM tblDDReferences WHERE idCode=? AND ISNULL(delStatus,0)=0`;
+                    const visibilityValue = await queryAsync(conn, lstInsertedVisibilityValue, [lastInsertedId[0].Visibility]);
+
                     success = true;
                     closeConnection();
-                    const infoMessage = "Disscussion Posted Successfully"
-                    logInfo(infoMessage)
-                    res.status(200).json({ success, data: { postId: lastInsertedId[0].DiscussionID, visibility: { value: lstInserterterVal[0].ddValue, id: lastInsertedId[0].Visibility } }, message: infoMessage });
-                    return
+                    const infoMessage = "Discussion Posted Successfully";
+                    logInfo(infoMessage);
+                    res.status(200).json({
+                        success,
+                        data: {
+                            postId: lastInsertedId[0].DiscussionID,
+                            visibility: {
+                                value: visibilityValue[0]?.ddValue || null,
+                                id: lastInsertedId[0].Visibility
+                            }
+                        },
+                        message: infoMessage
+                    });
+                    return;
                 } else {
                     closeConnection();
-                    const warningMessage = "User not found login first"
-                    logWarning(warningMessage)
+                    const warningMessage = "User not found login first";
+                    logWarning(warningMessage);
                     res.status(200).json({ success: false, data: {}, message: warningMessage });
-                    return
+                    return;
                 }
             } catch (queryErr) {
                 closeConnection();
                 console.error("Database Query Error:", queryErr);
-                logError(queryErr)
+                logError(queryErr);
                 res.status(500).json({ success: false, data: queryErr, message: 'Something went wrong please try again' });
-                return
+                return;
             }
         });
     } catch (error) {
-        logError(error)
+        logError(error);
         return res.status(500).json({ success: false, data: {}, message: 'Something went wrong please try again' });
-
     }
-}
+};
 
 export const getdiscussion = async (req, res) => {
     let success = false;
     console.log("user is", req.body);
-    
+
     const userId = req.body.user;
     console.log("Received request for getdiscussion. User ID:", userId)
     const errors = validationResult(req);
@@ -140,18 +167,20 @@ export const getdiscussion = async (req, res) => {
                 }
 
                 const discussionGetQuery = `SELECT 
-                        *
-                    FROM 
-                        Community_Discussion d
-                    JOIN 
-                        tblDDReferences r ON d.Visibility = r.idCode
-                    WHERE 
-                        ISNULL(d.delStatus, 0) = 0
-                        AND r.ddCategory = 'Privacy'
-                        AND r.ddValue = 'Public'
-                        AND d.Reference = 0
-                    ORDER BY 
-                        d.AddOnDt DESC;
+                    d.*,
+                    r.ddValue AS VisibilityName
+                FROM 
+                    Community_Discussion d
+                JOIN 
+                    tblDDReferences r ON TRY_CAST(d.Visibility AS INT) = r.idCode
+                WHERE 
+                    ISNULL(d.delStatus, 0) = 0
+                    AND d.Reference = 0
+                    AND r.ddCategory = 'Privacy'
+                    AND r.ddValue = 'Public'
+                    AND TRY_CAST(d.Visibility AS INT) IS NOT NULL
+                ORDER BY 
+                    d.AddOnDt DESC;
                     `;
                 const discussionGet = await queryAsync(conn, discussionGetQuery);
                 // console.log("Discussion Get Result:", discussionGet); // Log discussionGet

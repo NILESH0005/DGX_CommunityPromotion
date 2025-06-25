@@ -10,8 +10,7 @@ const Footer = () => {
             <a href="/">
               <img className="w-auto h-7" src={images.gilogowhite} alt="GiVenture Logo" />
             </a>
-            <div className="hidden md:block border-l border-gray-400 h-10 mx-4"></div>
-
+            <div className="hidden md:block border-l border-gray-400 opacity-60 h-18 mx-4"></div>
 
             <div className="flex space-x-6">
               {[

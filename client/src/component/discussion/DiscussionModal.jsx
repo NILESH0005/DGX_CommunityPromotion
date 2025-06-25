@@ -4,8 +4,9 @@ import ApiContext from "../../context/ApiContext.jsx";
 import images from "../../../public/images.js";
 import Swal from 'sweetalert2';
 
-const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
-  const [dissComments, setDissComments] = useState(discussion.comment || []); // Initialize with discussion comments
+const DiscussionModal = ({ isOpen, onRequestClose, discussion, setDemoDiscussion, setDemoDiscussions }) => {
+  const setDiscussionState = setDemoDiscussion || setDemoDiscussions;
+  const [dissComments, setDissComments] = useState(discussion.comment || []);
   const [newComment, setNewComment] = useState("");
   const [replyTexts, setReplyTexts] = useState({});
   const { fetchData, userToken, user } = useContext(ApiContext);
@@ -22,7 +23,7 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
     }
 
     if (userToken) {
-      const endpoint = "discussion/discussionpost"; // Ensure this is the correct API
+      const endpoint = "discussion/discussionpost";
       const method = "POST";
       const headers = {
         'Content-Type': 'application/json',
@@ -34,6 +35,7 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
 
       try {
         const data = await fetchData(endpoint, method, body, headers);
+        console.log("API Response:", data); // Debug log
 
         if (!data.success) {
           setLoading(false);
@@ -41,26 +43,39 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
             icon: 'error',
             title: 'Oops...',
             text: `Error posting comment: ${data.message}`,
-          }); return;
+          });
+          return;
         }
 
         // Create a new comment object
         const newCommentObj = {
           UserID: user.UserID,
           UserName: user.Name,
-          DiscussionID: data.postId,
+          DiscussionID: data.data?.postId || data.postId || Date.now(), // Handle both response structures
           timestamp: new Date().toISOString(),
           Comment: newComment,
-          comment: [], // Initialize with no replies
+          comment: [],
           likeCount: 0,
-          UserLike: 0,
+          userLike: 0,
         };
 
-        // Update the state immediately
-        setDissComments((prev) => [newCommentObj, ...prev]);
+        // Update the parent state
+        setDemoDiscussion(prevDiscussions =>
+          prevDiscussions.map(item =>
+            item.DiscussionID === discussion.DiscussionID
+              ? {
+                ...item,
+                comment: [newCommentObj, ...item.comment]
+              }
+              : item
+          )
+        );
 
+        // Update local state
+        setDissComments(prev => [newCommentObj, ...prev]);
         setNewComment("");
         setLoading(false);
+
         Swal.fire({
           icon: 'success',
           title: 'Success!',
@@ -68,6 +83,7 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
         });
       } catch (error) {
         setLoading(false);
+        console.error("Error posting comment:", error);
         Swal.fire({
           icon: 'error',
           title: 'Oops...',
@@ -95,7 +111,7 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
     }
 
     if (userToken) {
-      const endpoint = "discussion/discussionpost"; 
+      const endpoint = "discussion/discussionpost";
       const method = "POST";
       const headers = {
         "Content-Type": "application/json",
@@ -110,6 +126,7 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
 
       try {
         const data = await fetchData(endpoint, method, body, headers);
+        console.log("Reply API Response:", data); // Debug log
 
         if (!data.success) {
           setLoading(false);
@@ -132,7 +149,26 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
           comment: [],
         };
 
-        setDissComments((prev) => {
+        // Update parent state - use discussion prop instead of selectedDiscussion
+        setDemoDiscussion(prevDiscussions =>
+          prevDiscussions.map(item => {
+            if (item.DiscussionID === discussion.DiscussionID) {
+              const updatedComments = [...item.comment];
+              updatedComments[commentIndex].comment = [
+                ...updatedComments[commentIndex].comment,
+                newReplyObj
+              ];
+              return {
+                ...item,
+                comment: updatedComments
+              };
+            }
+            return item;
+          })
+        );
+
+        // Update local state
+        setDissComments(prev => {
           const updatedComments = [...prev];
           updatedComments[commentIndex].comment = [
             ...updatedComments[commentIndex].comment,
@@ -141,8 +177,8 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
           return updatedComments;
         });
 
-        setReplyTexts((prevState) => ({
-          ...prevState,
+        setReplyTexts(prev => ({
+          ...prev,
           [commentIndex]: "",
         }));
 
@@ -154,6 +190,7 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
         });
       } catch (error) {
         setLoading(false);
+        console.error("Error posting reply:", error);
         Swal.fire({
           icon: 'error',
           title: 'Oops...',
@@ -204,16 +241,11 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
                   ×{" "}
                 </button>
               </div>
-
-              {/* Post/Discussion Section */}
               <div className="flex flex-col sm:flex-row flex-grow h-full overflow-auto">
-                {/* Content Section (Top part) */}
                 <div className="w-full sm:w-1/2 p-2 sm:p-4 border-b sm:border-b-0 sm:border-r border-gray-200 overflow-auto flex-grow">
                   <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">
                     {discussion.title}
                   </h2>
-
-                  {/* Image */}
                   {discussion.Image && (
                     <div className="max-w-sm mx-auto mb-4 sm:mb-4">
                       <img
@@ -308,8 +340,6 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
                           })}</span>
                         </div>
                         <div className="text-md sm:text-lg">{comment.Comment}</div>
-
-                        {/* Rendering Replies */}
                         <div>
                           {comment.comment &&
                             comment.comment.map((reply, replyIndex) => (
@@ -325,8 +355,6 @@ const DiscussionModal = ({ isOpen, onRequestClose, discussion }) => {
                               </div>
                             ))}
                         </div>
-
-                        {/* Reply Input */}
                         <div className="p-2 sm:p-4 border-t border-gray-200 flex flex-wrap">
                           <textarea
                             rows={1}

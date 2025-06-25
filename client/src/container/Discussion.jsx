@@ -1,46 +1,54 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { FaSearch, FaComment, FaTrophy } from 'react-icons/fa';
-import { toast } from "react-toastify";
+import { FaSearch, FaComment, FaWindowClose, FaTrophy } from 'react-icons/fa';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ApiContext from '../context/ApiContext.jsx';
-import DiscussionModal from '../component/discussion/DiscussionModal';
+import DiscussionModal from '../component/discussion/DiscussionModal.jsx';
+import { compressImage } from '../utils/compressImage.js';
 import { AiFillLike, AiOutlineLike, AiOutlineComment } from "react-icons/ai";
 import { useCallback } from 'react';
-import Skeleton from 'react-loading-skeleton';
-import { Tooltip } from 'react-tooltip';
-import AddDiscussion from '../component/discussion/AddDiscussion.jsx';
-import Swal from 'sweetalert2';
-import { useNavigate } from 'react-router-dom';
+import Skeleton from 'react-loading-skeleton'; // Import Skeleton
+import 'react-loading-skeleton/dist/skeleton.css'; // Import Skeleton styles
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 const Discussion = () => {
   const { fetchData, userToken, user } = useContext(ApiContext);
   const [demoDiscussions, setDemoDiscussions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Loading state
+
+  useEffect(() => {
+    // Simulating data fetching
+    const loadEvents = async () => {
+      setIsLoading(true);
+      // Simulate network delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setIsLoading(false);
+    };
+
+    loadEvents();
+  }, []);
   const [likeCount, setLikeCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [tags, setTags] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [links, setLinks] = useState('');
+  const [linkInput, setLinkInput] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
   const [discussions, setDiscussions] = useState([]);
+  const [privacy, setPrivacy] = useState('private');
   const [selectedDiscussion, setSelectedDiscussion] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [communityHighlights, setCommunityHighlights] = useState([]);
-  const [topUsers, setTopUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [allDiscussions, setAllDiscussions] = useState([]);
-  const [filteredDiscussions, setFilteredDiscussions] = useState([]);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const loadEvents = async () => {
-      setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setIsLoading(false);
-    };
-    loadEvents();
-  }, []);
+  const [communityHighlights, setCommunityHighlights] = useState([])
+  const [topUsers, setTopUsers] = useState([])
 
   const getCommunityHighlights = (discussions) => {
     const sortedDiscussions = discussions.sort((a, b) => b.comment.length - a.comment.length);
@@ -69,148 +77,152 @@ const Discussion = () => {
     return usersArray.sort((a, b) => b.count - a.count).slice(0, 5);
   };
 
-  const fetchDiscussionData = (userEmail) => {
+  useEffect(() => {
     try {
-      const body = userEmail ? { user: userEmail } : { user: null };
-      const endpoint = "discussion/getdiscussion";
+      const fetchDiscussionData = (userEmail) => {
+        try {
+          const body = userEmail ? { user: userEmail } : { user: null };
+          const endpoint = "discussion/getdiscussion";
+          const method = "POST";
+          const headers = {
+            'Content-Type': 'application/json',
+          };
+
+          setLoading(true);
+
+          console.log(endpoint, headers, body)
+          fetchData(endpoint, method, body, headers)
+            .then(result => {
+              if (result && result.data) {
+                return result.data;
+              } else {
+                // return
+                throw new Error("Invalid data format");
+              }
+            })
+            .then(data => {
+              if (data && data.updatedDiscussions) {
+                setDemoDiscussions(data.updatedDiscussions);
+                const highlights = getCommunityHighlights(data.updatedDiscussions);
+                setCommunityHighlights(highlights)
+                const users = getTopUsersByDiscussions(data.updatedDiscussions);
+                setTopUsers(users)
+              } else {
+                // return
+                throw new Error("Missing updatedDiscussions in response data");
+              }
+              setLoading(false);
+            })
+            .catch(error => {
+              setLoading(false);
+              toast.error(`Something went wrong: ${error.message}`, {
+                position: "top-center",
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+                theme: "light",
+              });
+            });
+        } catch (error) {
+          console.log(error)
+        }
+      };
+      if (userToken && user) {
+        fetchDiscussionData(user.EmailId);
+      } else {
+        fetchDiscussionData(null);
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }, [user, userToken, fetchData]);
+
+
+
+  const searchDiscussion = useCallback(async (searchTerm, userId) => {
+    try {
+      const body = { searchTerm, userId }; // Match the backend expected structure
+      const endpoint = "discussion/searchdiscussion";
       const method = "POST";
       const headers = {
         'Content-Type': 'application/json',
       };
 
       setLoading(true);
-      fetchData(endpoint, method, body, headers)
-        .then(result => {
-          console.log("result is", result)
-          if (result && result.data) {
-            return result.data;
-          } else {
-            throw new Error("Invalid data format");
-          }
-        })
-        .then(data => {
-          if (data && data.updatedDiscussions) {
-            setAllDiscussions(data.updatedDiscussions);
-            setFilteredDiscussions(data.updatedDiscussions);
-            const highlights = getCommunityHighlights(data.updatedDiscussions);
-            setCommunityHighlights(highlights);
-            const users = getTopUsersByDiscussions(data.updatedDiscussions);
-            setTopUsers(users);
-          } else {
-            throw new Error("Missing updatedDiscussions in response data");
-          }
-          setLoading(false);
-        })
-        .catch(error => {
-          setLoading(false);
-          console.error(`Something went wrong: ${error.message}`);
-          toast.error("Failed to load discussions");
-        });
+      const result = await fetchData(endpoint, method, body, headers);
+      console.log("API Response:", result);
+      if (result && result.data && result.data.updatedDiscussions) {
+        setDemoDiscussions(result.data.updatedDiscussions);
+      } else {
+        toast.error("No discussions found.");
+      }
+      setLoading(false);
     } catch (error) {
-      console.log(error);
-      toast.error("An error occurred while fetching discussions");
+      setLoading(false);
+      toast.error(`Something went wrong: ${error.message}`);
     }
-  };
+  }, [fetchData]);
 
-  useEffect(() => {
-    if (userToken && user) {
-      setIsLoggedIn(true);
-      fetchDiscussionData(user.EmailId);
-    } else {
-      setIsLoggedIn(false);
-      fetchDiscussionData(null);
-    }
-  }, [user, userToken]);
 
-  const filterDiscussions = (query) => {
-    if (!query.trim()) {
-      setFilteredDiscussions(allDiscussions);
-      return;
-    }
-
-    const lowerCaseQuery = query.toLowerCase();
-    const filtered = allDiscussions.filter(discussion => {
-      return (
-        (discussion.Title && discussion.Title.toLowerCase().includes(lowerCaseQuery)) ||
-        (discussion.Content && discussion.Content.toLowerCase().includes(lowerCaseQuery)) ||
-        (discussion.Tag && discussion.Tag.toLowerCase().includes(lowerCaseQuery)) ||
-        (discussion.UserName && discussion.UserName.toLowerCase().includes(lowerCaseQuery))
-      );
-    });
-
-    setFilteredDiscussions(filtered);
-  };
-
-  const handleSearchChange = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    filterDiscussions(query);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      filterDiscussions(searchQuery);
-    }
-  };
-
-  const checkAuthAndNavigate = () => {
-    if (!userToken) {
-      Swal.fire({
-        title: 'Login Required',
-        text: 'You need to login to perform this action',
-        icon: 'warning',
-        showCancelButton: true,
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-      }).then((result) => {
-        if (result.isConfirmed) {
-          navigate('/SignInn');
-        }
-      });
-      return false;
-    }
-    return true;
-  };
 
   const handleAddLike = async (id, userLike) => {
-    if (!checkAuthAndNavigate()) return;
-
-    const endpoint = "discussion/discussionpost";
-    const method = "POST";
-    const headers = {
-      'Content-Type': 'application/json',
-      'auth-token': userToken
-    };
-    const like = userLike == 1 ? 0 : 1
-    const body = {
-      "reference": id,
-      "likes": like
-    };
-    console.log(body)
-    try {
-      const data = await fetchData(endpoint, method, body, headers)
-      if (!data.success) {
-        console.log("Error occured while liking the post")
-      } else if (data.success) {
-        const updatedData = demoDiscussions.map((item) =>
-          item.DiscussionID === id ? { ...item, userLike: like, likeCount: like === 1 ? item.likeCount + 1 : item.likeCount - 1 } : item
-        );
-        setDemoDiscussions(updatedData)
-        console.log(updatedData)
-        console.log(demoDiscussions)
+    // console.log(id, userLike)
+    if (userToken) {
+      const endpoint = "discussion/discussionpost";
+      const method = "POST";
+      const headers = {
+        'Content-Type': 'application/json',
+        'auth-token': userToken
+      };
+      const like = userLike == 1 ? 0 : 1
+      const body = {
+        "reference": id,
+        "likes": like
+      };
+      console.log(body)
+      try {
+        const data = await fetchData(endpoint, method, body, headers)
+        if (!data.success) {
+          // console.log(data)
+          console.log("Error occured while liking the post")
+        } else if (data.success) {
+          // console.log(data);
+          const updatedData = demoDiscussions.map((item) =>
+            item.DiscussionID === id ? { ...item, userLike: like, likeCount: like === 1 ? item.likeCount + 1 : item.likeCount - 1 } : item
+          );
+          setDemoDiscussions(updatedData)
+          console.log(updatedData)
+          console.log(demoDiscussions)
+        }
+      } catch (error) {
+        console.log(error);
       }
-    } catch (error) {
-      console.log(error);
     }
   };
+
+  const hotTopics = [
+    { title: "NVIDIA Innovations", link: "#", description: "Discover the latest advancements from NVIDIA and how they are shaping the future of technology." },
+    { title: "NVIDIA-H100: Performance Unleashed", link: "#", description: "Discuss the performance of the NVIDIA-H100 GPU. Share your experiences, benchmarks, and use cases to help others understand its capabilities and benefits." },
+    { title: "NVIDIA Ecosystem", link: "#", description: "Engage with other community members to discuss how various NVIDIA tools and platforms integrate with each other. Share tips, tricks, and best practices for maximizing the NVIDIA ecosystem." },
+    { title: "Success Stories with NVIDIA-H100", link: "#", description: "Exchange stories and insights about how the NVIDIA-H100 is being utilized in different industries. Discuss successful projects and explore innovative applications of this powerful GPU." },
+    { title: "Future of GPU Technology", link: "#", description: "Speculate on the future of GPU technology and NVIDIA's role in it. What advancements do you anticipate, and how do you see them shaping the tech landscape?" }
+  ];
+
+  // const topUsers = [
+  //   { name: "User 1", points: 1200 },
+  //   { name: "User 2", points: 1100 },
+  //   { name: "User 3", points: 1050 },
+  //   { name: "User 4", points: 1020 },
+  //   { name: "User 5", points: 980 }
+  // ];
 
   const toggleNav = () => setIsNavOpen(!isNavOpen);
   const handleLike = () => setLikeCount(likeCount + 1);
 
   const handleComment = (discussion) => {
-    if (!checkAuthAndNavigate()) return;
-
     setCommentCount(prevCount => prevCount + 1);
     openModal(discussion);
   };
@@ -225,61 +237,226 @@ const Discussion = () => {
     setIsFormOpen(false);
   };
 
+  const handleTagInputChange = (e) => setTagInput(e.target.value);
+
+  const handleTagInputKeyPress = (e) => {
+    if (e.key === 'Enter' && tagInput.trim() !== '') {
+      e.preventDefault();
+      setTags(tags + ',' + tagInput.trim());
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    const tagArray = tags.split(',');
+    const filteredTags = tagArray.filter(tag => tag !== tagToRemove);
+    const newTags = filteredTags.join(',');
+    setTags(newTags);
+  }
+  const handleImageChange = async (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file) {
+        const compressedFile = await compressImage(file);
+        setSelectedImage(compressedFile);
+      }
+    }
+  };
+
+  const handleLinkInputChange = (e) => setLinkInput(e.target.value);
+
+  const handleLinkInputKeyPress = (e) => {
+    if (e.key === 'Enter' && linkInput.trim() !== '') {
+      e.preventDefault();
+      setLinks(links + ',' + linkInput.trim());
+      setLinkInput('');
+    }
+  };
+
+  const removeLink = (linkToRemove) => {
+    const linkArray = links.split(',');
+    const filteredLinks = linkArray.filter(link => link !== linkToRemove);
+    const newLinks = filteredLinks.join(',');
+    setLinks(newLinks);
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const endpoint = "discussion/discussionpost";
+
+    const method = "POST";
+    const body = {
+      title,
+      content,
+      tags: tags,
+      url: links,
+      image: selectedImage,
+      visibility: privacy
+
+    };
+    const headers = {
+      'Content-Type': 'application/json',
+      'auth-token': userToken
+    };
+    setLoading(true);
+
+    try {
+      const data = await fetchData(endpoint, method, body, headers);
+      if (!data.success) {
+        setLoading(false);
+        toast.error(`Error in posting discussion try again: ${data.message}`, {
+          position: "top-center",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+      } else if (data.success) {
+        console.log(data);
+        setLoading(false);
+        if (privacy == "private") {
+          toast.success("Private Discussion Posted Successfully", {
+            position: "center",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: "light",
+          });
+        } else {
+          const newDiscussion = {
+            DiscussionID: data.postID,
+            Title: title,
+            Content: content,
+            Tag: tags,
+            ResourceUrl: links,
+            Image: selectedImage,
+            Visibility: privacy,
+            comment: []
+          };
+          setDemoDiscussions([newDiscussion, ...demoDiscussions]);
+          toast.success("Disscussion Post Successfully", {
+            position: "top-center",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: "light",
+            style: {
+              backgroundColor: 'green',
+              color: 'white',
+            }
+          });
+        }
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log(error);
+
+      toast.error(`On catching error: Something went wrong, try again`, {
+        position: "top-center",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+    }
+    setTitle('');
+    setContent('');
+    setTags('');
+    setLinks('');
+    setSelectedImage(null);
+    setTagInput('');
+    setLinkInput('');
+    setIsFormOpen(false);
+  };
+
+  console.log(demoDiscussions);
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleKeyDown = async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent default form submission
+      await searchDiscussion(searchQuery); // Trigger the search
+    }
+  };
+
   return (
     <div>
+
+      <ToastContainer style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
+
       <header className="flex flex-wrap sm:justify-start sm:flex-nowrap w-full bg-DGXblue text-sm py-4">
-        <nav className="max-w-[85rem] w-full mx-auto px-4 flex flex-wrap basis-full items-center justify-between" aria-label="Global">
-          <div className="sm:order-4 flex items-center w-full sm:w-auto mt-0 sm:mt-0 sm:ml-4">
+        <nav className="max-w-[85rem] w-full mx-auto px-4 flex flex-wrap basis-full items-center justify-between " aria-label="Global">
+          <div className="sm:order-4 flex items-center w-full sm:w-auto mt-0 sm:mt-0 sm:ml-4 ">
             {isLoading ? (
               <Skeleton
-                height="2.16rem"
-                width={250}
+                height="2.16rem" // Adjusted to match the height of the input element
+                width={250} // Adjusted to match the width of the input element
                 className="w-full sm:w-1/2 bg-gray-500 rounded-lg mb-1"
               />
             ) : (
               <div className="relative w-full sm:w-64 mb-2">
                 <input
                   type="text"
-                  className="w-full py-2 pl-10 pr-10 bg-white border border-gray-200 rounded-lg shadow-sm text-gray-800 focus:border-DGXgreen focus:ring-DGXgreen"
-                  placeholder="Search discussions..."
+                  className="w-full py-2 pl-10 pr-4 bg-white border border-gray-200 rounded-lg shadow-sm text-gray-800 focus:border-DGXgreen focus:ring-DGXgreen"
+                  placeholder="Search..."
                   value={searchQuery}
-                  onChange={handleSearchChange}
+                  onChange={handleSearchChange} // Call this directly without the arrow function
                   onKeyDown={handleKeyDown}
-                  data-tooltip-id="search-tooltip"
                 />
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <FaSearch className="text-gray-400" />
                 </div>
-                {searchQuery && (
-                  <button 
-                    onClick={() => {
-                      setSearchQuery("");
-                      filterDiscussions("");
-                    }}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  >
-                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-                <Tooltip id="search-tooltip" place="top" effect="solid">
-                  Search by title, content, tags, or author
-                </Tooltip>
               </div>
             )}
           </div>
 
+          {/* <div className="sm:order-3 flex items-center gap-x-2">
+            <button
+              type="button"
+              className="sm:hidden hs-collapse-toggle p-2.5 inline-flex justify-center items-center gap-x-2 rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+              aria-controls="navbar-alignment"
+              aria-label="Toggle navigation"
+              onClick={toggleNav}
+            >
+              <svg className={`${isNavOpen ? 'hidden' : 'block'} flex-shrink-0 size-4`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" x2="21" y1="6" y2="6" />
+                <line x1="3" x2="21" y1="12" y2="12" />
+                <line x1="3" x2="21" y1="18" y2="18" />
+              </svg>
+              <svg className={`${isNavOpen ? 'block' : 'hidden'} flex-shrink-0 size-4`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div> */}
           <div id="navbar-alignment" className={`${isNavOpen ? 'block' : 'hidden'} hs-collapse overflow-hidden transition-all duration-300 basis-full grow sm:grow-0 sm:basis-auto sm:block sm:order-2`}>
+            {/* <div className="flex flex-col gap-6 mt-5 sm:flex-row sm:items-center sm:mt-0 sm:ps-5">
+              <a className="text-lg font-bold text-DGXwhite cursor-pointer" onClick={() => setSelectedSection('all')} aria-current="page">All</a>
+              <a className="text-lg font-bold text-DGXwhite cursor-pointer" onClick={() => setSelectedSection('top')}>Top Discussions</a>
+              <a className="text-lg font-bold text-DGXwhite cursor-pointer" onClick={() => setSelectedSection('recent')}>Recent Discussions</a>
+            </div> */}
           </div>
-          
           {isLoading ? (
             <Skeleton
-              height={35}
+              height={35} // Adjusted to match the height of the input element
               width={150}
               className="w-full xs:w-full sm:w-64 bg-lime-500 rounded-lg mb-1 sm:mt-4"
             />
-          ) : user ? (
+          ) : (
             <button
               type="button"
               className="py-2 xs:w-full px-3 gap-x-2 text-sm font-bold rounded-lg bg-DGXgreen text-DGXwhite shadow-sm hover:bg-DGXblue hover:border-DGXgreen border border-DGXblue disabled:opacity-50 disabled:pointer-events-none"
@@ -287,19 +464,10 @@ const Discussion = () => {
             >
               Start a New Topic +
             </button>
-          ) : (
-            <a href="/SignInn" className="font-semibold text-DGXwhite bd">
-              <button
-                type="button"
-                className="py-2 xs:w-full px-3 gap-x-2 text-sm font-bold rounded-lg bg-DGXgreen text-DGXwhite shadow-sm hover:bg-DGXblue hover:border-DGXgreen border border-DGXblue disabled:opacity-50 disabled:pointer-events-none"
-              >
-                Start a New Topic +
-              </button>
-            </a>
           )}
+
         </nav>
       </header>
-
       {modalIsOpen && selectedDiscussion && (
         <DiscussionModal
           isOpen={modalIsOpen}
@@ -307,44 +475,48 @@ const Discussion = () => {
           discussion={selectedDiscussion}
           setDiscussions={setDiscussions}
           discussions={discussions}
+          setDemoDiscussion={setDemoDiscussions} // Make sure this matches your state setter
         />
       )}
-
       <div className="flex flex-col lg:flex-row w-full mx-auto bg-white rounded-md border border-gray-200 shadow-md mt-4 mb-4 p-4">
+
+
         <aside className="hidden lg:block lg:w-1/4 px-4">
+
           <div className="mb-8">
             <h2 className="sm:text-sm md:text-base lg:text-lg font-bold mb-4">
               <AiOutlineComment className="inline-block mr-2" />Community Highlights
             </h2>
+
             <div className="space-y-4">
               {isLoading ? (
+                // Display Skeleton loaders in place of the actual content
                 Array.from({ length: 5 }).map((_, index) => (
                   <Skeleton
                     key={index}
-                    height="8.5rem"
+                    height="8.5rem" // Adjust height as needed to mimic the card's height
                     className="w-full bg-gray-300 rounded-lg mb-4"
                   />
                 ))
               ) : (
+                // Display actual content when loading is complete
                 communityHighlights.map((topic) => (
                   <div
                     key={topic.DiscussionID}
-                    className="rounded-lg shadow-lg p-4 border hover:bg-DGXgreen/50 border-DGXblack transition-transform transform hover:scale-105 hover:shadow-xl cursor-pointer"
+                    className="rounded-lg shadow-lg p-4 border hover:bg-DGXgreen/50 border-DGXblack transition-transform transform hover:scale-105 hover:shadow-xl"
                     onClick={() => openModal(topic)}
                   >
                     <h3 className="text-xl font-semibold">
-                      {topic.Title}
+                      <a href={topic.link} className="text-DGXblack hover:underline">
+                        {topic.Title}
+                      </a>
                     </h3>
-                    <p
-                      className="text-DGXblack mt-2 overflow-hidden"
-                      dangerouslySetInnerHTML={{
-                        __html: topic.Content.substring(0, 150),
-                      }}
-                    />
+                    <p className="text-DGXblack mt-2">{(topic.Content).substring(0, 150)}</p>
                   </div>
                 ))
               )}
             </div>
+
           </div>
 
           <div>
@@ -371,31 +543,162 @@ const Discussion = () => {
                   </div>
                 ))
               )}
+
             </div>
           </div>
         </aside>
 
+
         <section className="w-full lg:w-2/3 px-4">
-          <h2 className="sm:text-sm md:text-base lg:text-lg font-bold mb-4">
-            {selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1)} Discussions
-            {searchQuery && filteredDiscussions.length > 0 && (
-              <span className="text-sm font-normal ml-2 text-gray-500">
-                ({filteredDiscussions.length} results for "{searchQuery}")
-              </span>
-            )}
-          </h2>
-          
+          {/* All Discussions */}
+          <h2 className="sm:text-sm md:text-base lg:text-lg font-bold mb-4">{selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1)} Discussions</h2>
           <div className="flex flex-col space-y-4">
             {isFormOpen && (
-              <AddDiscussion 
-                closeModal={closeModal} 
-                fetchDiscussionData={() => fetchDiscussionData(user?.EmailId || null)} 
-              />
+              <form onSubmit={handleSubmit} className="border border-gray-300 rounded-lg p-4">
+                <h3 className="text-lg font-bold mb-4">Start a New Discussion</h3>
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-bold mb-2" htmlFor="title">Title <span className="text-red-500">*</span></label>
+                  <input
+                    id="title"
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-bold mb-2" htmlFor="content">
+                    Content <span className="text-red-500">*</span>
+                  </label>
+                  <ReactQuill
+                    id="content"
+                    theme="snow"
+                    value={content}
+                    onChange={setContent}
+                    className="border rounded-lg"
+                    modules={{
+                      toolbar: [
+                        [{ header: [1, 2, 3, false] }],
+                        ["bold", "italic", "underline", "strike"],
+                        ["blockquote", "code-block"],
+                        [{ list: "ordered" }, { list: "bullet" }],
+                        ["link", "formula"],
+                        ["clean"],
+                      ]
+                    }}
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-bold mb-2">
+                    Tags
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={tagInput}
+                    onChange={handleTagInputChange}
+                    onKeyPress={handleTagInputKeyPress}
+                    placeholder="Press Enter to add a tag"
+                  />
+                  <div className="mt-2 flex flex-wrap">
+                    {tags.split(',').filter(tag => tag).map((tag, index) => (
+                      <div key={index} className="flex items-center bg-DGXgreen text-white rounded-full px-3 py-1 mr-2 mt-2">
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          className="ml-2 focus:outline-none"
+                          onClick={() => removeTag(tag)}
+                        >
+                          <FaWindowClose />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-bold mb-2">
+                    Links
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={linkInput}
+                    onChange={handleLinkInputChange}
+                    onKeyPress={handleLinkInputKeyPress}
+                    placeholder="Press Enter to add a link"
+                  />
+                  <div className="mt-2 flex flex-wrap">
+                    {links.split(',').filter(link => link).map((link, index) => (
+                      <div key={index} className="flex items-center bg-DGXgreen text-white rounded-full px-3 py-1 mr-2 mt-2">
+                        <span>{link}</span>
+                        <button
+                          type="button"
+                          className="ml-2 focus:outline-none"
+                          onClick={() => removeLink(link)}
+                        >
+                          <FaWindowClose />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-bold mb-2">
+                    Image
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
+                  {selectedImage && (
+                    <div className="mt-2">
+                      <img src={selectedImage} alt="Selected" className="max-h-40" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-bold mb-2">
+                    Privacy
+                  </label>
+                  <select
+                    value={privacy}
+                    onChange={(e) => setPrivacy(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    className="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg"
+                    onClick={closeModal}
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-DGXgreen text-white py-2 px-4 rounded-lg"
+                  >
+                    Submit
+                  </button>
+                </div>
+              </form>
             )}
 
-            <div className="two-h-screen scrollbar scrollbar-thin overflow-y-auto px-6">
+            <div className="two-h-screen scrollbar scrollbar-thin  overflow-y-auto px-6">
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, index) => (
+                // Display a skeleton for each item based on the length of demoDiscussions
+                demoDiscussions.map((_, index) => (
                   <div
                     key={index}
                     className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl bg-gray-200 animate-pulse"
@@ -405,62 +708,31 @@ const Discussion = () => {
                     <div className="h-40 w-60 bg-gray-300 rounded mb-2"></div>
                     <div className="flex gap-2">
                       {Array.from({ length: 3 }).map((_, tagIndex) => (
-                        <span key={tagIndex} className="h-8 w-20 bg-gray-300 rounded"></span>
+                        <span key={tagIndex} className="h-8 w-20 bg-gray-300 rounded" ></span>
                       ))}
                     </div>
                     <div className="mt-4 h-5 bg-gray-300 rounded w-1/2"></div>
                     <div className="mt-4 h-8 bg-gray-300 rounded w-52"></div>
                   </div>
                 ))
-              ) : filteredDiscussions.length === 0 && searchQuery ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 text-lg">No discussions found matching "{searchQuery}"</p>
-                  <button 
-                    onClick={() => {
-                      setSearchQuery("");
-                      filterDiscussions("");
-                    }}
-                    className="mt-4 px-4 py-2 bg-DGXgreen text-white rounded-lg hover:bg-DGXblue transition-colors"
-                  >
-                    Clear Search
-                  </button>
-                </div>
-              ) : filteredDiscussions.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 text-lg">No discussions available</p>
-                </div>
               ) : (
-                filteredDiscussions.map((discussion, i) => (
-                  <div 
+                demoDiscussions.map((discussion, i) => (
+                  <div
                     key={i}
                     className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl transition-transform transform hover:scale-105 hover:shadow-lg hover:bg-gray-100 cursor-pointer focus-within:z-10 hover:z-10"
+                  // Moved onClick to the entire div for easier interaction
                   >
                     <div>
                       <h3 className="text-lg font-bold md:text-lg lg:text-xl xl:text-2xl">
                         {discussion.Title}
                       </h3>
-                      <p className="text-gray-600 text-sm md:text-base lg:text-lg xl:text-xl xs:overflow-hidden">
+                      <p className="text-gray-600 text-sm md:text-base lg:text-lg xl:text-xl">
                         {discussion.Content.length > 500 ? (
                           <>
-                            <span
-                              dangerouslySetInnerHTML={{
-                                __html: discussion.Content.substring(0, 497),
-                              }}
-                            />
-                            <span
-                              className="text-blue-700 cursor-pointer"
-                              onClick={() => openModal(discussion)}
-                            >
-                              ...see more
-                            </span>
+                            {discussion.Content.substring(0, 497)}
+                            <span className='text-blue-700 cursor-pointer' onClick={() => { openModal(discussion) }}>...see more</span>
                           </>
-                        ) : (
-                          <span
-                            dangerouslySetInnerHTML={{
-                              __html: discussion.Content,
-                            }}
-                          />
-                        )}
+                        ) : discussion.Content}
                       </p>
                     </div>
                     {discussion.Image && (
@@ -476,35 +748,19 @@ const Discussion = () => {
                       ))}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2" onClick={() => openModal(discussion)}>
-                      {discussion.ResourceUrl.split(',').filter(link => link).map((link, linkIndex) => (
-                        <a 
-                          key={linkIndex} 
-                          href={link} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {link.length > 30 ? `${link.substring(0, 30)}...` : link}
+                      {discussion.ResourceUrl.split(',').map((link, linkIndex) => (
+                        <a key={linkIndex} href={link} className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base">
+                          {link}
                         </a>
                       ))}
                     </div>
                     <div className="mt-4 flex items-center space-x-4">
-                      <button 
-                        className="flex items-center text-sm md:text-base lg:text-lg" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddLike(discussion.DiscussionID, discussion.userLike);
-                        }}
-                      >
+                      <button className="flex items-center text-sm md:text-base lg:text-lg" onClick={() => { handleAddLike(discussion.DiscussionID, discussion.userLike) }}>
                         {discussion.userLike == 1 ? <AiFillLike /> : <AiOutlineLike />} {discussion.likeCount} Likes
                       </button>
                       <button
                         className="flex items-center text-DGXgreen text-sm md:text-base lg:text-lg"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleComment(discussion);
-                        }}
+                        onClick={() => handleComment(discussion)}
                       >
                         <FaComment className="mr-2" /> {discussion.comment.length} Comments
                       </button>
@@ -512,10 +768,14 @@ const Discussion = () => {
                   </div>
                 ))
               )}
+
+
             </div>
+
+
+
           </div>
         </section>
-
         {isLoading ? (
           <Skeleton
             height="2.5rem"
@@ -534,21 +794,17 @@ const Discussion = () => {
                 <div className="mb-8">
                   <h2 className="text-2xl font-bold mb-4">Community Highlights</h2>
                   <div className="space-y-4">
-                    {communityHighlights.map((topic) => (
+                    {hotTopics.map((topic, index) => (
                       <div
-                        key={topic.DiscussionID}
-                        className="rounded-lg shadow-lg p-4 border hover:bg-DGXgreen/50 border-DGXblack transition-transform transform hover:scale-105 hover:shadow-xl"
-                        onClick={() => openModal(topic)}
+                        key={index}
+                        className="rounded-lg shadow-lg p-4 border border-DGXblack hover:bg-DGXgreen/50 transition-transform transform hover:scale-105 hover:shadow-xl"
                       >
                         <h3 className="text-xl font-semibold">
-                          {topic.Title}
+                          <a href={topic.link} className="text-DGXblack hover:underline">
+                            {topic.title}
+                          </a>
                         </h3>
-                        <p
-                          className="text-DGXblack mt-2 overflow-hidden"
-                          dangerouslySetInnerHTML={{
-                            __html: topic.Content.substring(0, 150),
-                          }}
-                        />
+                        <p className="text-DGXblack mt-2">{topic.description}</p>
                       </div>
                     ))}
                   </div>
@@ -558,11 +814,11 @@ const Discussion = () => {
                   <div className="space-y-2">
                     {topUsers.map((user, index) => (
                       <div
-                        key={user.userID}
+                        key={index}
                         className="flex justify-between items-center bg-DGXblue border border-gray-200 rounded-lg shadow-sm p-3 hover:shadow-xl hover:scale-105 transition-colors"
                       >
-                        <span className="font-medium text-white">{user.userName}</span>
-                        <span className="text-white">{user.count} Post(s)</span>
+                        <span className="font-medium text-white">{user.name}</span>
+                        <span className="text-white">{user.points} points</span>
                       </div>
                     ))}
                   </div>
@@ -571,6 +827,7 @@ const Discussion = () => {
             )}
           </div>
         )}
+
       </div>
     </div>
   );

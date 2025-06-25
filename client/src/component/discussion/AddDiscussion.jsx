@@ -17,6 +17,7 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
     const [links, setLinks] = useState('');
     const [linkInput, setLinkInput] = useState('');
     const [errors, setErrors] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleTagInputChange = (e) => setTagInput(e.target.value);
 
@@ -103,10 +104,19 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
         }
     };
 
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!title.trim() || !content.trim() || !privacy.id) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Missing Information',
+                text: 'Please fill all required fields',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
 
-        // Show SweetAlert for confirmation
         const result = await Swal.fire({
             title: 'Confirm Submission',
             text: 'Are you sure you want to post this discussion?',
@@ -117,75 +127,81 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
         });
 
         if (result.isConfirmed) {
-            // Proceed with form submission
-            const endpoint = "discussion/discussionpost";
-            const method = "POST";
-            const body = {
-                title,
-                content,
-                tags: tags,
-                url: links,
-                image: selectedImage,
-                visibility: privacy.id,
-            };
-            const headers = {
-                'Content-Type': 'application/json',
-                'auth-token': userToken
-            };
-
+            setIsSubmitting(true);
             try {
-                const data = await fetchData(endpoint, method, body, headers);
-                if (!data.success) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: `Error in posting discussion try again: ${data.message}`,
-                        confirmButtonText: 'OK'
-                    });
-                } else if (data.success) {
-                    console.log(data);
-                    const newDiscussion = {
-                        DiscussionID: data.postID,
-                        Title: title,
-                        Content: content,
-                        Tag: tags,
-                        ResourceUrl: links,
-                        Image: selectedImage,
-                        Visibility: {
-                            id: privacy.id,
-                            value: privacy.value
-                        },
-                        comment: []
-                    };
+                let imageToSend = selectedImage?.startsWith('data:')
+                    ? selectedImage.split(',')[1]
+                    : selectedImage;
 
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success',
-                        text: 'Discussion Posted Successfully',
-                        confirmButtonText: 'OK'
-                    });
+                const endpoint = "discussion/discussionpost";
+                const method = "POST";
+                const body = {
+                    title,
+                    content,
+                    tags: tags,
+                    url: links,
+                    image: imageToSend,
+                    visibility: privacy.id,
+                };
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'auth-token': userToken
+                };
 
-                    setDemoDiscussions([newDiscussion, ...demoDiscussions]);
+                const response = await fetchData(endpoint, method, body, headers);
+
+                if (!response || !response.success) {
+                    throw new Error(response?.message || 'Failed to post discussion');
                 }
-            } catch (error) {
-                console.log(error);
+                const postID = response.data?.postID || Date.now().toString(); // Fallback ID if not provided
+                const newDiscussion = {
+                    DiscussionID: postID,
+                    Title: title,
+                    Content: content,
+                    Tag: tags,
+                    ResourceUrl: links,
+                    Image: selectedImage,
+                    Visibility: {
+                        id: privacy.id,
+                        value: privacy.value
+                    },
+                    comment: []
+                };
 
+                // Only update if setDiscussions is provided
+                if (typeof setDiscussions === 'function') {
+                    setDiscussions(prev => [newDiscussion, ...(Array.isArray(prev) ? prev : [])]);
+                }
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.message || 'Discussion Posted Successfully',
+                    confirmButtonText: 'OK'
+                });
+
+                // Reset form
+                setTitle('');
+                setContent('');
+                setTags('');
+                setLinks('');
+                setSelectedImage(null);
+                setTagInput('');
+                setLinkInput('');
+                setPrivacy({ id: '', value: '' });
+                closeModal();
+
+            } catch (error) {
+                console.error('Submission error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Something went wrong, try again',
+                    text: error.message || 'Something went wrong, try again',
                     confirmButtonText: 'OK'
                 });
+            } finally {
+                setIsSubmitting(false);
             }
-            setTitle('');
-            setContent('');
-            setTags('');
-            setLinks('');
-            setSelectedImage(null);
-            setTagInput('');
-            setLinkInput('');
-            setPrivacy({ id: '', value: '' });
-            closeModal();
         }
     };
 
@@ -359,11 +375,18 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
                     >
                         Close
                     </button>
-                    <button
+                    {/* <button
                         type="submit"
                         className="bg-DGXgreen text-white py-2 px-4 rounded-lg"
                     >
                         Submit
+                    </button> */}
+                    <button
+                        type="submit"
+                        className="bg-DGXgreen text-white py-2 px-4 rounded-lg"
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? 'Submitting...' : 'Submit'}
                     </button>
                 </div>
             </form>
