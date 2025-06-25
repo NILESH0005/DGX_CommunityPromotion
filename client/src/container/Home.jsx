@@ -79,8 +79,8 @@ const Home = () => {
       <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-black to-blue-500">
         <ParallaxSection />
         <ContentSection />
-        <NewsSection />
-        <ProjectShowcase />
+        {/* <NewsSection />
+        <ProjectShowcase /> */}
         <CommunityHighlights />
       </div>
     );

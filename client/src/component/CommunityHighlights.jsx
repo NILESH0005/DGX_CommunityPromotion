@@ -5,11 +5,19 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
 const modules = [
+   {
+    title: "Learning Management System",
+    description:
+      "Access structured learning paths, track progress, and master new skills.",
+    category: "LMS",
+    image:
+      "https://images.unsplash.com/photo-1584697964320-261c73d9f68b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
+    path: "/LearningPath",
+  },
   {
     title: "Discussions",
     description:
       "Engage in meaningful conversations and share knowledge with the community.",
-    date: "March 20, 2025",
     category: "Discussion",
     image:
       "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
@@ -19,7 +27,6 @@ const modules = [
     title: "Blogs",
     description:
       "Read insightful articles and stay updated with the latest trends.",
-    date: "April 5, 2025",
     category: "Blog",
     image:
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
@@ -29,7 +36,6 @@ const modules = [
     title: "Events",
     description:
       "Join exciting events, meet industry experts, and expand your network.",
-    date: "April 15, 2025",
     category: "Event",
     image:
       "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1412&q=80",
@@ -39,22 +45,12 @@ const modules = [
     title: "Quiz",
     description:
       "Test your knowledge with interactive quizzes and improve your understanding.",
-    date: "May 1, 2025",
     category: "Quiz",
     image:
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     path: "/QuizInterface",
   },
-  {
-    title: "Learning Management System",
-    description:
-      "Access structured learning paths, track progress, and master new skills.",
-    date: "May 10, 2025",
-    category: "LMS",
-    image:
-      "https://images.unsplash.com/photo-1584697964320-261c73d9f68b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
-    path: "/LearningPath",
-  },
+ 
 ];
 
 const CommunityHighlights = () => {
