@@ -7,8 +7,23 @@ const ParallaxSection = () => {
 
   useEffect(() => {
     fetchActiveParallaxText();
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+
+      const text = document.getElementById("text");
+      const circuit = document.getElementById("circuit_board");
+      const wave = document.getElementById("tech_wave");
+
+      if (text) text.style.marginTop = scrollY * 1.5 + "px";
+      if (circuit) circuit.style.top = scrollY * 0.5 + "px";
+      if (wave) wave.style.top = scrollY * 0.3 + "px";
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-console.log(typeof yourParam)
+
   const fetchActiveParallaxText = async () => {
     const endpoint = "home/getParallaxContent";
     const method = "POST";
@@ -27,7 +42,7 @@ console.log(typeof yourParam)
         }
       }
     } catch (error) {
-      // Optional: silently handle error or display to user
+      console.error("Error fetching parallax content:", error);
     }
   };
 
@@ -39,7 +54,7 @@ console.log(typeof yourParam)
         alt="Circuit Board"
         className="absolute top-0 left-0 w-full h-full object-cover pointer-events-none"
       />
-      <h2 id="text" className="absolute text-white text-8xl whitespace-nowrap z-10">
+      <h2 id="text" className="absolute text-white text-9xl whitespace-nowrap z-10">
         {activeText}
       </h2>
       {!userToken && (

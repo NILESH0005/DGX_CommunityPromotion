@@ -10,7 +10,7 @@ import DetailsEventModal from "./eventAndWorkshop/DetailsEventModal.jsx";
 import LoadPage from "./LoadPage.jsx";
 import Swal from "sweetalert2";
 import { FaEye, FaSearch, FaFilter, FaPlus } from "react-icons/fa";
-// import { useMediaQuery } from "react-responsive";
+import { useMediaQuery } from "react-responsive";
 
 const EventTable = (props) => {
   const [selectedEvent, setSelectedEvent] = useState(null);

@@ -1,17 +1,15 @@
 import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
 
 const modules = [
-   {
+  {
     title: "Learning Management System",
     description:
       "Access structured learning paths, track progress, and master new skills.",
     category: "LMS",
     image:
-      "https://images.unsplash.com/photo-1584697964320-261c73d9f68b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
+      "https://images.unsplash.com/photo-1596495577886-d920f1fb7238?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     path: "/LearningPath",
   },
   {
@@ -20,7 +18,7 @@ const modules = [
       "Engage in meaningful conversations and share knowledge with the community.",
     category: "Discussion",
     image:
-      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
+      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     path: "/Discussion",
   },
   {
@@ -29,7 +27,7 @@ const modules = [
       "Read insightful articles and stay updated with the latest trends.",
     category: "Blog",
     image:
-      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
+      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     path: "/Blog",
   },
   {
@@ -38,7 +36,7 @@ const modules = [
       "Join exciting events, meet industry experts, and expand your network.",
     category: "Event",
     image:
-      "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1412&q=80",
+      "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-4.0.3&auto=format&fit=crop&w=1412&q=80",
     path: "/EventWorkshopPage",
   },
   {
@@ -50,7 +48,6 @@ const modules = [
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     path: "/QuizInterface",
   },
- 
 ];
 
 const CommunityHighlights = () => {
@@ -78,16 +75,15 @@ const CommunityHighlights = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#3A1C83] flex flex-col items-center py-16 px-8 overflow-hidden">
+    <div className="w-full min-h-screen bg-gradient-to-b from-[#060a1f] to-[#0a1128] text-white flex flex-col items-center py-16 px-6 overflow-hidden">
       {/* Heading */}
-      <div className="w-full max-w-6xl flex flex-col sm:flex-row sm:items-center sm:justify-between text-white mb-10">
-        <h1 className="text-5xl font-extrabold">Community Highlight</h1>
-        <p className="text-xl text-gray-300 mt-2 sm:mt-0">
-          Covering March & April 2025
-        </p>
+      <div className="w-full max-w-6xl mb-10 text-center sm:text-left">
+        <h1 className="text-5xl py-3 font-extrabold tracking-tight bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+          Community Highlights
+        </h1>
       </div>
 
-      {/* Horizontal Scrolling Cards */}
+      {/* Scrolling Cards */}
       <motion.div
         ref={scrollRef}
         className="w-full max-w-7xl flex space-x-8 py-6 overflow-x-hidden"
@@ -96,17 +92,16 @@ const CommunityHighlights = () => {
         {modules.map((module, index) => (
           <motion.div
             key={index}
-            className="relative bg-white rounded-3xl overflow-hidden shadow-lg w-[400px] flex-shrink-0 cursor-pointer"
+            className="relative w-[400px] rounded-3xl overflow-hidden bg-[#0f172a]/80 backdrop-blur-lg border border-blue-800 shadow-[0_0_25px_#3b82f6aa] flex-shrink-0 cursor-pointer transition-all duration-300 hover:shadow-[0_0_40px_#60a5faaa]"
             whileHover={{
               scale: 1.05,
               y: -10,
-              boxShadow: "0px 20px 30px rgba(0, 0, 0, 0.3)",
             }}
             whileTap={{ scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 200, damping: 10 }}
+            transition={{ type: "spring", stiffness: 200, damping: 15 }}
             onClick={() => handleCardClick(module.path)}
           >
-            {/* Image & Category Label */}
+            {/* Image & Category */}
             <div className="relative">
               <img
                 src={module.image}
@@ -114,23 +109,21 @@ const CommunityHighlights = () => {
                 className="w-full h-96 object-cover"
                 loading="lazy"
               />
-              <span className="absolute top-4 left-4 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg">
-                {module.category.toUpperCase()}
+              <span className="absolute top-4 left-4 bg-blue-700/90 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
+                {module.category}
               </span>
             </div>
 
-            {/* Card Content */}
-            <div className="p-8">
-              <p className="text-md text-gray-500">{module.date}</p>
-              <h3 className="text-2xl font-bold text-gray-900">
-                {module.title}
-              </h3>
-              <p className="text-gray-700 mt-3 text-lg">{module.description}</p>
+            {/* Card Body */}
+            <div className="p-6 space-y-2">
+              <h3 className="text-xl font-bold text-white">{module.title}</h3>
+              <p className="text-gray-300 text-sm leading-relaxed">
+                {module.description}
+              </p>
 
-              {/* CTA Link */}
-              <div className="mt-6 inline-flex items-center text-indigo-600 text-lg font-semibold group transition-all">
+              <div className="mt-4 inline-flex items-center text-blue-400 text-sm font-semibold group">
                 Find out more
-                <span className="ml-2 transition-all duration-300 transform group-hover:translate-x-1">
+                <span className="ml-2 transform transition-transform duration-300 group-hover:translate-x-1">
                   →
                 </span>
               </div>
