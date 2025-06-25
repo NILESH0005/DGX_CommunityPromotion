@@ -156,14 +156,20 @@ const Discussion = () => {
 
           setLoading(true);
 
-          console.log(endpoint, headers, body);
           fetchData(endpoint, method, body, headers)
             .then((result) => {
               if (result && result.data) {
                 return result.data;
               } else {
-                // return
-                throw new Error("Invalid data format");
+                // Only show error if there's actually an error
+                if (result && result.message) {
+                  Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: result.message,
+                  });
+                }
+                return null;
               }
             })
             .then((data) => {
@@ -175,26 +181,22 @@ const Discussion = () => {
                 setCommunityHighlights(highlights);
                 const users = getTopUsersByDiscussions(data.updatedDiscussions);
                 setTopUsers(users);
-              } else {
-                // return
-                throw new Error("Missing updatedDiscussions in response data");
               }
               setLoading(false);
             })
             .catch((error) => {
               setLoading(false);
-              toast.error(`Something went wrong: ${error.message}`, {
-                position: "top-center",
-                autoClose: 3000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-                theme: "light",
-              });
+              // Only show error if it's not the default "Invalid data format" error
+              if (error.message !== "Invalid data format") {
+                Swal.fire({
+                  icon: "error",
+                  title: "Error",
+                  text: `Something went wrong: ${error.message}`,
+                });
+              }
             });
         } catch (error) {
+          setLoading(false);
           console.log(error);
         }
       };
@@ -211,7 +213,7 @@ const Discussion = () => {
   const searchDiscussion = useCallback(
     async (searchTerm, userId) => {
       try {
-        const body = { searchTerm, userId }; // Match the backend expected structure
+        const body = { searchTerm, userId };
         const endpoint = "discussion/searchdiscussion";
         const method = "POST";
         const headers = {
@@ -220,16 +222,30 @@ const Discussion = () => {
 
         setLoading(true);
         const result = await fetchData(endpoint, method, body, headers);
-        console.log("API Response:", result);
+
         if (result && result.data && result.data.updatedDiscussions) {
           setDemoDiscussions(result.data.updatedDiscussions);
         } else {
-          toast.error("No discussions found.");
+          // Only show error if there's actually an error message
+          if (result && result.message) {
+            Swal.fire({
+              icon: "error",
+              title: "No discussions found",
+              text: result.message,
+            });
+          }
         }
         setLoading(false);
       } catch (error) {
         setLoading(false);
-        toast.error(`Something went wrong: ${error.message}`);
+        // Only show error if it's meaningful
+        if (error.message && !error.message.includes("Invalid data format")) {
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: `Something went wrong: ${error.message}`,
+          });
+        }
       }
     },
     [fetchData]
@@ -416,8 +432,8 @@ const Discussion = () => {
     if (!validateForm()) {
       return;
     }
-    const endpoint = "discussion/discussionpost";
 
+    const endpoint = "discussion/discussionpost";
     const method = "POST";
     const body = {
       title,
@@ -437,31 +453,25 @@ const Discussion = () => {
       const data = await fetchData(endpoint, method, body, headers);
       if (!data.success) {
         setLoading(false);
-        toast.error(`Error in posting discussion try again: ${data.message}`, {
-          position: "top-center",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "light",
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: `Error in posting discussion: ${data.message}`,
         });
       } else if (data.success) {
-        console.log(data);
         setLoading(false);
-        if (privacy == "private") {
-          toast.success("Private Discussion Posted Successfully", {
-            position: "center",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-          });
-        } else {
+        const successMessage =
+          privacy === "private"
+            ? "Private Discussion Posted Successfully"
+            : "Discussion Posted Successfully";
+
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: successMessage,
+        });
+
+        if (privacy !== "private") {
           const newDiscussion = {
             DiscussionID: data.postID,
             Title: title,
@@ -473,45 +483,17 @@ const Discussion = () => {
             comment: [],
           };
           setDemoDiscussions([newDiscussion, ...demoDiscussions]);
-          toast.success("Disscussion Post Successfully", {
-            position: "top-center",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-            style: {
-              backgroundColor: "green",
-              color: "white",
-            },
-          });
         }
+        resetForm();
       }
     } catch (error) {
       setLoading(false);
-      console.log(error);
-
-      toast.error(`On catching error: Something went wrong, try again`, {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Something went wrong, please try again",
       });
     }
-    setTitle("");
-    setContent("");
-    setTags("");
-    setLinks("");
-    setSelectedImage(null);
-    setTagInput("");
-    setLinkInput("");
-    setIsFormOpen(false);
   };
 
   console.log(demoDiscussions);
@@ -934,26 +916,44 @@ const Discussion = () => {
                   ))
                 : demoDiscussions.map((discussion, i) => (
                     <div
-                      key={i}
                       className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl transition-transform transform hover:scale-105 hover:shadow-lg hover:bg-gray-100 cursor-pointer focus-within:z-10 hover:z-10"
-                      // Moved onClick to the entire div for easier interaction
+                      onClick={(e) => {
+                        // Don't open modal if clicking on interactive elements
+                        if (
+                          !e.target.closest("a") &&
+                          !e.target.closest("button") &&
+                          !e.target.classList.contains("text-blue-700") // "see more" text
+                        ) {
+                          openModal(discussion);
+                        }
+                      }}
                     >
                       <div>
                         <h3 className="text-lg font-bold md:text-lg lg:text-xl xl:text-2xl">
                           {discussion.Title}
                         </h3>
-                        <div
-                          className="text-gray-600 text-sm md:text-base lg:text-lg xl:text-xl"
-                          dangerouslySetInnerHTML={{
-                            __html:
-                              discussion.Content.length > 500
-                                ? `${discussion.Content.substring(
-                                    0,
-                                    497
-                                  )}...<span class="text-blue-700 cursor-pointer" onclick="document.getElementById('modal').click()">see more</span>`
-                                : discussion.Content,
-                          }}
-                        />
+                        <div className="text-gray-600 text-sm md:text-base lg:text-lg xl:text-xl">
+                          {discussion.Content.length > 500 ? (
+                            <>
+                              {discussion.Content.substring(0, 497)}
+                              <span
+                                className="text-blue-700 cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openModal(discussion);
+                                }}
+                              >
+                                ...see more
+                              </span>
+                            </>
+                          ) : (
+                            <div
+                              dangerouslySetInnerHTML={{
+                                __html: discussion.Content,
+                              }}
+                            />
+                          )}
+                        </div>
                       </div>
                       {discussion.Image && (
                         <div
@@ -991,7 +991,10 @@ const Discussion = () => {
                             <a
                               key={linkIndex}
                               href={link}
+                              onClick={(e) => e.stopPropagation()}
                               className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               {link}
                             </a>
@@ -1001,7 +1004,8 @@ const Discussion = () => {
                       <div className="mt-4 flex items-center space-x-4">
                         <button
                           className="flex items-center text-sm md:text-base lg:text-lg"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             handleAddLike(
                               discussion.DiscussionID,
                               discussion.userLike
@@ -1012,14 +1016,18 @@ const Discussion = () => {
                             <AiFillLike />
                           ) : (
                             <AiOutlineLike />
-                          )}{" "}
+                          )}
                           {discussion.likeCount} Likes
                         </button>
+
                         <button
                           className="flex items-center text-DGXgreen text-sm md:text-base lg:text-lg"
-                          onClick={() => handleComment(discussion)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleComment(discussion);
+                          }}
                         >
-                          <FaComment className="mr-2" />{" "}
+                          <FaComment className="mr-2" />
                           {discussion.comment.length} Comments
                         </button>
                       </div>
