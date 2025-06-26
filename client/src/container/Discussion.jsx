@@ -12,9 +12,11 @@ import "react-loading-skeleton/dist/skeleton.css"; // Import Skeleton styles
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import Swal from 'sweetalert2';
+import { useNavigate } from 'react-router-dom';
 
 
 const Discussion = () => {
+  const navigate = useNavigate();
   const { fetchData, userToken, user } = useContext(ApiContext);
   const [demoDiscussions, setDemoDiscussions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -431,7 +433,6 @@ const Discussion = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-<<<<<<< HEAD
 
     // Validate required fields
     if (!title.trim() || !content.trim()) {
@@ -443,12 +444,6 @@ const Discussion = () => {
       return;
     }
 
-=======
-    if (!validateForm()) {
-      return;
-    }
-
->>>>>>> 43a4308fc0bc068089b626af13484d11e9c86742
     const endpoint = "discussion/discussionpost";
     const method = "POST";
     const body = {
@@ -457,15 +452,11 @@ const Discussion = () => {
       tags: tags.join(","),
       url: links.join(","),
       image: selectedImage,
-<<<<<<< HEAD
       visibility: privacy
-=======
-      visibility: privacy,
->>>>>>> 43a4308fc0bc068089b626af13484d11e9c86742
     };
     const headers = {
-      "Content-Type": "application/json",
-      "auth-token": userToken,
+      'Content-Type': 'application/json',
+      'auth-token': userToken
     };
 
     setLoading(true);
@@ -476,7 +467,6 @@ const Discussion = () => {
       if (!data.success) {
         setLoading(false);
         Swal.fire({
-<<<<<<< HEAD
           icon: 'error',
           title: 'Error',
           text: data.message || 'Error in posting discussion, please try again',
@@ -484,49 +474,27 @@ const Discussion = () => {
       } else if (data.success) {
         setLoading(false);
 
-        // Show success message
+        // Show customized success message with SweetAlert
         await Swal.fire({
-          icon: 'success',
           title: 'Success!',
           text: privacy === "private"
-            ? 'Private Discussion Posted Successfully'
-            : 'Discussion Posted Successfully',
-          showConfirmButton: false,
-          timer: 1500
+            ? 'Your private discussion has been posted successfully!'
+            : 'Your discussion has been posted successfully!',
+          icon: 'success',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#3085d6',
+          customClass: {
+            popup: 'animated bounceIn' // Add animation if desired
+          },
+          willClose: () => {
+            // Reset form and close after user clicks OK
+            resetForm();
+            setIsFormOpen(false);
+          }
         });
-
-        // Reset form and close
-        setTitle('');
-        setContent('');
-        setTags('');
-        setLinks('');
-        setSelectedImage(null);
-        setTagInput('');
-        setLinkInput('');
-        setIsFormOpen(false);
 
         // Update discussions if public
         if (privacy === "public") {
-=======
-          icon: "error",
-          title: "Error",
-          text: `Error in posting discussion: ${data.message}`,
-        });
-      } else if (data.success) {
-        setLoading(false);
-        const successMessage =
-          privacy === "private"
-            ? "Private Discussion Posted Successfully"
-            : "Discussion Posted Successfully";
-
-        Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: successMessage,
-        });
-
-        if (privacy !== "private") {
->>>>>>> 43a4308fc0bc068089b626af13484d11e9c86742
           const newDiscussion = {
             DiscussionID: data.postID,
             Title: title,
@@ -535,26 +503,18 @@ const Discussion = () => {
             ResourceUrl: links,
             Image: selectedImage,
             Visibility: privacy,
-            comment: [],
+            comment: []
           };
           setDemoDiscussions([newDiscussion, ...demoDiscussions]);
         }
-        resetForm();
       }
     } catch (error) {
       setLoading(false);
-<<<<<<< HEAD
       console.log(error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
         text: 'Something went wrong, please try again',
-=======
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Something went wrong, please try again",
->>>>>>> 43a4308fc0bc068089b626af13484d11e9c86742
       });
     }
   };
@@ -627,9 +587,8 @@ const Discussion = () => {
           </div> */}
           <div
             id="navbar-alignment"
-            className={`${
-              isNavOpen ? "block" : "hidden"
-            } hs-collapse overflow-hidden transition-all duration-300 basis-full grow sm:grow-0 sm:basis-auto sm:block sm:order-2`}
+            className={`${isNavOpen ? "block" : "hidden"
+              } hs-collapse overflow-hidden transition-all duration-300 basis-full grow sm:grow-0 sm:basis-auto sm:block sm:order-2`}
           >
             {/* <div className="flex flex-col gap-6 mt-5 sm:flex-row sm:items-center sm:mt-0 sm:ps-5">
               <a className="text-lg font-bold text-DGXwhite cursor-pointer" onClick={() => setSelectedSection('all')} aria-current="page">All</a>
@@ -648,8 +607,23 @@ const Discussion = () => {
               type="button"
               className="py-2 xs:w-full px-3 gap-x-2 text-sm font-bold rounded-lg bg-DGXgreen text-DGXwhite shadow-sm hover:bg-DGXblue hover:border-DGXgreen border border-DGXblue disabled:opacity-50 disabled:pointer-events-none"
               onClick={() => {
-                resetForm(); // Reset form when opening
-                setIsFormOpen(true);
+                if (!userToken) {
+                  Swal.fire({
+                    icon: 'warning',
+                    title: 'Authentication Required',
+                    text: 'You need to login to start a discussion',
+                    confirmButtonText: 'Login',
+                    showCancelButton: true,
+                    cancelButtonText: 'Cancel'
+                  }).then((result) => {
+                    if (result.isConfirmed) {
+                      navigate('/SignInn');
+                    }
+                  });
+                } else {
+                  resetForm();
+                  setIsFormOpen(true);
+                }
               }}
             >
               Start a New Topic +
@@ -678,33 +652,33 @@ const Discussion = () => {
             <div className="space-y-4">
               {isLoading
                 ? // Display Skeleton loaders in place of the actual content
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <Skeleton
-                      key={index}
-                      height="8.5rem" // Adjust height as needed to mimic the card's height
-                      className="w-full bg-gray-300 rounded-lg mb-4"
-                    />
-                  ))
+                Array.from({ length: 5 }).map((_, index) => (
+                  <Skeleton
+                    key={index}
+                    height="8.5rem" // Adjust height as needed to mimic the card's height
+                    className="w-full bg-gray-300 rounded-lg mb-4"
+                  />
+                ))
                 : // Display actual content when loading is complete
-                  communityHighlights.map((topic) => (
-                    <div
-                      key={topic.DiscussionID}
-                      className="rounded-lg shadow-lg p-4 border hover:bg-DGXgreen/50 border-DGXblack transition-transform transform hover:scale-105 hover:shadow-xl"
-                      onClick={() => openModal(topic)}
-                    >
-                      <h3 className="text-xl font-semibold">
-                        <a
-                          href={topic.link}
-                          className="text-DGXblack hover:underline"
-                        >
-                          {topic.Title}
-                        </a>
-                      </h3>
-                      <p className="text-DGXblack mt-2">
-                        {topic.Content.substring(0, 150)}
-                      </p>
-                    </div>
-                  ))}
+                communityHighlights.map((topic) => (
+                  <div
+                    key={topic.DiscussionID}
+                    className="rounded-lg shadow-lg p-4 border hover:bg-DGXgreen/50 border-DGXblack transition-transform transform hover:scale-105 hover:shadow-xl"
+                    onClick={() => openModal(topic)}
+                  >
+                    <h3 className="text-xl font-semibold">
+                      <a
+                        href={topic.link}
+                        className="text-DGXblack hover:underline"
+                      >
+                        {topic.Title}
+                      </a>
+                    </h3>
+                    <p className="text-DGXblack mt-2">
+                      {topic.Content.substring(0, 150)}
+                    </p>
+                  </div>
+                ))}
             </div>
           </div>
 
@@ -716,23 +690,23 @@ const Discussion = () => {
             <div className="space-y-2">
               {isLoading
                 ? Array.from({ length: 5 }).map((_, index) => (
-                    <Skeleton
-                      key={index}
-                      height="2.5rem"
-                      className="w-full bg-gray-300 rounded-lg mb-4"
-                    />
-                  ))
+                  <Skeleton
+                    key={index}
+                    height="2.5rem"
+                    className="w-full bg-gray-300 rounded-lg mb-4"
+                  />
+                ))
                 : topUsers.map((user, index) => (
-                    <div
-                      key={user.userID}
-                      className="flex justify-between items-center bg-DGXblue border border-gray-200 rounded-lg shadow-sm p-3 hover:shadow-xl hover:scale-105 transition-colors"
-                    >
-                      <span className="font-medium text-white">
-                        {user.userName}
-                      </span>
-                      <span className="text-white">{user.count} Post(s)</span>
-                    </div>
-                  ))}
+                  <div
+                    key={user.userID}
+                    className="flex justify-between items-center bg-DGXblue border border-gray-200 rounded-lg shadow-sm p-3 hover:shadow-xl hover:scale-105 transition-colors"
+                  >
+                    <span className="font-medium text-white">
+                      {user.userName}
+                    </span>
+                    <span className="text-white">{user.count} Post(s)</span>
+                  </div>
+                ))}
             </div>
           </div>
         </aside>
@@ -762,9 +736,8 @@ const Discussion = () => {
                   <input
                     id="title"
                     type="text"
-                    className={`w-full px-3 py-2 border rounded-lg ${
-                      errors.title ? "border-red-500" : ""
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg ${errors.title ? "border-red-500" : ""
+                      }`}
                     value={title}
                     onChange={(e) => {
                       setTitle(e.target.value);
@@ -794,9 +767,8 @@ const Discussion = () => {
                       setContent(value);
                       setErrors({ ...errors, content: "" });
                     }}
-                    className={`border rounded-lg ${
-                      errors.content ? "border-red-500" : ""
-                    }`}
+                    className={`border rounded-lg ${errors.content ? "border-red-500" : ""
+                      }`}
                     modules={{
                       toolbar: [
                         [{ header: [1, 2, 3, false] }],
@@ -821,9 +793,8 @@ const Discussion = () => {
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2 border rounded-lg ${
-                      errors.tags ? "border-red-500" : ""
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg ${errors.tags ? "border-red-500" : ""
+                      }`}
                     value={tagInput}
                     onChange={handleTagInputChange}
                     onKeyPress={handleTagInputKeyPress}
@@ -858,9 +829,8 @@ const Discussion = () => {
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2 border rounded-lg ${
-                      errors.links ? "border-red-500" : ""
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg ${errors.links ? "border-red-500" : ""
+                      }`}
                     value={linkInput}
                     onChange={handleLinkInputChange}
                     onKeyPress={handleLinkInputKeyPress}
@@ -920,9 +890,8 @@ const Discussion = () => {
                       setPrivacy(e.target.value);
                       setErrors({ ...errors, privacy: "" });
                     }}
-                    className={`w-full px-3 py-2 border rounded-lg ${
-                      errors.privacy ? "border-red-500" : ""
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg ${errors.privacy ? "border-red-500" : ""
+                      }`}
                   >
                     <option value="">Select privacy</option>{" "}
                     {/* Default shown */}
@@ -940,29 +909,22 @@ const Discussion = () => {
                   <button
                     type="button"
                     className="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg"
-<<<<<<< HEAD
-                    onClick={() => {
-                      setTitle('');
-                      setContent('');
-                      setTags('');
-                      setLinks('');
-                      setSelectedImage(null);
-                      setTagInput('');
-                      setLinkInput('');
-                      setIsFormOpen(false);
-                    }}
-=======
                     onClick={closeModal} // This will now reset the form
->>>>>>> 43a4308fc0bc068089b626af13484d11e9c86742
                   >
                     Close
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-DGXgreen text-white py-2 px-4 rounded-lg"
+                  >
+                    Submit
                   </button>
                 </div>
               </form>
             )}
             <div className="two-h-screen scrollbar scrollbar-thin  overflow-y-auto px-6">
-<<<<<<< HEAD
-              {isLoading ? (
+              {isLoading
+                ? // Display a skeleton for each item based on the length of demoDiscussions
                 demoDiscussions.map((_, index) => (
                   <div
                     key={index}
@@ -973,179 +935,135 @@ const Discussion = () => {
                     <div className="h-40 w-60 bg-gray-300 rounded mb-2"></div>
                     <div className="flex gap-2">
                       {Array.from({ length: 3 }).map((_, tagIndex) => (
-                        <span key={tagIndex} className="h-8 w-20 bg-gray-300 rounded" ></span>
+                        <span
+                          key={tagIndex}
+                          className="h-8 w-20 bg-gray-300 rounded"
+                        ></span>
                       ))}
                     </div>
                     <div className="mt-4 h-5 bg-gray-300 rounded w-1/2"></div>
                     <div className="mt-4 h-8 bg-gray-300 rounded w-52"></div>
                   </div>
                 ))
-              ) : (
-                demoDiscussions.map((discussion, i) => (
+                : demoDiscussions.map((discussion, i) => (
                   <div
-                    key={i}
                     className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl transition-transform transform hover:scale-105 hover:shadow-lg hover:bg-gray-100 cursor-pointer focus-within:z-10 hover:z-10"
-                  // Moved onClick to the entire div for easier interaction
+                    onClick={(e) => {
+                      // Don't open modal if clicking on interactive elements
+                      if (
+                        !e.target.closest("a") &&
+                        !e.target.closest("button") &&
+                        !e.target.classList.contains("text-blue-700") // "see more" text
+                      ) {
+                        openModal(discussion);
+                      }
+                    }}
                   >
                     <div>
                       <h3 className="text-lg font-bold md:text-lg lg:text-xl xl:text-2xl">
                         {discussion.Title}
                       </h3>
-                      <p className="text-gray-600 text-sm md:text-base lg:text-lg xl:text-xl">
+                      <div className="text-gray-600 text-sm md:text-base lg:text-lg xl:text-xl">
                         {discussion.Content.length > 500 ? (
                           <>
                             {discussion.Content.substring(0, 497)}
-                            <span className='text-blue-700 cursor-pointer' onClick={() => { openModal(discussion) }}>...see more</span>
-                          </>
-                        ) : discussion.Content}
-                      </p>
-                    </div>
-                    {discussion.Image && (
-                      <div className="mt-2" onClick={() => openModal(discussion)}>
-                        <img src={discussion.Image} alt="Discussion" className="max-h-40 w-auto object-cover" />
-=======
-              {isLoading
-                ? // Display a skeleton for each item based on the length of demoDiscussions
-                  demoDiscussions.map((_, index) => (
-                    <div
-                      key={index}
-                      className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl bg-gray-200 animate-pulse"
-                    >
-                      <div className="h-10 bg-gray-300 rounded w-3/4 mb-2"></div>
-                      <div className="h-24 bg-gray-300 rounded w-full mb-2"></div>
-                      <div className="h-40 w-60 bg-gray-300 rounded mb-2"></div>
-                      <div className="flex gap-2">
-                        {Array.from({ length: 3 }).map((_, tagIndex) => (
-                          <span
-                            key={tagIndex}
-                            className="h-8 w-20 bg-gray-300 rounded"
-                          ></span>
-                        ))}
->>>>>>> 43a4308fc0bc068089b626af13484d11e9c86742
-                      </div>
-                      <div className="mt-4 h-5 bg-gray-300 rounded w-1/2"></div>
-                      <div className="mt-4 h-8 bg-gray-300 rounded w-52"></div>
-                    </div>
-                  ))
-                : demoDiscussions.map((discussion, i) => (
-                    <div
-                      className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl transition-transform transform hover:scale-105 hover:shadow-lg hover:bg-gray-100 cursor-pointer focus-within:z-10 hover:z-10"
-                      onClick={(e) => {
-                        // Don't open modal if clicking on interactive elements
-                        if (
-                          !e.target.closest("a") &&
-                          !e.target.closest("button") &&
-                          !e.target.classList.contains("text-blue-700") // "see more" text
-                        ) {
-                          openModal(discussion);
-                        }
-                      }}
-                    >
-                      <div>
-                        <h3 className="text-lg font-bold md:text-lg lg:text-xl xl:text-2xl">
-                          {discussion.Title}
-                        </h3>
-                        <div className="text-gray-600 text-sm md:text-base lg:text-lg xl:text-xl">
-                          {discussion.Content.length > 500 ? (
-                            <>
-                              {discussion.Content.substring(0, 497)}
-                              <span
-                                className="text-blue-700 cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openModal(discussion);
-                                }}
-                              >
-                                ...see more
-                              </span>
-                            </>
-                          ) : (
-                            <div
-                              dangerouslySetInnerHTML={{
-                                __html: discussion.Content,
-                              }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                      {discussion.Image && (
-                        <div
-                          className="mt-2"
-                          onClick={() => openModal(discussion)}
-                        >
-                          <img
-                            src={discussion.Image}
-                            alt="Discussion"
-                            className="max-h-40 w-auto object-cover"
-                          />
-                        </div>
-                      )}
-                      <div
-                        className="mt-2 flex flex-wrap gap-2"
-                        onClick={() => openModal(discussion)}
-                      >
-                        {discussion.Tag.split(",")
-                          .filter((tag) => tag)
-                          .map((tag, tagIndex) => (
                             <span
-                              key={tagIndex}
-                              className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base"
+                              className="text-blue-700 cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openModal(discussion);
+                              }}
                             >
-                              {tag}
+                              ...see more
                             </span>
-                          ))}
-                      </div>
-                      <div
-                        className="mt-2 flex flex-wrap gap-2"
-                        onClick={() => openModal(discussion)}
-                      >
-                        {discussion.ResourceUrl.split(",").map(
-                          (link, linkIndex) => (
-                            <a
-                              key={linkIndex}
-                              href={link}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {link}
-                            </a>
-                          )
+                          </>
+                        ) : (
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: discussion.Content,
+                            }}
+                          />
                         )}
                       </div>
-                      <div className="mt-4 flex items-center space-x-4">
-                        <button
-                          className="flex items-center text-sm md:text-base lg:text-lg"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddLike(
-                              discussion.DiscussionID,
-                              discussion.userLike
-                            );
-                          }}
-                        >
-                          {discussion.userLike == 1 ? (
-                            <AiFillLike />
-                          ) : (
-                            <AiOutlineLike />
-                          )}
-                          {discussion.likeCount} Likes
-                        </button>
-
-                        <button
-                          className="flex items-center text-DGXgreen text-sm md:text-base lg:text-lg"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleComment(discussion);
-                          }}
-                        >
-                          <FaComment className="mr-2" />
-                          {discussion.comment.length} Comments
-                        </button>
-                      </div>
                     </div>
-                  ))}
+                    {discussion.Image && (
+                      <div
+                        className="mt-2"
+                        onClick={() => openModal(discussion)}
+                      >
+                        <img
+                          src={discussion.Image}
+                          alt="Discussion"
+                          className="max-h-40 w-auto object-cover"
+                        />
+                      </div>
+                    )}
+                    <div
+                      className="mt-2 flex flex-wrap gap-2"
+                      onClick={() => openModal(discussion)}
+                    >
+                      {discussion.Tag.split(",")
+                        .filter((tag) => tag)
+                        .map((tag, tagIndex) => (
+                          <span
+                            key={tagIndex}
+                            className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                    </div>
+                    <div
+                      className="mt-2 flex flex-wrap gap-2"
+                      onClick={() => openModal(discussion)}
+                    >
+                      {discussion.ResourceUrl.split(",").map(
+                        (link, linkIndex) => (
+                          <a
+                            key={linkIndex}
+                            href={link}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {link}
+                          </a>
+                        )
+                      )}
+                    </div>
+                    <div className="mt-4 flex items-center space-x-4">
+                      <button
+                        className="flex items-center text-sm md:text-base lg:text-lg"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddLike(
+                            discussion.DiscussionID,
+                            discussion.userLike
+                          );
+                        }}
+                      >
+                        {discussion.userLike == 1 ? (
+                          <AiFillLike />
+                        ) : (
+                          <AiOutlineLike />
+                        )}
+                        {discussion.likeCount} Likes
+                      </button>
+
+                      <button
+                        className="flex items-center text-DGXgreen text-sm md:text-base lg:text-lg"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleComment(discussion);
+                        }}
+                      >
+                        <FaComment className="mr-2" />
+                        {discussion.comment.length} Comments
+                      </button>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         </section>

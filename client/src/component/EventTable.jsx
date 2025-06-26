@@ -10,7 +10,7 @@ import DetailsEventModal from "./eventAndWorkshop/DetailsEventModal.jsx";
 import LoadPage from "./LoadPage.jsx";
 import Swal from "sweetalert2";
 import { FaEye, FaSearch, FaFilter, FaPlus } from "react-icons/fa";
-import { useMediaQuery } from "react-responsive";
+// import { useMediaQuery } from "react-responsive";
 
 const EventTable = (props) => {
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -32,7 +32,7 @@ const EventTable = (props) => {
   const [isMobileView, setIsMobileView] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  const mobileView = useMediaQuery({ query: "(max-width: 768px)" });
+  // const mobileView = useMediaQuery({ query: "(max-width: 768px)" });
 
   useEffect(() => {
     setIsMobileView(mobileView);
