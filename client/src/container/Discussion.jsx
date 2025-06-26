@@ -11,6 +11,8 @@ import Skeleton from 'react-loading-skeleton'; // Import Skeleton
 import 'react-loading-skeleton/dist/skeleton.css'; // Import Skeleton styles
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import Swal from 'sweetalert2';
+
 
 const Discussion = () => {
   const { fetchData, userToken, user } = useContext(ApiContext);
@@ -282,8 +284,18 @@ const Discussion = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const endpoint = "discussion/discussionpost";
 
+    // Validate required fields
+    if (!title.trim() || !content.trim()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Title and Content are required fields!',
+      });
+      return;
+    }
+
+    const endpoint = "discussion/discussionpost";
     const method = "POST";
     const body = {
       title,
@@ -292,43 +304,50 @@ const Discussion = () => {
       url: links,
       image: selectedImage,
       visibility: privacy
-
     };
     const headers = {
       'Content-Type': 'application/json',
       'auth-token': userToken
     };
+
     setLoading(true);
 
     try {
       const data = await fetchData(endpoint, method, body, headers);
+
       if (!data.success) {
         setLoading(false);
-        toast.error(`Error in posting discussion try again: ${data.message}`, {
-          position: "top-center",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "light",
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: data.message || 'Error in posting discussion, please try again',
         });
       } else if (data.success) {
-        console.log(data);
         setLoading(false);
-        if (privacy == "private") {
-          toast.success("Private Discussion Posted Successfully", {
-            position: "center",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-          });
-        } else {
+
+        // Show success message
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: privacy === "private"
+            ? 'Private Discussion Posted Successfully'
+            : 'Discussion Posted Successfully',
+          showConfirmButton: false,
+          timer: 1500
+        });
+
+        // Reset form and close
+        setTitle('');
+        setContent('');
+        setTags('');
+        setLinks('');
+        setSelectedImage(null);
+        setTagInput('');
+        setLinkInput('');
+        setIsFormOpen(false);
+
+        // Update discussions if public
+        if (privacy === "public") {
           const newDiscussion = {
             DiscussionID: data.postID,
             Title: title,
@@ -340,45 +359,17 @@ const Discussion = () => {
             comment: []
           };
           setDemoDiscussions([newDiscussion, ...demoDiscussions]);
-          toast.success("Disscussion Post Successfully", {
-            position: "top-center",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-            style: {
-              backgroundColor: 'green',
-              color: 'white',
-            }
-          });
         }
       }
     } catch (error) {
       setLoading(false);
       console.log(error);
-
-      toast.error(`On catching error: Something went wrong, try again`, {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Something went wrong, please try again',
       });
     }
-    setTitle('');
-    setContent('');
-    setTags('');
-    setLinks('');
-    setSelectedImage(null);
-    setTagInput('');
-    setLinkInput('');
-    setIsFormOpen(false);
   };
 
   console.log(demoDiscussions);
@@ -681,23 +672,24 @@ const Discussion = () => {
                   <button
                     type="button"
                     className="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg"
-                    onClick={closeModal}
+                    onClick={() => {
+                      setTitle('');
+                      setContent('');
+                      setTags('');
+                      setLinks('');
+                      setSelectedImage(null);
+                      setTagInput('');
+                      setLinkInput('');
+                      setIsFormOpen(false);
+                    }}
                   >
                     Close
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-DGXgreen text-white py-2 px-4 rounded-lg"
-                  >
-                    Submit
                   </button>
                 </div>
               </form>
             )}
-
             <div className="two-h-screen scrollbar scrollbar-thin  overflow-y-auto px-6">
               {isLoading ? (
-                // Display a skeleton for each item based on the length of demoDiscussions
                 demoDiscussions.map((_, index) => (
                   <div
                     key={index}
