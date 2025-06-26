@@ -33,42 +33,42 @@ const Home = () => {
     images.us9,
   ];
 
-  const people = [
-    {
-      name: "Ashiwini Thakur",
-      role: "Project Manager",
-      imageUrl: `${images.AshwiniSir}`,
-    },
-    {
-      name: "Sharad Srivastav",
-      role: "Project Manager",
-      imageUrl: `${images.SharadSir}`,
-    },
-    {
-      name: "Anubhav Patrick",
-      role: "Project Manager",
-      imageUrl: `${images.PatrickSir}`,
-    },
-    {
-      name: "Sugandh Gupta",
-      role: "Project Manager",
-      imageUrl: `${images.SugandhMaam}`,
-    },
-  ];
+  // const people = [
+  //   {
+  //     name: "Ashiwini Thakur",
+  //     role: "Project Manager",
+  //     imageUrl: `${images.AshwiniSir}`,
+  //   },
+  //   {
+  //     name: "Sharad Srivastav",
+  //     role: "Project Manager",
+  //     imageUrl: `${images.SharadSir}`,
+  //   },
+  //   {
+  //     name: "Anubhav Patrick",
+  //     role: "Project Manager",
+  //     imageUrl: `${images.PatrickSir}`,
+  //   },
+  //   {
+  //     name: "Sugandh Gupta",
+  //     role: "Project Manager",
+  //     imageUrl: `${images.SugandhMaam}`,
+  //   },
+  // ];
 
-  // Auto-slide functionality
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) =>
-        prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
-      );
-      setCurrentIndexUS((prevIndex) =>
-        prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
-      );
-    }, 3000);
+  // // Auto-slide functionality
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setCurrentIndex((prevIndex) =>
+  //       prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
+  //     );
+  //     setCurrentIndexUS((prevIndex) =>
+  //       prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
+  //     );
+  //   }, 3000);
 
-    return () => clearInterval(interval);
-  }, [usSlides .length, usSlides.length]);
+  //   return () => clearInterval(interval);
+  // }, [usSlides .length, usSlides.length]);
 
   const handleRedirect = () => navigate("/EventWorkshopPage");
   const handleRedirect01 = () => navigate("/Discussion");
