@@ -5,10 +5,9 @@ import { FaFile, FaLink } from "react-icons/fa";
 const FilesOrder = ({ files, onClose, onSave }) => {
   const [orderedFiles, setOrderedFiles] = useState([]);
 
-  // Initialize and update state when files prop changes
   useEffect(() => {
     if (files && Array.isArray(files)) {
-      setOrderedFiles([...files]);
+      setOrderedFiles([...files].sort((a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0)));
     }
   }, [files]);
 
@@ -53,8 +52,8 @@ const FilesOrder = ({ files, onClose, onSave }) => {
                 >
                   {orderedFiles.map((file, index) => (
                     <Draggable 
-                      key={file.FileID || `temp-${index}`} 
-                      draggableId={(file.FileID || `temp-${index}`).toString()} 
+                      key={file.FileID} 
+                      draggableId={file.FileID.toString()} 
                       index={index}
                     >
                       {(provided) => (
@@ -92,10 +91,6 @@ const FilesOrder = ({ files, onClose, onSave }) => {
             No files available to reorder
           </div>
         )}
-
-        <div className="mt-4 text-sm text-gray-500">
-          Note: Reordering files will redistribute percentages equally
-        </div>
 
         <div className="mt-6 flex justify-end space-x-3">
           <button

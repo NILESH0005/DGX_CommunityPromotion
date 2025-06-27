@@ -285,6 +285,52 @@ export const addContentSection = async (req, res) => {
   }
 };
 
+export const getParallaxContent = async (req, res) => {
+  let success = false;
+  try {
+    connectToDatabase(async (err, conn) => {
+      if (err) {
+        logError("Failed to connect to database");
+        return res.status(500).json({
+          success: false,
+          data: err,
+          message: "Failed to connect to database",
+        });
+      }
+      try {
+        const query = `SELECT idCode, ComponentName, ComponentIdName, Content, isActive  FROM tblCMSContent  WHERE ComponentName = 'Parallax' AND ISNULL(delStatus, 0) = 0 `;
+        const results = await queryAsync(conn, query);
+        console.log("Query result:", results);
+        
+        success = true;
+        closeConnection();
+        logInfo("Parallax content fetched successfully!");
+        
+        return res.status(200).json({
+          success,
+          data: results,
+          message: "Parallax content fetched successfully!",
+        });
+      } catch (queryErr) {
+        closeConnection();
+        logError("Database Query Error: ", queryErr);
+        return res.status(500).json({
+          success: false,
+          data: queryErr,
+          message: "Database Query Error",
+        });
+      }
+    });
+  } catch (error) {
+    logError("Unexpected Error: ", error);
+    return res.status(500).json({
+      success: false,
+      data: error,
+      message: "Unexpected Error, check logs",
+    });
+  }
+};
+
 export const getContent = async (req, res) => {
   console.log("Received request for getContent");
 
@@ -332,6 +378,7 @@ export const getContent = async (req, res) => {
       .json({ success: false, message: "Unexpected error occurred" });
   }
 };
+
 export const updateContentSection = async (req, res) => {
   try {
     const userId = req.user.id; // Get user email from authentication
@@ -768,52 +815,6 @@ export const setActiveParallaxText = async (req, res) => {
   }
 };
 
-export const getParallaxContent = async (req, res) => {
-  let success = false;
-  try {
-    connectToDatabase(async (err, conn) => {
-      if (err) {
-        logError("Failed to connect to database");
-        return res.status(500).json({
-          success: false,
-          data: err,
-          message: "Failed to connect to database",
-        });
-      }
-      try {
-        const query = `SELECT idCode, ComponentName, ComponentIdName, Content, isActive  FROM tblCMSContent  WHERE ComponentName = 'Parallax' AND ISNULL(delStatus, 0) = 0 `;
-        const results = await queryAsync(conn, query);
-        console.log("Query result:", results);
-        
-        success = true;
-        closeConnection();
-        logInfo("Parallax content fetched successfully!");
-        
-        return res.status(200).json({
-          success,
-          data: results,
-          message: "Parallax content fetched successfully!",
-        });
-      } catch (queryErr) {
-        closeConnection();
-        logError("Database Query Error: ", queryErr);
-        return res.status(500).json({
-          success: false,
-          data: queryErr,
-          message: "Database Query Error",
-        });
-      }
-    });
-  } catch (error) {
-    logError("Unexpected Error: ", error);
-    return res.status(500).json({
-      success: false,
-      data: error,
-      message: "Unexpected Error, check logs",
-    });
-  }
-};
-
 
 
 // export const updateContentSection = async (req, res) => {
@@ -901,8 +902,6 @@ export const getParallaxContent = async (req, res) => {
 //       .json({ success: false, message: "Something went wrong", error });
 //   }
 // };
-
-
 
 export const getProjectShowcase = async (req, res) => {
   let success = false;
