@@ -1,39 +1,23 @@
-import React, { useEffect, useState, useContext, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import ApiContext from "../context/ApiContext";
 
-const ParallaxSection = () => {
+const ParallaxSection = ({ data, userToken }) => {
   const [activeText, setActiveText] = useState("");
-  const { fetchData, userToken } = useContext(ApiContext);
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
   });
 
-  const fetchActiveParallaxText = useCallback(async () => {
-    const endpoint = "home/getParallaxContent";
-    const method = "POST";
-    const headers = {
-      "Content-Type": "application/json",
-      // "auth-token": userToken,
-    };
-    const body = {};
-
-    try {
-      const response = await fetchData(endpoint, method, body, headers);
-      if (response.success) {
-        const active = response.data.find((text) => text.isActive);
-        if (active) {
-          setActiveText(active.Content);
-        }
+  useEffect(() => {
+    if (data) {
+      const active = data.find((text) => text.isActive);
+      if (active) {
+        setActiveText(active.Content);
       }
-    } catch (error) {
-      console.error("Error fetching parallax content:", error);
     }
-  }, [fetchData]);
+  }, [data]);
 
   useEffect(() => {
-    fetchActiveParallaxText();
-
     const handleResize = () => {
       setWindowSize({
         width: window.innerWidth,
@@ -43,7 +27,7 @@ const ParallaxSection = () => {
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [fetchActiveParallaxText]);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,7 +36,6 @@ const ParallaxSection = () => {
       const circuit = document.getElementById("circuit_board");
       const wave = document.getElementById("tech_wave");
 
-      // Adjust parallax effects based on screen size
       const parallaxFactorText = windowSize.width > 768 ? 1.5 : 0.8;
       const parallaxFactorCircuit = windowSize.width > 768 ? 0.5 : 0.3;
       const parallaxFactorWave = windowSize.width > 768 ? 0.3 : 0.2;
@@ -66,20 +49,18 @@ const ParallaxSection = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [windowSize]);
 
-  // Calculate responsive text size
   const getTextSize = () => {
-    if (windowSize.width < 640) return "text-4xl"; // mobile
-    if (windowSize.width < 768) return "text-5xl"; // small tablet
-    if (windowSize.width < 1024) return "text-7xl"; // tablet
-    return "text-9xl"; // desktop
+    if (windowSize.width < 640) return "text-4xl";
+    if (windowSize.width < 768) return "text-5xl";
+    if (windowSize.width < 1024) return "text-7xl";
+    return "text-9xl";
   };
 
-  // Calculate button size and position
   const getButtonStyle = () => {
     if (windowSize.width < 640) {
-      return "px-6 py-3 text-lg transform translate-y-16"; // mobile
+      return "px-6 py-3 text-lg transform translate-y-16";
     }
-    return "px-8 py-4 text-xl transform translate-y-24"; // desktop
+    return "px-8 py-4 text-xl transform translate-y-24";
   };
 
   return (
@@ -101,15 +82,7 @@ const ParallaxSection = () => {
       >
         {activeText}
       </h2>
-      {!userToken && (
-        <a
-          href="/VerifyEmail"
-          id="btn"
-          className={`absolute bg-white text-purple-900 rounded-full z-10 ${getButtonStyle()}`}
-        >
-          Join Us
-        </a>
-      )}
+     
       <img
         src="bg0.png"
         id="tech_wave"

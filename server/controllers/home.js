@@ -379,6 +379,10 @@ export const getContent = async (req, res) => {
   }
 };
 
+
+
+
+
 export const updateContentSection = async (req, res) => {
   try {
     const userId = req.user.id; // Get user email from authentication
@@ -1004,5 +1008,114 @@ export const getAllCMSContent = async (req, res) => {
       data: error,
       message: "Unexpected Error, check logs",
     });
+  }
+};
+
+
+// In your API file (add this new endpoint)
+// export const getHomePageContent = async (req, res) => {
+//   try {
+//     connectToDatabase(async (err, conn) => {
+//       if (err) {
+//         logError("Failed to connect to database");
+//         return res.status(500).json({
+//           success: false,
+//           message: "Failed to connect to database",
+//         });
+//       }
+
+//       try {
+//         // Fetch both parallax and content data in parallel
+//         const [parallaxResults, contentResults] = await Promise.all([
+//           queryAsync(conn, `SELECT idCode, ComponentName, ComponentIdName, Content, isActive FROM tblCMSContent WHERE ComponentName = 'Parallax' AND ISNULL(delStatus, 0) = 0`),
+//           queryAsync(conn, `SELECT idCode, ComponentName, ComponentIdName, Title, Content, Image, isActive FROM tblCMSContent WHERE ComponentName = 'ContentSection' AND ISNULL(delStatus, 0) = 0`)
+//         ]);
+
+//         closeConnection();
+        
+//         return res.status(200).json({
+//           success: true,
+//           data: {
+//             parallax: parallaxResults,
+//             content: contentResults
+//           },
+//           message: "Homepage content fetched successfully"
+//         });
+//       } catch (queryErr) {
+//         closeConnection();
+//         logError("Database Query Error: ", queryErr);
+//         return res.status(500).json({
+//           success: false,
+//           message: "Database Query Error",
+//         });
+//       }
+//     });
+//   } catch (error) {
+//     logError("Unexpected Error: ", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Unexpected Error, check logs",
+//     });
+//   }
+// };
+
+export const getHomePageContent = async (req, res) => {
+  let conn;
+  try {
+    // Connect to database
+    conn = await new Promise((resolve, reject) => {
+      connectToDatabase((err, connection) => {
+        if (err) {
+          logError("Failed to connect to database", err);
+          reject(err);
+        } else {
+          resolve(connection);
+        }
+      });
+    });
+
+    // Execute queries in parallel with proper error handling
+    const [parallaxResults, contentResults] = await Promise.all([
+      queryAsync(conn, `
+        SELECT idCode, ComponentName, ComponentIdName, Content, isActive 
+        FROM tblCMSContent 
+        WHERE ComponentName = 'Parallax' AND ISNULL(delStatus, 0) = 0
+      `).catch(err => {
+        logError("Parallax query failed", err);
+        throw err;
+      }),
+      queryAsync(conn, `
+        SELECT idCode, ComponentName, ComponentIdName, Title, Content, Image, isActive 
+        FROM tblCMSContent 
+        WHERE ComponentName = 'ContentSection' AND ISNULL(delStatus, 0) = 0
+      `).catch(err => {
+        logError("Content query failed", err);
+        throw err;
+      })
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        parallax: parallaxResults,
+        content: contentResults
+      },
+      message: "Homepage content fetched successfully"
+    });
+  } catch (error) {
+    logError("Homepage content fetch error", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch homepage content",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  } finally {
+    if (conn) {
+      try {
+        await closeConnection(conn);
+      } catch (closeErr) {
+        logError("Failed to close connection", closeErr);
+      }
+    }
   }
 };
