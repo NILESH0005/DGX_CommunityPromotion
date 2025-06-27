@@ -1011,28 +1011,35 @@ export const getUserQuizCategory = async (req, res) => {
     QuizDetails.StartDateAndTime,
     QuizDetails.EndDateTime,
     GroupMaster.group_name,
-    GroupMaster.group_id, 
+    GroupMaster.group_id,
+    QuizDetails.refId,
+    QuizDetails.refName,
     SUM(QuizMapping.totalMarks) AS MaxScore,
     COUNT(DISTINCT QuizMapping.QuestionsID) AS Total_Question_No,
     MAX(ISNULL(UserAttempts.noOfAttempts, 0)) AS userAttempts
-FROM QuizMapping
-LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
-LEFT JOIN GroupMaster ON QuizDetails.QuizCategory = GroupMaster.group_id
-LEFT JOIN (
+    FROM QuizMapping
+    LEFT JOIN QuizDetails ON QuizMapping.quizId = QuizDetails.QuizID
+    LEFT JOIN GroupMaster ON QuizDetails.QuizCategory = GroupMaster.group_id
+    LEFT JOIN (
     SELECT quizID, MAX(noOfAttempts) AS noOfAttempts
     FROM quiz_score
-    WHERE userID = ?
+    WHERE userID = 1
     GROUP BY quizID
 ) AS UserAttempts ON QuizMapping.quizId = UserAttempts.quizID
-WHERE ISNULL(QuizMapping.delStatus, 0) = 0
+WHERE ISNULL(QuizMapping.delStatus, 0) = 0 and ISNULL(QuizDetails.delStatus, 0) = 0
 GROUP BY 
+    
     QuizDetails.QuizID, 
     QuizDetails.QuizImage, 
     QuizDetails.QuizName,
     GroupMaster.group_id, 
     GroupMaster.group_name, 
     QuizDetails.StartDateAndTime, 
-    QuizDetails.EndDateTime`;
+    QuizDetails.EndDateTime,
+    QuizDetails.refId,
+    QuizDetails.refName
+
+    order by refName, QuizName;`;
         const quizzes = await queryAsync(conn, query, [userId, userId]);
 
         const validQuizzes = quizzes.filter(
@@ -1876,7 +1883,7 @@ export const unmappQuestion = (req, res) => {
   }
 };
 
-export const updateQuestion = async (req, res) => {};
+export const updateQuestion = async (req, res) => { };
 
 export const getLeaderboardRanking = async (req, res) => {
   let success = false;
