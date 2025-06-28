@@ -326,49 +326,49 @@ const DiscussionModal = ({
               dangerouslySetInnerHTML={{ __html: discussion.Content }}
             />
 
-            {discussion.Tag && (
+            {discussion.Tag && typeof discussion.Tag === "string" && (
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Tags
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {discussion.Tag.split(",")
-                    .filter((tag) => tag)
+                    .filter((tag) => tag.trim()) // Also trim to remove any whitespace
                     .map((tag, index) => (
                       <span
                         key={index}
                         className="bg-DGXblue text-white px-3 py-1 rounded-full text-xs"
                       >
-                        {tag}
+                        {tag.trim()}
                       </span>
                     ))}
                 </div>
               </div>
             )}
-
-            {discussion.ResourceUrl && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Links
-                </h3>
-                <ul className="space-y-2">
-                  {discussion.ResourceUrl.split(",")
-                    .filter((link) => link)
-                    .map((link, index) => (
-                      <li key={index}>
-                        <a
-                          href={link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-DGXblue hover:underline break-all"
-                        >
-                          {link}
-                        </a>
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            )}
+            {discussion.ResourceUrl &&
+              typeof discussion.ResourceUrl === "string" && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Links
+                  </h3>
+                  <ul className="space-y-2">
+                    {discussion.ResourceUrl.split(",")
+                      .filter((link) => link.trim())
+                      .map((link, index) => (
+                        <li key={index}>
+                          <a
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-DGXblue hover:underline break-all"
+                          >
+                            {link.trim()}
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
           </div>
 
           {/* Comments Section */}
