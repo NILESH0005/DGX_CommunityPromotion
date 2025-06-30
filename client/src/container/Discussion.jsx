@@ -263,13 +263,9 @@ const Discussion = () => {
           fetchData(endpoint, method, body, headers)
             .then((result) => {
               if (result && result.data) {
-                // Ensure each discussion has a commentCount
-                const updatedDiscussions = result.data.updatedDiscussions.map(disc => ({
-                  ...disc,
-                  commentCount: disc.commentCount || disc.comment?.length || 0
-                }));
-                return updatedDiscussions;
+                return result.data;
               } else {
+                // Only show error if there's actually an error
                 if (result && result.message) {
                   Swal.fire({
                     icon: "error",
@@ -281,17 +277,20 @@ const Discussion = () => {
               }
             })
             .then((data) => {
-              if (data) {
-                setDemoDiscussions(data);
-                const highlights = getCommunityHighlights(data);
+              if (data && data.updatedDiscussions) {
+                setDemoDiscussions(data.updatedDiscussions);
+                const highlights = getCommunityHighlights(
+                  data.updatedDiscussions
+                );
                 setCommunityHighlights(highlights);
-                const users = getTopUsersByDiscussions(data);
+                const users = getTopUsersByDiscussions(data.updatedDiscussions);
                 setTopUsers(users);
               }
               setLoading(false);
             })
             .catch((error) => {
               setLoading(false);
+              // Only show error if it's not the default "Invalid data format" error
               if (error.message !== "Invalid data format") {
                 Swal.fire({
                   icon: "error",
@@ -370,80 +369,51 @@ const Discussion = () => {
       });
       return;
     }
-    const newLikeState = currentUserLike === 1 ? 0 : 1;
-    setDemoDiscussions(prevDiscussions =>
-      prevDiscussions.map(discussion => {
-        if (discussion.DiscussionID === id) {
-          const currentLikes = Number(discussion.likeCount) || 0;
-          const newLikeCount = newLikeState === 1 ? currentLikes + 1 : Math.max(0, currentLikes - 1);
 
-          return {
-            ...discussion,
-            userLike: newLikeState,
-            likeCount: newLikeCount,
-            _optimisticLike: true
-          };
-        }
-        return discussion;
-      })
-    );
+    const endpoint = "discussion/discussionpost";
+    const method = "POST";
+    const headers = {
+      "Content-Type": "application/json",
+      "auth-token": userToken,
+    };
+
+    // Toggle like state (1 → 0 or 0 → 1)
+    const newLikeState = currentUserLike === 1 ? 0 : 1;
+
+    const body = {
+      reference: id,
+      likes: newLikeState,
+    };
 
     try {
-      const endpoint = "discussion/discussionpost";
-      const method = "POST";
-      const headers = {
-        "Content-Type": "application/json",
-        "auth-token": userToken,
-      };
-      const body = {
-        reference: id,
-        likes: newLikeState,
-      };
-
       const data = await fetchData(endpoint, method, body, headers);
 
       if (!data.success) {
-        setDemoDiscussions(prevDiscussions =>
-          prevDiscussions.map(discussion => {
-            if (discussion.DiscussionID === id) {
-              return {
-                ...discussion,
-                userLike: currentUserLike,
-                likeCount: Number(discussion.likeCount) || 0,
-                _optimisticLike: false
-              };
-            }
-            return discussion;
-          })
-        );
+        console.error("Error occurred while liking the post");
         return;
       }
-      setDemoDiscussions(prevDiscussions =>
-        prevDiscussions.map(discussion => {
-          if (discussion.DiscussionID === id) {
-            return {
-              ...discussion,
-              _optimisticLike: false
-            };
-          }
-          return discussion;
-        })
-      );
 
-    } catch (error) {
-      setDemoDiscussions(prevDiscussions =>
-        prevDiscussions.map(discussion => {
+      // Update the discussion in state
+      setDemoDiscussions((prevDiscussions) =>
+        prevDiscussions.map((discussion) => {
           if (discussion.DiscussionID === id) {
+            // Calculate new like count
+            const currentLikes = Number(discussion.likeCount) || 0;
+            const newLikeCount =
+              newLikeState === 1
+                ? currentLikes + 1
+                : Math.max(0, currentLikes - 1);
+
             return {
               ...discussion,
-              userLike: currentUserLike,
-              likeCount: Number(discussion.likeCount) || 0,
-              _optimisticLike: false
+              userLike: newLikeState,
+              likeCount: newLikeCount,
             };
           }
           return discussion;
         })
       );
+    } catch (error) {
       console.error("Error:", error);
       Swal.fire({
         icon: "error",
@@ -616,10 +586,8 @@ const Discussion = () => {
           text: data.message || "Error in posting discussion, please try again",
           confirmButtonColor: "#3085d6",
         });
-        return;
-      }
-
-      setLoading(false);
+      } else if (data.success) {
+        setLoading(false);
 
         // Show success message
         await Swal.fire({
@@ -637,9 +605,9 @@ const Discussion = () => {
         });
         window.location.reload();
 
-      // Reset form and close
-      resetForm();
-      setIsFormOpen(false);
+        // Reset form and close
+        resetForm();
+        setIsFormOpen(false);
 
         // Update discussions if public
         if (privacy === "public") {
@@ -786,8 +754,9 @@ const Discussion = () => {
           isOpen={modalIsOpen}
           onRequestClose={closeModal}
           discussion={selectedDiscussion}
-          setDiscussions={setDemoDiscussions}
-          discussions={demoDiscussions}
+          setDiscussions={setDiscussions}
+          discussions={discussions}
+          setDemoDiscussion={setDemoDiscussions} // Make sure this matches your state setter
         />
       )}
       <div className="flex flex-col lg:flex-row w-full mx-auto bg-white rounded-md border border-gray-200 shadow-md mt-4 mb-4 p-4">
