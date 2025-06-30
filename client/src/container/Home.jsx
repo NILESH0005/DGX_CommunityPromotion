@@ -6,22 +6,21 @@ import ApiContext from "../context/ApiContext";
 import images from "../constant/images.js";
 import ParallaxSection from "../component/ParallaxSection";
 import ContentSection from "../component/ContentSection";
-import NewsSection from "../component/NewsSection";
-import ProjectShowcase from "../component/ProjectShowcase";
 import CommunityHighlights from "../component/CommunityHighlights";
 import LogoMarquee from "../component/LogoMarquee";
 import { TextParallax } from "../component/TextParallax.jsx";
 import Swal from "sweetalert2";
 
 const Home = () => {
-  const { user, userToken } = useContext(ApiContext);
+  const { user, userToken, fetchData } = useContext(ApiContext);
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentIndexUS, setCurrentIndexUS] = useState(0);
+  const [homeData, setHomeData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Slides data
-  // const slides = [images.us2, images.us3, images.us4, images.us5];
-
+  // Define usSlides array (was missing in previous version)
   const usSlides = [
     images.us1,
     images.us2,
@@ -33,60 +32,114 @@ const Home = () => {
     images.us9,
   ];
 
-  // const people = [
-  //   {
-  //     name: "Ashiwini Thakur",
-  //     role: "Project Manager",
-  //     imageUrl: `${images.AshwiniSir}`,
-  //   },
-  //   {
-  //     name: "Sharad Srivastav",
-  //     role: "Project Manager",
-  //     imageUrl: `${images.SharadSir}`,
-  //   },
-  //   {
-  //     name: "Anubhav Patrick",
-  //     role: "Project Manager",
-  //     imageUrl: `${images.PatrickSir}`,
-  //   },
-  //   {
-  //     name: "Sugandh Gupta",
-  //     role: "Project Manager",
-  //     imageUrl: `${images.SugandhMaam}`,
-  //   },
-  // ];
+  useEffect(() => {
+    // In your fetchHomeData function in Home.jsx
+    const fetchHomeData = async () => {
+      try {
+        const response = await fetchData(
+          "home/getHomePageContent",
+          "GET",
+          {},
+          { "Content-Type": "application/json" }
+        );
 
-  // // Auto-slide functionality
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     setCurrentIndex((prevIndex) =>
-  //       prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
-  //     );
-  //     setCurrentIndexUS((prevIndex) =>
-  //       prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
-  //     );
-  //   }, 3000);
+        if (response?.success) {
+          setHomeData(response.data);
+        } else {
+          const errorMsg =
+            response?.message || "Please Reload the Page";
+          
+        }
+      } catch (err) {
+        const errorMsg =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to load homepage";
+        setError(errorMsg);
+        Swal.fire("Error", errorMsg, "error");
 
-  //   return () => clearInterval(interval);
-  // }, [usSlides .length, usSlides.length]);
+        // Log detailed error in development
+        if (process.env.NODE_ENV === "development") {
+          console.error("API Error Details:", err);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomeData();
+  }, [fetchData]);
+
+  // Auto-slide functionality (from your original code)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) =>
+        prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
+      );
+      setCurrentIndexUS((prevIndex) =>
+        prevIndex === usSlides.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [usSlides.length]);
+
+  const [retryCount, setRetryCount] = useState(0);
+
+useEffect(() => {
+  const fetchWithRetry = async () => {
+    try {
+      await fetchHomeData();
+    } catch (error) {
+      if (retryCount < 2) { // Retry up to 2 times
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+        }, 2000); // Wait 2 seconds before retrying
+      }
+    }
+  };
+
+  fetchWithRetry();
+}, [retryCount]); // Add retryCount to dependency array
 
   const handleRedirect = () => navigate("/EventWorkshopPage");
   const handleRedirect01 = () => navigate("/Discussion");
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black to-blue-500 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black to-blue-500 flex items-center justify-center">
+        <div className="text-center text-white">
+          <p className="text-xl mb-4">Error loading content</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (userToken) {
-    // Logged-in view
     return (
       <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-black to-blue-500">
-        <ParallaxSection />
-        <ContentSection />
-        {/* <NewsSection />
-        <ProjectShowcase /> */}
+        <ParallaxSection data={homeData?.parallax} />
+        <ContentSection data={homeData?.content} />
         <CommunityHighlights />
       </div>
     );
   }
 
-  // Logged-out view
+  // Logged-out view (restored from your original code)
   return (
     <div>
       {/* Hero Section */}
@@ -141,7 +194,7 @@ const Home = () => {
           {/* About Us Carousel */}
           <div className="relative w-full h-52 md:h-[400px] lg:h-[400px] rounded-lg overflow-hidden">
             <div className="relative h-full">
-              {usSlides.map((usSlides, index) => (
+              {usSlides.map((slide, index) => (
                 <div
                   key={index}
                   className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
@@ -149,7 +202,7 @@ const Home = () => {
                   }`}
                 >
                   <img
-                    src={usSlides}
+                    src={slide}
                     alt={`US Slide ${index}`}
                     className="object-fill w-full h-full"
                   />
@@ -185,7 +238,7 @@ const Home = () => {
           {/* Events Carousel */}
           <div className="relative w-full h-64 md:h-[500px] lg:h-[500px] rounded-lg overflow-hidden">
             <div className="relative h-full">
-              {usSlides.map((usSlides, index) => (
+              {usSlides.map((slide, index) => (
                 <div
                   key={index}
                   className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
@@ -193,7 +246,7 @@ const Home = () => {
                   }`}
                 >
                   <img
-                    src={usSlides}
+                    src={slide}
                     alt={`Slide ${index}`}
                     className="w-full h-full object-cover"
                   />
@@ -204,45 +257,6 @@ const Home = () => {
         </div>
       </section>
       <TextParallax />
-      {/* Leadership Section */}
-      {/* <div className="bg-DGXgray/50 py-24 sm:py-32">
-        <div className="mx-auto grid max-w-7xl gap-x-8 gap-y-20 px-6 lg:px-8 xl:grid-cols-3">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-bold tracking-tight text-[#111827] sm:text-4xl">
-              Meet our leadership
-            </h2>
-            <p className="mt-6 text-justify text-lg leading-8 text-[#4b5563]">
-              "Our leaders are shaping the future with unparalleled expertise,
-              harnessing the revolutionary NVIDIA DGX system to drive
-              groundbreaking advancements in AI."
-            </p>
-          </div>
-          <ul
-            role="list"
-            className="p-6 grid gap-x-8 gap-y-12 sm:grid-cols-2 sm:gap-y-16 xl:col-span-2"
-          >
-            {people.map((person) => (
-              <li key={person.name}>
-                <div className="flex items-center gap-x-6">
-                  <img
-                    alt=""
-                    src={person.imageUrl}
-                    className="h-16 w-16 rounded-full"
-                  />
-                  <div>
-                    <h3 className="text-base font-semibold leading-7 tracking-tight text-[#111827]">
-                      {person.name}
-                    </h3>
-                    <p className="text-sm font-semibold leading-6 text-[#4f46e5]">
-                      {person.role}
-                    </p>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div> */}
 
       {/* Partners Section */}
       <div className="bg-white py-24 sm:py-32 w-full">
@@ -251,7 +265,6 @@ const Home = () => {
             NVIDIA DGX systems are at the forefront of AI research...
           </h1>
         </div>
-        {/* Remove any padding/margin constraints from the parent */}
         <div className="w-full overflow-hidden">
           <LogoMarquee />
         </div>

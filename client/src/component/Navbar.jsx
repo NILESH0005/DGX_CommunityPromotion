@@ -98,9 +98,9 @@ const Navbar = () => {
                     />
                     <Link to="/" className="flex items-center">
                         <img 
-                            src={images.nvidiaPP} 
+                            src={images.giventure} 
                             className="h-10 md:h-10 lg:h-12 xl:h-14" 
-                            alt="NVIDIA Preferred Partner Logo" 
+                            alt="gi-venture logo" 
                         />
                     </Link>
                 </section>

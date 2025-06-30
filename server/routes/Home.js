@@ -12,6 +12,7 @@ import {
   getProjectShowcase,
   deleteParallaxText,
   getAllCMSContent,
+  getHomePageContent,
 } from "../controllers/home.js";
 
 const router = express.Router();
@@ -28,5 +29,6 @@ router.post("/addNewsSection", fetchUser, addNewsSection);
 router.post("/addNewsSection", fetchUser, addNewsSection);
 router.post("/addProjectShowcase", fetchUser, addProjectShowcase);
 router.get("/getAllCMSContent", getAllCMSContent);
+router.get("/getHomePageContent", getHomePageContent);
 
 export default router;

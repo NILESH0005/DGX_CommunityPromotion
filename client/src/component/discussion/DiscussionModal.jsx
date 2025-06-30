@@ -52,39 +52,7 @@ const DiscussionModal = ({
       return;
     }
 
-    // Create temporary comment ID for optimistic update
-    const tempCommentId = `temp-${Date.now()}`;
-
-    // Optimistic update
-    const newCommentObj = {
-      UserID: user.UserID,
-      UserName: user.Name,
-      DiscussionID: tempCommentId,
-      timestamp: new Date().toISOString(),
-      Comment: newComment,
-      comment: [],
-      likeCount: 0,
-      userLike: 0,
-      _optimistic: true
-    };
-
-    // Update local state immediately
-    setDissComments(prev => [newCommentObj, ...prev]);
-
-    // Update parent state to ensure comment count is updated
-    setDemoDiscussions(prevDiscussions =>
-      prevDiscussions.map(item =>
-        item.DiscussionID === discussion.DiscussionID
-          ? {
-            ...item,
-            comment: [newCommentObj, ...item.comment],
-            commentCount: (item.commentCount || item.comment?.length || 0) + 1
-          }
-          : item
-      )
-    );
-
-    try {
+    if (userToken) {
       const endpoint = "discussion/discussionpost";
       const method = "POST";
       const headers = {
@@ -93,70 +61,64 @@ const DiscussionModal = ({
       };
       const body = { reference: id, comment: newComment };
 
-      const data = await fetchData(endpoint, method, body, headers);
+      setLoading(true);
 
-      if (!data.success) {
-        throw new Error(data.message || "Failed to post comment");
+      try {
+        const data = await fetchData(endpoint, method, body, headers);
+        console.log("API Responserrrr:", data); // Debug log
+
+        if (!data.success) {
+          setLoading(false);
+          Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: `Error posting comment: ${data.message}`,
+          });
+          return;
+        }
+
+        // Create a new comment object
+        const newCommentObj = {
+          UserID: user.UserID,
+          UserName: user.Name,
+          DiscussionID: data.data?.postId || data.postId || Date.now(), // Handle both response structures
+          timestamp: new Date().toISOString(),
+          Comment: newComment,
+          comment: [],
+          likeCount: 0,
+          userLike: 0,
+        };
+        // Update the parent state
+        setDemoDiscussion((prevDiscussions) =>
+          prevDiscussions.map((item) =>
+            item.DiscussionID === discussion.DiscussionID
+              ? {
+                  ...item,
+                  comment: [newCommentObj, ...item.comment],
+                }
+              : item
+          )
+        );
+
+        // Update local state
+        setDissComments((prev) => [newCommentObj, ...prev]);
+        setNewComment("");
+        setLoading(false);
+
+        Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text: "Comment posted successfully!",
+        });
+      } catch (error) {
+        setLoading(false);
+        console.error("Error posting comment:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: "Something went wrong. Try again.",
+        });
       }
-
-      // Replace optimistic comment with server response
-      const serverComment = {
-        ...newCommentObj,
-        DiscussionID: data.data?.postId || data.postId,
-        _optimistic: false
-      };
-
-      // Update both local and parent state with the server response
-      setDissComments(prev =>
-        prev.map(comment =>
-          comment.DiscussionID === tempCommentId ? serverComment : comment
-        )
-      );
-
-      setDemoDiscussions(prevDiscussions =>
-        prevDiscussions.map(item =>
-          item.DiscussionID === discussion.DiscussionID
-            ? {
-              ...item,
-              comment: item.comment.map(comment =>
-                comment.DiscussionID === tempCommentId ? serverComment : comment
-              )
-            }
-            : item
-        )
-      );
-
-      setNewComment("");
-      Swal.fire({
-        icon: "success",
-        title: "Success!",
-        text: "Comment posted successfully!",
-      });
-    } catch (error) {
-      // Revert on error
-      setDissComments(prev =>
-        prev.filter(comment => comment.DiscussionID !== tempCommentId)
-      );
-      setDemoDiscussions(prevDiscussions =>
-        prevDiscussions.map(item =>
-          item.DiscussionID === discussion.DiscussionID
-            ? {
-              ...item,
-              comment: item.comment.filter(
-                comment => comment.DiscussionID !== tempCommentId
-              ),
-              commentCount: (item.commentCount || item.comment?.length || 0) - 1
-            }
-            : item
-        )
-      );
-
-      console.error("Error posting comment:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "Something went wrong. Try again.",
-      });
     }
   };
 
@@ -364,70 +326,52 @@ const DiscussionModal = ({
               dangerouslySetInnerHTML={{ __html: discussion.Content }}
             />
 
-            {discussion.Tag && (
+            {discussion.Tag && typeof discussion.Tag === "string" && (
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Tags
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {Array.isArray(discussion.Tag)
-                    ? discussion.Tag.map((tag, index) => (
-                      <span key={index} className="bg-DGXblue text-white px-3 py-1 rounded-full text-xs">
-                        {tag}
+                  {discussion.Tag.split(",")
+                    .filter((tag) => tag.trim()) // Also trim to remove any whitespace
+                    .map((tag, index) => (
+                      <span
+                        key={index}
+                        className="bg-DGXblue text-white px-3 py-1 rounded-full text-xs"
+                      >
+                        {tag.trim()}
                       </span>
-                    ))
-                    : typeof discussion.Tag === 'string'
-                      ? discussion.Tag.split(",")
-                        .filter(tag => tag.trim())
-                        .map((tag, index) => (
-                          <span key={index} className="bg-DGXblue text-white px-3 py-1 rounded-full text-xs">
-                            {tag}
-                          </span>
-                        ))
-                      : null}
+                    ))}
                 </div>
               </div>
             )}
-
-            {discussion.ResourceUrl && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Links
-                </h3>
-                <ul className="space-y-2">
-                  {Array.isArray(discussion.ResourceUrl)
-                    ? discussion.ResourceUrl.map((link, index) => (
-                      <li key={index}>
-                        <a
-                          href={link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-DGXblue hover:underline break-all"
-                        >
-                          {link}
-                        </a>
-                      </li>
-                    ))
-                    : typeof discussion.ResourceUrl === 'string'
-                      ? discussion.ResourceUrl.split(",")
-                        .filter(link => link.trim())
-                        .map((link, index) => (
-                          <li key={index}>
-                            <a
-                              href={link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-DGXblue hover:underline break-all"
-                            >
-                              {link}
-                            </a>
-                          </li>
-                        ))
-                      : null}
-                </ul>
-              </div>
-            )}
+            {discussion.ResourceUrl &&
+              typeof discussion.ResourceUrl === "string" && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Links
+                  </h3>
+                  <ul className="space-y-2">
+                    {discussion.ResourceUrl.split(",")
+                      .filter((link) => link.trim())
+                      .map((link, index) => (
+                        <li key={index}>
+                          <a
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-DGXblue hover:underline break-all"
+                          >
+                            {link.trim()}
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
           </div>
+
+          {/* Comments Section */}
           <div className="md:w-1/2 flex flex-col">
             {/* Comment Input */}
             <div className="p-4 border-b border-gray-200">
@@ -594,68 +538,68 @@ const DiscussionModal = ({
                                     {/* Nested Reply form */}
                                     {activeNestedReplyIndex[commentIndex] ===
                                       replyIndex && (
-                                        <div className="ml-8 mt-2">
-                                          <div className="flex space-x-2">
-                                            <img
-                                              src={
-                                                user?.ProfilePicture ||
-                                                images.defaultProfile
-                                              }
-                                              className="w-6 h-6 rounded-full"
-                                              alt="User"
-                                            />
-                                            <div className="flex-1">
-                                              <textarea
-                                                rows={1}
-                                                value={
-                                                  nestedReplyTexts[
+                                      <div className="ml-8 mt-2">
+                                        <div className="flex space-x-2">
+                                          <img
+                                            src={
+                                              user?.ProfilePicture ||
+                                              images.defaultProfile
+                                            }
+                                            className="w-6 h-6 rounded-full"
+                                            alt="User"
+                                          />
+                                          <div className="flex-1">
+                                            <textarea
+                                              rows={1}
+                                              value={
+                                                nestedReplyTexts[
                                                   `${commentIndex}-${replyIndex}`
-                                                  ] || ""
+                                                ] || ""
+                                              }
+                                              onChange={(e) =>
+                                                setNestedReplyTexts((prev) => ({
+                                                  ...prev,
+                                                  [`${commentIndex}-${replyIndex}`]:
+                                                    e.target.value,
+                                                }))
+                                              }
+                                              className="w-full rounded-lg border border-gray-300 p-2 text-xs focus:ring-2 focus:ring-DGXblue focus:border-transparent"
+                                              placeholder="Write a reply..."
+                                            />
+                                            <div className="flex justify-end mt-1 space-x-2">
+                                              <button
+                                                onClick={() =>
+                                                  setActiveNestedReplyIndex(
+                                                    (prev) => ({
+                                                      ...prev,
+                                                      [commentIndex]: null,
+                                                    })
+                                                  )
                                                 }
-                                                onChange={(e) =>
-                                                  setNestedReplyTexts((prev) => ({
-                                                    ...prev,
-                                                    [`${commentIndex}-${replyIndex}`]:
-                                                      e.target.value,
-                                                  }))
-                                                }
-                                                className="w-full rounded-lg border border-gray-300 p-2 text-xs focus:ring-2 focus:ring-DGXblue focus:border-transparent"
-                                                placeholder="Write a reply..."
-                                              />
-                                              <div className="flex justify-end mt-1 space-x-2">
-                                                <button
-                                                  onClick={() =>
-                                                    setActiveNestedReplyIndex(
-                                                      (prev) => ({
-                                                        ...prev,
-                                                        [commentIndex]: null,
-                                                      })
-                                                    )
-                                                  }
-                                                  className="text-xs text-gray-600 hover:text-gray-800"
-                                                >
-                                                  Cancel
-                                                </button>
-                                                <button
-                                                  onClick={() =>
-                                                    handleAddReply(
-                                                      commentIndex,
-                                                      nestedReplyTexts[
+                                                className="text-xs text-gray-600 hover:text-gray-800"
+                                              >
+                                                Cancel
+                                              </button>
+                                              <button
+                                                onClick={() =>
+                                                  handleAddReply(
+                                                    commentIndex,
+                                                    nestedReplyTexts[
                                                       `${commentIndex}-${replyIndex}`
-                                                      ],
-                                                      comment.DiscussionID,
-                                                      replyIndex
-                                                    )
-                                                  }
-                                                  className="bg-DGXgreen hover:bg-DGXblue text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors"
-                                                >
-                                                  Reply
-                                                </button>
-                                              </div>
+                                                    ],
+                                                    comment.DiscussionID,
+                                                    replyIndex
+                                                  )
+                                                }
+                                                className="bg-DGXgreen hover:bg-DGXblue text-white text-xs font-medium py-1 px-2 rounded-lg transition-colors"
+                                              >
+                                                Reply
+                                              </button>
                                             </div>
                                           </div>
                                         </div>
-                                      )}
+                                      </div>
+                                    )}
 
                                     {/* Nested Replies */}
                                     {reply.comment?.length > 0 && (

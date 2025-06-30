@@ -83,6 +83,7 @@ const EventDetailsModal = ({ event, isOpen, onClose }) => {
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-DGXblue hover:underline"
+
                     >
                       Register Here
                     </a>
@@ -100,7 +101,7 @@ const EventDetailsModal = ({ event, isOpen, onClose }) => {
             </div>
           </div>
           
-          <div className="flex flex-wrap gap-3 justify-center mt-6">
+          {/* <div className="flex flex-wrap gap-3 justify-center mt-6">
             {event.RegistrationLink && (
               <a
                 href={event.RegistrationLink}
@@ -123,7 +124,7 @@ const EventDetailsModal = ({ event, isOpen, onClose }) => {
             >
               Close
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
@@ -296,13 +297,13 @@ const EventWorkshopPage = () => {
                     >
                       Details
                     </button>
-                    <button
+                    {/* <button
                       onClick={() => handleShare(event)}
                       className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition flex items-center justify-center"
                     >
                       <FontAwesomeIcon icon={faShare} className="mr-2" />
                       Share
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </motion.div>

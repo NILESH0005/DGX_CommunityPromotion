@@ -1,5 +1,6 @@
 
 import nvidiaPP from '../public/nvidiapp.jpg';
+import giventure from '../public/giventure.png';
 import verifyImg from '../public/verifyImg.png';
 import Refresh from '../public/Refresh.png';
 import robo from '../public/robo.png'
@@ -60,6 +61,7 @@ import Discussion from '../public/Discussion.png'
 
 export default {
     nvidiaPP,
+    giventure,
     verifyImg,
     Refresh,
     robo,
