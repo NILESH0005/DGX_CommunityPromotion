@@ -141,6 +141,8 @@ export const discussionpost = async (req, res) => {
                 value: visibilityValue[0]?.ddValue || null,
                 id: lastInsertedId[0].Visibility,
               },
+              action: likes !== null ? 'like' : comment !== null ? 'comment' : 'post'
+
             },
             message: infoMessage,
           });

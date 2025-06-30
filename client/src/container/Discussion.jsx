@@ -248,9 +248,13 @@ const Discussion = () => {
           fetchData(endpoint, method, body, headers)
             .then((result) => {
               if (result && result.data) {
-                return result.data;
+                // Ensure each discussion has a commentCount
+                const updatedDiscussions = result.data.updatedDiscussions.map(disc => ({
+                  ...disc,
+                  commentCount: disc.commentCount || disc.comment?.length || 0
+                }));
+                return updatedDiscussions;
               } else {
-                // Only show error if there's actually an error
                 if (result && result.message) {
                   Swal.fire({
                     icon: "error",
@@ -262,20 +266,17 @@ const Discussion = () => {
               }
             })
             .then((data) => {
-              if (data && data.updatedDiscussions) {
-                setDemoDiscussions(data.updatedDiscussions);
-                const highlights = getCommunityHighlights(
-                  data.updatedDiscussions
-                );
+              if (data) {
+                setDemoDiscussions(data);
+                const highlights = getCommunityHighlights(data);
                 setCommunityHighlights(highlights);
-                const users = getTopUsersByDiscussions(data.updatedDiscussions);
+                const users = getTopUsersByDiscussions(data);
                 setTopUsers(users);
               }
               setLoading(false);
             })
             .catch((error) => {
               setLoading(false);
-              // Only show error if it's not the default "Invalid data format" error
               if (error.message !== "Invalid data format") {
                 Swal.fire({
                   icon: "error",
@@ -354,51 +355,80 @@ const Discussion = () => {
       });
       return;
     }
-
-    const endpoint = "discussion/discussionpost";
-    const method = "POST";
-    const headers = {
-      "Content-Type": "application/json",
-      "auth-token": userToken,
-    };
-
-    // Toggle like state (1 → 0 or 0 → 1)
     const newLikeState = currentUserLike === 1 ? 0 : 1;
+    setDemoDiscussions(prevDiscussions =>
+      prevDiscussions.map(discussion => {
+        if (discussion.DiscussionID === id) {
+          const currentLikes = Number(discussion.likeCount) || 0;
+          const newLikeCount = newLikeState === 1 ? currentLikes + 1 : Math.max(0, currentLikes - 1);
 
-    const body = {
-      reference: id,
-      likes: newLikeState,
-    };
+          return {
+            ...discussion,
+            userLike: newLikeState,
+            likeCount: newLikeCount,
+            _optimisticLike: true
+          };
+        }
+        return discussion;
+      })
+    );
 
     try {
+      const endpoint = "discussion/discussionpost";
+      const method = "POST";
+      const headers = {
+        "Content-Type": "application/json",
+        "auth-token": userToken,
+      };
+      const body = {
+        reference: id,
+        likes: newLikeState,
+      };
+
       const data = await fetchData(endpoint, method, body, headers);
 
       if (!data.success) {
-        console.error("Error occurred while liking the post");
+        setDemoDiscussions(prevDiscussions =>
+          prevDiscussions.map(discussion => {
+            if (discussion.DiscussionID === id) {
+              return {
+                ...discussion,
+                userLike: currentUserLike,
+                likeCount: Number(discussion.likeCount) || 0,
+                _optimisticLike: false
+              };
+            }
+            return discussion;
+          })
+        );
         return;
       }
-
-      // Update the discussion in state
-      setDemoDiscussions((prevDiscussions) =>
-        prevDiscussions.map((discussion) => {
+      setDemoDiscussions(prevDiscussions =>
+        prevDiscussions.map(discussion => {
           if (discussion.DiscussionID === id) {
-            // Calculate new like count
-            const currentLikes = Number(discussion.likeCount) || 0;
-            const newLikeCount =
-              newLikeState === 1
-                ? currentLikes + 1
-                : Math.max(0, currentLikes - 1);
-
             return {
               ...discussion,
-              userLike: newLikeState,
-              likeCount: newLikeCount,
+              _optimisticLike: false
             };
           }
           return discussion;
         })
       );
+
     } catch (error) {
+      setDemoDiscussions(prevDiscussions =>
+        prevDiscussions.map(discussion => {
+          if (discussion.DiscussionID === id) {
+            return {
+              ...discussion,
+              userLike: currentUserLike,
+              likeCount: Number(discussion.likeCount) || 0,
+              _optimisticLike: false
+            };
+          }
+          return discussion;
+        })
+      );
       console.error("Error:", error);
       Swal.fire({
         icon: "error",
@@ -520,13 +550,7 @@ const Discussion = () => {
     e.preventDefault();
 
     // Validate all fields before submission
-    const isTitleValid = validateTitle();
-    const isContentValid = validateContent();
-    const isTagsValid = validateTags();
-    const isLinksValid = validateLinks();
-    const isPrivacyValid = validatePrivacy();
-
-    if (!isTitleValid || !isContentValid || !isTagsValid || !isLinksValid || !isPrivacyValid) {
+    if (!validateForm()) {
       Swal.fire({
         icon: 'error',
         title: 'Validation Error',
@@ -564,41 +588,47 @@ const Discussion = () => {
           text: data.message || 'Error in posting discussion, please try again',
           confirmButtonColor: '#3085d6',
         });
-      } else if (data.success) {
-        setLoading(false);
+        return;
+      }
 
-        // Show success message
-        await Swal.fire({
-          title: 'Success!',
-          text: privacy === "private"
-            ? 'Your private discussion has been posted successfully!'
-            : 'Your discussion has been posted successfully!',
-          icon: 'success',
-          confirmButtonText: 'OK',
-          confirmButtonColor: '#3085d6',
-          customClass: {
-            popup: 'animated bounceIn'
-          }
-        });
+      setLoading(false);
 
-        // Reset form and close
-        resetForm();
-        setIsFormOpen(false);
+      // Show success message
+      await Swal.fire({
+        title: 'Success!',
+        text: privacy === "private"
+          ? 'Your private discussion has been posted successfully!'
+          : 'Your discussion has been posted successfully!',
+        icon: 'success',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
 
-        // Update discussions if public
-        if (privacy === "public") {
-          const newDiscussion = {
-            DiscussionID: data.postID,
-            Title: title,
-            Content: content,
-            Tag: tags,
-            ResourceUrl: links,
-            Image: selectedImage,
-            Visibility: privacy,
-            comment: []
-          };
-          setDemoDiscussions([newDiscussion, ...demoDiscussions]);
-        }
+      // Reset form and close
+      resetForm();
+      setIsFormOpen(false);
+
+      // Only update state if public discussion
+      if (privacy === "public") {
+        const newDiscussion = {
+          DiscussionID: data.data.postId,
+          Title: title,
+          Content: content,
+          Tag: tags,
+          ResourceUrl: links,
+          Image: selectedImage,
+          Visibility: privacy,
+          comment: [],
+          likeCount: 0,
+          userLike: 0,
+          UserID: user.UserID,
+          UserName: user.Name,
+          AddOnDt: new Date().toISOString(),
+          AuthAdd: user.Name
+        };
+
+        // Add to beginning of discussions array
+        setDemoDiscussions(prev => [newDiscussion, ...prev]);
       }
     } catch (error) {
       setLoading(false);
@@ -729,9 +759,8 @@ const Discussion = () => {
           isOpen={modalIsOpen}
           onRequestClose={closeModal}
           discussion={selectedDiscussion}
-          setDiscussions={setDiscussions}
-          discussions={discussions}
-          setDemoDiscussion={setDemoDiscussions} // Make sure this matches your state setter
+          setDiscussions={setDemoDiscussions}
+          discussions={demoDiscussions}
         />
       )}
       <div className="flex flex-col lg:flex-row w-full mx-auto bg-white rounded-md border border-gray-200 shadow-md mt-4 mb-4 p-4">
@@ -1150,57 +1179,49 @@ const Discussion = () => {
                       </div>
                     )}
                     <div className="mt-2 flex flex-wrap gap-2" onClick={() => openModal(discussion)}>
-                      {discussion.Tag && typeof discussion.Tag === 'string'
-                        ? discussion.Tag.split(",")
-                          .filter((tag) => tag)
-                          .map((tag, tagIndex) => (
-                            <span
-                              key={tagIndex}
-                              className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base"
-                            >
-                              {tag}
-                            </span>
-                          ))
-                        : Array.isArray(discussion.Tag)
-                          ? discussion.Tag.map((tag, tagIndex) => (
-                            <span
-                              key={tagIndex}
-                              className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base"
-                            >
-                              {tag}
-                            </span>
-                          ))
+                      {Array.isArray(discussion.Tag)
+                        ? discussion.Tag.map((tag, tagIndex) => (
+                          <span key={tagIndex} className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base">
+                            {tag}
+                          </span>
+                        ))
+                        : typeof discussion.Tag === 'string'
+                          ? discussion.Tag.split(",")
+                            .filter(tag => tag.trim())
+                            .map((tag, tagIndex) => (
+                              <span key={tagIndex} className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base">
+                                {tag}
+                              </span>
+                            ))
                           : null}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2" onClick={() => openModal(discussion)}>
-                      {discussion.ResourceUrl && typeof discussion.ResourceUrl === 'string'
-                        ? discussion.ResourceUrl.split(",").map(
-                          (link, linkIndex) => (
-                            <a
-                              key={linkIndex}
-                              href={link}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {link}
-                            </a>
-                          )
-                        )
-                        : Array.isArray(discussion.ResourceUrl)
-                          ? discussion.ResourceUrl.map((link, linkIndex) => (
-                            <a
-                              key={linkIndex}
-                              href={link}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {link}
-                            </a>
-                          ))
+                      {Array.isArray(discussion.ResourceUrl)
+                        ? discussion.ResourceUrl.map((link, linkIndex) => (
+                          <a
+                            key={linkIndex}
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
+                          >
+                            {link}
+                          </a>
+                        ))
+                        : typeof discussion.ResourceUrl === 'string'
+                          ? discussion.ResourceUrl.split(",")
+                            .filter(link => link.trim())
+                            .map((link, linkIndex) => (
+                              <a
+                                key={linkIndex}
+                                href={link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
+                              >
+                                {link}
+                              </a>
+                            ))
                           : null}
                     </div>
                     <div className="mt-4 flex items-center space-x-4">
@@ -1230,7 +1251,7 @@ const Discussion = () => {
                         }}
                       >
                         <FaComment className="mr-2" />
-                        {discussion.comment.length} Comments
+                        {discussion.commentCount || discussion.comment?.length || 0} Comments
                       </button>
                     </div>
                   </div>
