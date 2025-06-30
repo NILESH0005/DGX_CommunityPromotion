@@ -20,7 +20,6 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Define usSlides array (was missing in previous version)
   const usSlides = [
     images.us1,
     images.us2,
@@ -212,8 +211,6 @@ useEffect(() => {
           </div>
         </div>
       </section>
-
-      {/* Events Section */}
       <section className="bg-white">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 lg:p-8">
           <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left">
@@ -235,7 +232,6 @@ useEffect(() => {
             </button>
           </div>
 
-          {/* Events Carousel */}
           <div className="relative w-full h-64 md:h-[500px] lg:h-[500px] rounded-lg overflow-hidden">
             <div className="relative h-full">
               {usSlides.map((slide, index) => (
@@ -258,7 +254,6 @@ useEffect(() => {
       </section>
       <TextParallax />
 
-      {/* Partners Section */}
       <div className="bg-white py-24 sm:py-32 w-full">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <h1 className="text-center text-2xl font-bold leading-8 text-DGXblue mb-20">

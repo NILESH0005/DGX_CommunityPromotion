@@ -44,9 +44,10 @@ const modules = [
     description:
       "Test your knowledge with interactive quizzes and improve your understanding.",
     category: "Quiz",
-    image:
-      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
+    image: "https://images.pexels.com/photos/5428830/pexels-photo-5428830.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
+
     path: "/QuizInterface",
+
   },
 ];
 

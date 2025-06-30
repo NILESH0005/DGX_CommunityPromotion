@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import { useState, useEffect, useRef,useContext} from "react";
 import { FaSearch, FaComment, FaWindowClose, FaTrophy } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 const Discussion = () => {
   const navigate = useNavigate();
   const { fetchData, userToken, user } = useContext(ApiContext);
+  const [searchScope, setSearchScope] = useState("all"); // 'all', 'title', 'content', 'tags'
   const [demoDiscussions, setDemoDiscussions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // Loading state
@@ -704,9 +705,8 @@ const Discussion = () => {
           </div> */}
           <div
             id="navbar-alignment"
-            className={`${
-              isNavOpen ? "block" : "hidden"
-            } hs-collapse overflow-hidden transition-all duration-300 basis-full grow sm:grow-0 sm:basis-auto sm:block sm:order-2`}
+            className={`${isNavOpen ? "block" : "hidden"
+              } hs-collapse overflow-hidden transition-all duration-300 basis-full grow sm:grow-0 sm:basis-auto sm:block sm:order-2`}
           >
             {/* <div className="flex flex-col gap-6 mt-5 sm:flex-row sm:items-center sm:mt-0 sm:ps-5">
               <a className="text-lg font-bold text-DGXwhite cursor-pointer" onClick={() => setSelectedSection('all')} aria-current="page">All</a>
@@ -770,33 +770,33 @@ const Discussion = () => {
             <div className="space-y-4">
               {isLoading
                 ? // Display Skeleton loaders in place of the actual content
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <Skeleton
-                      key={index}
-                      height="8.5rem" // Adjust height as needed to mimic the card's height
-                      className="w-full bg-gray-300 rounded-lg mb-4"
-                    />
-                  ))
+                Array.from({ length: 5 }).map((_, index) => (
+                  <Skeleton
+                    key={index}
+                    height="8.5rem" // Adjust height as needed to mimic the card's height
+                    className="w-full bg-gray-300 rounded-lg mb-4"
+                  />
+                ))
                 : // Display actual content when loading is complete
-                  communityHighlights.map((topic) => (
-                    <div
-                      key={topic.DiscussionID}
-                      className="rounded-lg shadow-lg p-4 border hover:bg-DGXgreen/50 border-DGXblack transition-transform transform hover:scale-105 hover:shadow-xl"
-                      onClick={() => openModal(topic)}
-                    >
-                      <h3 className="text-xl font-semibold">
-                        <a
-                          href={topic.link}
-                          className="text-DGXblack hover:underline"
-                        >
-                          {topic.Title}
-                        </a>
-                      </h3>
-                      <p className="text-DGXblack mt-2">
-                        {topic.Content.substring(0, 150)}
-                      </p>
-                    </div>
-                  ))}
+                communityHighlights.map((topic) => (
+                  <div
+                    key={topic.DiscussionID}
+                    className="rounded-lg shadow-lg p-4 border hover:bg-DGXgreen/50 border-DGXblack transition-transform transform hover:scale-105 hover:shadow-xl"
+                    onClick={() => openModal(topic)}
+                  >
+                    <h3 className="text-xl font-semibold">
+                      <a
+                        href={topic.link}
+                        className="text-DGXblack hover:underline"
+                      >
+                        {topic.Title}
+                      </a>
+                    </h3>
+                    <p className="text-DGXblack mt-2">
+                      {topic.Content.substring(0, 150)}
+                    </p>
+                  </div>
+                ))}
             </div>
           </div>
 
@@ -808,23 +808,23 @@ const Discussion = () => {
             <div className="space-y-2">
               {isLoading
                 ? Array.from({ length: 5 }).map((_, index) => (
-                    <Skeleton
-                      key={index}
-                      height="2.5rem"
-                      className="w-full bg-gray-300 rounded-lg mb-4"
-                    />
-                  ))
+                  <Skeleton
+                    key={index}
+                    height="2.5rem"
+                    className="w-full bg-gray-300 rounded-lg mb-4"
+                  />
+                ))
                 : topUsers.map((user, index) => (
-                    <div
-                      key={user.userID}
-                      className="flex justify-between items-center bg-DGXblue border border-gray-200 rounded-lg shadow-sm p-3 hover:shadow-xl hover:scale-105 transition-colors"
-                    >
-                      <span className="font-medium text-white">
-                        {user.userName}
-                      </span>
-                      <span className="text-white">{user.count} Post(s)</span>
-                    </div>
-                  ))}
+                  <div
+                    key={user.userID}
+                    className="flex justify-between items-center bg-DGXblue border border-gray-200 rounded-lg shadow-sm p-3 hover:shadow-xl hover:scale-105 transition-colors"
+                  >
+                    <span className="font-medium text-white">
+                      {user.userName}
+                    </span>
+                    <span className="text-white">{user.count} Post(s)</span>
+                  </div>
+                ))}
             </div>
           </div>
         </aside>
@@ -856,9 +856,8 @@ const Discussion = () => {
                   <input
                     id="title"
                     type="text"
-                    className={`w-full px-3 py-2 border rounded-lg ${
-                      errors.title ? "border-red-500" : ""
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg ${errors.title ? "border-red-500" : ""
+                      }`}
                     value={title}
                     onChange={(e) => {
                       setTitle(e.target.value);
@@ -897,9 +896,8 @@ const Discussion = () => {
                       if (errors.content) validateContent();
                     }}
                     onBlur={validateContent}
-                    className={`border rounded-lg ${
-                      errors.content ? "border-red-500" : ""
-                    }`}
+                    className={`border rounded-lg ${errors.content ? "border-red-500" : ""
+                      }`}
                     modules={{
                       toolbar: [
                         [{ header: [1, 2, 3, false] }],
@@ -930,9 +928,8 @@ const Discussion = () => {
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2 border rounded-lg ${
-                      errors.tags ? "border-red-500" : ""
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg ${errors.tags ? "border-red-500" : ""
+                      }`}
                     value={tagInput}
                     onChange={handleTagInputChange}
                     onKeyPress={(e) => {
@@ -992,9 +989,8 @@ const Discussion = () => {
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2 border rounded-lg ${
-                      errors.links ? "border-red-500" : ""
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg ${errors.links ? "border-red-500" : ""
+                      }`}
                     value={linkInput}
                     onChange={handleLinkInputChange}
                     onKeyPress={(e) => {
@@ -1084,9 +1080,8 @@ const Discussion = () => {
                       setErrors({ ...errors, privacy: "" });
                     }}
                     onBlur={validatePrivacy}
-                    className={`w-full px-3 py-2 border rounded-lg ${
-                      errors.privacy ? "border-red-500" : ""
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg ${errors.privacy ? "border-red-500" : ""
+                      }`}
                   >
                     <option value="">Select privacy</option>
                     <option value="private">Private</option>
@@ -1149,172 +1144,172 @@ const Discussion = () => {
             <div className="two-h-screen scrollbar scrollbar-thin  overflow-y-auto px-6">
               {isLoading
                 ? // Display a skeleton for each item based on the length of demoDiscussions
-                  demoDiscussions.map((_, index) => (
-                    <div
-                      key={index}
-                      className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl bg-gray-200 animate-pulse"
-                    >
-                      <div className="h-10 bg-gray-300 rounded w-3/4 mb-2"></div>
-                      <div className="h-24 bg-gray-300 rounded w-full mb-2"></div>
-                      <div className="h-40 w-60 bg-gray-300 rounded mb-2"></div>
-                      <div className="flex gap-2">
-                        {Array.from({ length: 3 }).map((_, tagIndex) => (
-                          <span
-                            key={tagIndex}
-                            className="h-8 w-20 bg-gray-300 rounded"
-                          ></span>
-                        ))}
-                      </div>
-                      <div className="mt-4 h-5 bg-gray-300 rounded w-1/2"></div>
-                      <div className="mt-4 h-8 bg-gray-300 rounded w-52"></div>
+                demoDiscussions.map((_, index) => (
+                  <div
+                    key={index}
+                    className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl bg-gray-200 animate-pulse"
+                  >
+                    <div className="h-10 bg-gray-300 rounded w-3/4 mb-2"></div>
+                    <div className="h-24 bg-gray-300 rounded w-full mb-2"></div>
+                    <div className="h-40 w-60 bg-gray-300 rounded mb-2"></div>
+                    <div className="flex gap-2">
+                      {Array.from({ length: 3 }).map((_, tagIndex) => (
+                        <span
+                          key={tagIndex}
+                          className="h-8 w-20 bg-gray-300 rounded"
+                        ></span>
+                      ))}
                     </div>
-                  ))
+                    <div className="mt-4 h-5 bg-gray-300 rounded w-1/2"></div>
+                    <div className="mt-4 h-8 bg-gray-300 rounded w-52"></div>
+                  </div>
+                ))
                 : demoDiscussions.map((discussion, i) => (
-                    <div
-                      className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl transition-transform transform hover:scale-105 hover:shadow-lg hover:bg-gray-100 cursor-pointer focus-within:z-10 hover:z-10"
-                      onClick={(e) => {
-                        // Don't open modal if clicking on interactive elements
-                        if (
-                          !e.target.closest("a") &&
-                          !e.target.closest("button") &&
-                          !e.target.classList.contains("text-blue-700") // "see more" text
-                        ) {
-                          openModal(discussion);
-                        }
-                      }}
-                    >
-                      <div>
-                        <h3 className="text-lg font-bold md:text-lg lg:text-xl xl:text-2xl">
-                          {discussion.Title}
-                        </h3>
-                        <div className="text-gray-600 text-sm md:text-base lg:text-lg xl:text-xl">
-                          {discussion.Content.length > 500 ? (
-                            <>
-                              {discussion.Content.substring(0, 497)}
-                              <span
-                                className="text-blue-700 cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openModal(discussion);
-                                }}
-                              >
-                                ...see more
-                              </span>
-                            </>
-                          ) : (
-                            <div
-                              dangerouslySetInnerHTML={{
-                                __html: discussion.Content,
+                  <div
+                    className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl transition-transform transform hover:scale-105 hover:shadow-lg hover:bg-gray-100 cursor-pointer focus-within:z-10 hover:z-10"
+                    onClick={(e) => {
+                      // Don't open modal if clicking on interactive elements
+                      if (
+                        !e.target.closest("a") &&
+                        !e.target.closest("button") &&
+                        !e.target.classList.contains("text-blue-700") // "see more" text
+                      ) {
+                        openModal(discussion);
+                      }
+                    }}
+                  >
+                    <div>
+                      <h3 className="text-lg font-bold md:text-lg lg:text-xl xl:text-2xl">
+                        {discussion.Title}
+                      </h3>
+                      <div className="text-gray-600 text-sm md:text-base lg:text-lg xl:text-xl">
+                        {discussion.Content.length > 500 ? (
+                          <>
+                            {discussion.Content.substring(0, 497)}
+                            <span
+                              className="text-blue-700 cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openModal(discussion);
                               }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                      {discussion.Image && (
-                        <div
-                          className="mt-2"
-                          onClick={() => openModal(discussion)}
-                        >
-                          <img
-                            src={discussion.Image}
-                            alt="Discussion"
-                            className="max-h-40 w-auto object-cover"
+                            >
+                              ...see more
+                            </span>
+                          </>
+                        ) : (
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: discussion.Content,
+                            }}
                           />
-                        </div>
-                      )}
-                      <div
-                        className="mt-2 flex flex-wrap gap-2"
-                        onClick={() => openModal(discussion)}
-                      >
-                        {discussion.Tag && typeof discussion.Tag === "string"
-                          ? discussion.Tag.split(",")
-                              .filter((tag) => tag)
-                              .map((tag, tagIndex) => (
-                                <span
-                                  key={tagIndex}
-                                  className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base"
-                                >
-                                  {tag}
-                                </span>
-                              ))
-                          : Array.isArray(discussion.Tag)
-                          ? discussion.Tag.map((tag, tagIndex) => (
-                              <span
-                                key={tagIndex}
-                                className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base"
-                              >
-                                {tag}
-                              </span>
-                            ))
-                          : null}
-                      </div>
-                      <div
-                        className="mt-2 flex flex-wrap gap-2"
-                        onClick={() => openModal(discussion)}
-                      >
-                        {discussion.ResourceUrl &&
-                        typeof discussion.ResourceUrl === "string"
-                          ? discussion.ResourceUrl.split(",").map(
-                              (link, linkIndex) => (
-                                <a
-                                  key={linkIndex}
-                                  href={link}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {link}
-                                </a>
-                              )
-                            )
-                          : Array.isArray(discussion.ResourceUrl)
-                          ? discussion.ResourceUrl.map((link, linkIndex) => (
-                              <a
-                                key={linkIndex}
-                                href={link}
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {link}
-                              </a>
-                            ))
-                          : null}
-                      </div>
-                      <div className="mt-4 flex items-center space-x-4">
-                        <button
-                          className="flex items-center text-sm md:text-base lg:text-lg"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddLike(
-                              discussion.DiscussionID,
-                              discussion.userLike
-                            );
-                          }}
-                        >
-                          {discussion.userLike == 1 ? (
-                            <AiFillLike />
-                          ) : (
-                            <AiOutlineLike />
-                          )}
-                          {discussion.likeCount} Likes
-                        </button>
-
-                        <button
-                          className="flex items-center text-DGXgreen text-sm md:text-base lg:text-lg"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleComment(discussion);
-                          }}
-                        >
-                          <FaComment className="mr-2" />
-                          {discussion.comment.length} Comments
-                        </button>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    {discussion.Image && (
+                      <div
+                        className="mt-2"
+                        onClick={() => openModal(discussion)}
+                      >
+                        <img
+                          src={discussion.Image}
+                          alt="Discussion"
+                          className="max-h-40 w-auto object-cover"
+                        />
+                      </div>
+                    )}
+                    <div
+                      className="mt-2 flex flex-wrap gap-2"
+                      onClick={() => openModal(discussion)}
+                    >
+                      {discussion.Tag && typeof discussion.Tag === "string"
+                        ? discussion.Tag.split(",")
+                          .filter((tag) => tag)
+                          .map((tag, tagIndex) => (
+                            <span
+                              key={tagIndex}
+                              className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base"
+                            >
+                              {tag}
+                            </span>
+                          ))
+                        : Array.isArray(discussion.Tag)
+                          ? discussion.Tag.map((tag, tagIndex) => (
+                            <span
+                              key={tagIndex}
+                              className="bg-DGXgreen text-white rounded-full px-3 py-1 text-xs md:text-sm lg:text-base"
+                            >
+                              {tag}
+                            </span>
+                          ))
+                          : null}
+                    </div>
+                    <div
+                      className="mt-2 flex flex-wrap gap-2"
+                      onClick={() => openModal(discussion)}
+                    >
+                      {discussion.ResourceUrl &&
+                        typeof discussion.ResourceUrl === "string"
+                        ? discussion.ResourceUrl.split(",").map(
+                          (link, linkIndex) => (
+                            <a
+                              key={linkIndex}
+                              href={link}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {link}
+                            </a>
+                          )
+                        )
+                        : Array.isArray(discussion.ResourceUrl)
+                          ? discussion.ResourceUrl.map((link, linkIndex) => (
+                            <a
+                              key={linkIndex}
+                              href={link}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-DGXgreen hover:underline text-xs md:text-sm lg:text-base"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {link}
+                            </a>
+                          ))
+                          : null}
+                    </div>
+                    <div className="mt-4 flex items-center space-x-4">
+                      <button
+                        className="flex items-center text-sm md:text-base lg:text-lg"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddLike(
+                            discussion.DiscussionID,
+                            discussion.userLike
+                          );
+                        }}
+                      >
+                        {discussion.userLike == 1 ? (
+                          <AiFillLike />
+                        ) : (
+                          <AiOutlineLike />
+                        )}
+                        {discussion.likeCount} Likes
+                      </button>
+
+                      <button
+                        className="flex items-center text-DGXgreen text-sm md:text-base lg:text-lg"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleComment(discussion);
+                        }}
+                      >
+                        <FaComment className="mr-2" />
+                        {discussion.comment.length} Comments
+                      </button>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         </section>
