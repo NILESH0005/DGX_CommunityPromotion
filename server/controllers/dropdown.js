@@ -5,51 +5,105 @@ import { queryAsync, logError, logInfo } from "../helper/index.js";
 
 dotenv.config();
 
+// export const getDropdownValues = async (req, res) => {
+//     let success = false;
+//     let infoMessage = ''
+//     try {
+//         const { category } = req.query;
+//         if (!category) {
+//             return res.status(400).json({ success, data: {}, message: "Category is required" });
+//         }
+
+//         connectToDatabase(async (err, conn) => {
+
+//             if (err) {
+//                 console.error('Connection error:', err);
+//                 const errorMessage = "Failed to connect to database";
+//                 logError(err);
+//                 res.status(500).json({ success: false, data: err, message: errorMessage });
+//                 return;
+//             }
+//             try {
+//                 const query = `SELECT idCode, ddValue FROM tblDDReferences WHERE ddCategory = ? AND delStatus = 0`;
+//                 const results = await queryAsync(conn, query, [category]);
+//                 if (results.length === 0) {
+//                     success = false;
+//                     infoMessage = `No data found for ${category} category`;
+//                     logInfo(infoMessage);
+//                     res.status(404).json({ success, message: infoMessage });
+//                 } else {
+//                     success = true;
+//                     infoMessage = "Dropdown values fetched successfully";
+//                     logInfo(infoMessage);
+//                     res.status(200).json({ success, data: results, message: infoMessage });
+//                 }
+//                 closeConnection();
+//             } catch (queryErr) {
+//                 console.error('Query error:', queryErr);
+//                 logError(queryErr);
+//                 closeConnection();
+//                 res.status(500).json({ success: false, data: queryErr, message: "Something went wrong, please try again" });
+//             }
+//         });
+//     } catch (error) {
+//         logError(error);
+//         res.status(500).json({ success: false, data: {}, message: "Something went wrong, please try again" });
+//     }
+// };
+
+//Faster api
 export const getDropdownValues = async (req, res) => {
     let success = false;
-    let infoMessage = ''
+    let infoMessage = '';
+    const startTime = Date.now();
+
     try {
         const { category } = req.query;
         if (!category) {
             return res.status(400).json({ success, data: {}, message: "Category is required" });
         }
 
-        connectToDatabase(async (err, conn) => {
-
-            if (err) {
-                console.error('Connection error:', err);
-                const errorMessage = "Failed to connect to database";
-                logError(err);
-                res.status(500).json({ success: false, data: err, message: errorMessage });
-                return;
-            }
-            try {
-                const query = `SELECT idCode, ddValue FROM tblDDReferences WHERE ddCategory = ? AND delStatus = 0`;
-                const results = await queryAsync(conn, query, [category]);
-                if (results.length === 0) {
-                    success = false;
-                    infoMessage = `No data found for ${category} category`;
-                    logInfo(infoMessage);
-                    res.status(404).json({ success, message: infoMessage });
-                } else {
-                    success = true;
-                    infoMessage = "Dropdown values fetched successfully";
-                    logInfo(infoMessage);
-                    res.status(200).json({ success, data: results, message: infoMessage });
-                }
-                closeConnection();
-            } catch (queryErr) {
-                console.error('Query error:', queryErr);
-                logError(queryErr);
-                closeConnection();
-                res.status(500).json({ success: false, data: queryErr, message: "Something went wrong, please try again" });
-            }
+        const conn = await new Promise((resolve, reject) => {
+            connectToDatabase((err, connection) => {
+                if (err) return reject(err);
+                return resolve(connection);
+            });
         });
+
+        try {
+            const query = `SELECT idCode, ddValue FROM tblDDReferences WHERE ddCategory = ? AND delStatus = 0`;
+            const results = await queryAsync(conn, query, [category]);
+
+            if (results.length === 0) {
+                success = false;
+                infoMessage = `No data found for ${category} category`;
+                logInfo(infoMessage);
+                return res.status(404).json({ success, message: infoMessage });
+            } else {
+                success = true;
+                infoMessage = "Dropdown values fetched successfully";
+                logInfo(infoMessage);
+                return res.status(200).json({ success, data: results, message: infoMessage });
+            }
+        } catch (queryErr) {
+            console.error('Query error:', queryErr);
+            logError(queryErr);
+            return res.status(500).json({ success: false, data: queryErr, message: "Something went wrong, please try again" });
+        } finally {
+            if (conn) conn.release?.(); // use release if it's a pool
+            else if (typeof closeConnection === 'function') closeConnection(); // fallback
+        }
+
     } catch (error) {
+        console.error('Connection error:', error);
         logError(error);
-        res.status(500).json({ success: false, data: {}, message: "Something went wrong, please try again" });
+        return res.status(500).json({ success: false, data: error, message: "Failed to connect to database" });
+    } finally {
+        const endTime = Date.now();
+        console.log(`getDropdownValues response time: ${endTime - startTime}ms`);
     }
 };
+
 
 export const getQuizDropdown = async (req, res) => {
     let success = false;
@@ -818,8 +872,6 @@ export const getUnitsWithFiles = async (req, res) => {
         });
     }
 };
-
-
 
 // export const getUnitsWithFiles = async (req, res) => {
 //     let success = false;

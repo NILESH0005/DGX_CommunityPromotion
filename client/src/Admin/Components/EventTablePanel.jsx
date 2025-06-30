@@ -130,6 +130,7 @@ const EventTable = () => {
         const body = { eventId };
 
         const response = await fetchData(endpoint, method, body, headers);
+        console.log('hello')
         if (response.success) {
           setEvents((prev) => prev.filter((event) => event._id !== eventId));
           setFilteredEvents((prev) =>
