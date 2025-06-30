@@ -301,7 +301,7 @@ const Discussion = () => {
             });
         } catch (error) {
           setLoading(false);
-          console.log(error);
+          // console.log(error);
         }
       };
       if (userToken && user) {
@@ -310,7 +310,7 @@ const Discussion = () => {
         fetchDiscussionData(null);
       }
     } catch (error) {
-      console.log(error);
+      // console.log(error);
     }
   }, [user, userToken, fetchData]);
 
@@ -636,7 +636,7 @@ const Discussion = () => {
     }
   };
 
-  console.log(demoDiscussions);
+  // console.log(demoDiscussions);
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
