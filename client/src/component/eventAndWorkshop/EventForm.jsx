@@ -213,115 +213,135 @@ const EventForm = (props) => {
     }
   };
 
-  const handleSubmit = async () => {
-    const errors = {};
-    if (!newEvent.title) errors.title = "Event title is required.";
-    if (!newEvent.start) errors.start = "Start date is required.";
-    if (!newEvent.end) errors.end = "End date is required.";
-    if (newEvent.categoryId === "Select one")
-      errors.categoryId = "Please select a category.";
-    if (newEvent.companyCategoryId === "Select one")
-      errors.companyCategoryId = "Please select a company category.";
-    if (!newEvent.venue) errors.venue = "Venue is required.";
-    if (!newEvent.description) errors.description = "Description is required.";
-    if (!newEvent.host) errors.host = "Host is required.";
-    if (!newEvent.registerLink)
-      errors.registerLink = "Register link is required.";
-    if (!newEvent.poster) errors.poster = "Poster is required.";
+ const handleSubmit = async () => {
+  // Validate all fields
+  const errors = {};
+  if (!newEvent.title) errors.title = "Event title is required.";
+  if (!newEvent.start) errors.start = "Start date is required.";
+  if (!newEvent.end) errors.end = "End date is required.";
+  if (!newEvent.categoryId || newEvent.categoryId === "Select one")
+    errors.categoryId = "Please select a category.";
+  if (!newEvent.companyCategoryId || newEvent.companyCategoryId === "Select one")
+    errors.companyCategoryId = "Please select a company category.";
+  if (!newEvent.venue) errors.venue = "Venue is required.";
+  if (!newEvent.description) errors.description = "Description is required.";
+  if (!newEvent.host) errors.host = "Host is required.";
+  if (!newEvent.registerLink)
+    errors.registerLink = "Register link is required.";
+  if (!newEvent.poster) errors.poster = "Poster is required.";
 
-    // Handle validation errors
-    if (Object.keys(errors).length > 0) {
-      setErrors(errors);
-      const firstErrorField = Object.keys(errors)[0];
-      const refMap = {
-        title: titleRef,
-        start: startRef,
-        end: endRef,
-        category: categoryRef,
-        companyCategory: companyCategoryRef,
-        venue: venueRef,
-        host: hostRef,
-        description: descriptionRef,
-        registerLink: registerLinkRef,
-      };
-      const element = refMap[firstErrorField]?.current;
-      if (element) {
-        element.focus();
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-      return;
-    }
-
-    const endpoint = "eventandworkshop/addEvent";
-    const method = "POST";
-    const headers = {
-      "Content-Type": "application/json",
-      "auth-token": userToken,
+  // Handle validation errors
+  if (Object.keys(errors).length > 0) {
+    setErrors(errors);
+    const firstErrorField = Object.keys(errors)[0];
+    const refMap = {
+      title: titleRef,
+      start: startRef,
+      end: endRef,
+      categoryId: categoryRef,
+      companyCategoryId: companyCategoryRef,
+      venue: venueRef,
+      host: hostRef,
+      description: descriptionRef,
+      registerLink: registerLinkRef,
     };
-    const body = {
-      userID: user.UserID,
-      userName: user.Name,
-      title: newEvent.title,
-      start: newEvent.start,
-      end: newEvent.end,
-      category: newEvent.categoryId,
-      companyCategory: newEvent.companyCategoryId,
-      venue: newEvent.venue,
-      host: newEvent.host,
-      registerLink: newEvent.registerLink,
-      poster: newEvent.poster,
-      description: newEvent.description,
-    };
-
-    try {
-      const data = await fetchData(endpoint, method, body, headers);
-      console.log("API Response:", data);
-
-      if (data.success) {
-        const addedEvent = {
-          EventId: data.data.eventId, // Ensure it aligns with API response
-          EventTitle: newEvent.title,
-          StartDate: newEvent.start,
-          EndDate: newEvent.end,
-          Category: newEvent.categoryId,
-          CompanyCategory: newEvent.companyCategoryId,
-          Venue: newEvent.venue,
-          Host: newEvent.host,
-          RegistrationLink: newEvent.registerLink,
-          EventImage: newEvent.poster,
-          EventDescription: newEvent.description,
-        };
-        if (typeof props.setEvents === "function") {
-          props.setEvents((prevEvent) => [
-            {
-              ...addedEvent,
-              UserName: user.Name,
-              Status: user.isAdmin === 1 ? "Approved" : "Pending",
-
-              start: new Date(newEvent.start),
-              end: new Date(newEvent.end),
-            },
-            ...prevEvent,
-          ]);
-        } else {
-          console.warn("setEvents is not a function!");
-        }
-
-        Swal.fire("Success", "Event Added Successfully", "success");
-        resetForm();
-        setIsModalOpen(false);
-      } else {
-        Swal.fire("Error", `Error: ${data.message}`, "error");
-      }
-    } catch (error) {
-      console.error("Error adding event:", error);
-      Swal.fire(
-        "Error",
-        "An error occurred while adding the event. Please try again.",
-        "error"
-      );
+    const element = refMap[firstErrorField]?.current;
+    if (element) {
+      element.focus();
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
     }
+    return;
+  }
+
+  const endpoint = "eventandworkshop/addEvent";
+  const method = "POST";
+  const headers = {
+    "Content-Type": "application/json",
+    "auth-token": userToken,
   };
+  const body = {
+    userID: user.UserID,
+    userName: user.Name,
+    title: newEvent.title,
+    start: newEvent.start,
+    end: newEvent.end,
+    category: newEvent.categoryId,
+    companyCategory: newEvent.companyCategoryId,
+    venue: newEvent.venue,
+    host: newEvent.host,
+    registerLink: newEvent.registerLink,
+    poster: newEvent.poster,
+    description: newEvent.description,
+  };
+
+  try {
+    const data = await fetchData(endpoint, method, body, headers);
+    console.log("API Response:", data);
+
+    if (data.success) {
+      // Get category name from dropdown data
+      const categoryName = dropdownData.categoryOptions.find(
+        (item) => item.idCode === newEvent.categoryId
+      )?.ddValue || newEvent.categoryId;
+
+      // Get company category name from dropdown data
+      const companyCategoryName = dropdownData.companyCategoryOptions.find(
+        (item) => item.idCode === newEvent.companyCategoryId
+      )?.ddValue || newEvent.companyCategoryId;
+
+      const addedEvent = {
+        EventID: data.data.eventId,
+        EventTitle: newEvent.title,
+        StartDate: newEvent.start,
+        EndDate: newEvent.end,
+        Category: categoryName,
+        CategoryId: newEvent.categoryId,
+        CompanyCategory: companyCategoryName,
+        Venue: newEvent.venue,
+        Host: newEvent.host,
+        RegistrationLink: newEvent.registerLink,
+        EventImage: newEvent.poster,
+        EventDescription: newEvent.description,
+        UserName: user.Name,
+        Status: user.isAdmin === "1" ? "Approved" : "Pending", // Preserving your original logic
+        start: new Date(newEvent.start),
+        end: new Date(newEvent.end),
+      };
+
+      // Update parent component's state
+      if (typeof props.setEvents === "function") {
+        props.setEvents((prevEvents) => [addedEvent, ...prevEvents]);
+      } else {
+        console.warn("setEvents is not a function - cannot update events list");
+      }
+
+      Swal.fire({
+        title: "Success!",
+        text: "Event added successfully",
+        icon: "success",
+        confirmButtonText: "OK",
+      });
+
+      resetForm();
+      setIsModalOpen(false);
+    } else {
+      Swal.fire({
+        title: "Error!",
+        text: data.message || "Failed to add event",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+    }
+  } catch (error) {
+    console.error("Error adding event:", error);
+    Swal.fire({
+      title: "Error!",
+      text: "An error occurred while adding the event",
+      icon: "error",
+      confirmButtonText: "OK",
+    });
+  }
+};
 
   const handleCancel = () => {
     Swal.fire({

@@ -14,7 +14,8 @@ import {
   resetPassword,
   getAllUser,
   deleteUser,
-  addUser
+  addUser,
+  sendContactEmail
 
 } from "../controllers/user.js";
 
@@ -46,6 +47,10 @@ router.get('/users', getAllUser)
 router.post('/sendinvite', [
   body('email', 'Enter a valid email').isEmail()
 ], fetchUser, sendInvite)
+
+router.post('/sendContactEmail', [
+  body('email', 'Enter a valid email').isEmail()
+], fetchUser, sendContactEmail)
 
 router.post('/passwordrecovery', [
   body('email', 'Enter a valid email').isEmail()

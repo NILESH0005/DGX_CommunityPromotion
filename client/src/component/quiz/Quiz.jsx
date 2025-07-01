@@ -15,7 +15,6 @@ const Quiz = () => {
   const STORAGE_KEY = `quiz_attempt_${quiz.QuizID}`;
   const { userToken, fetchData } = useContext(ApiContext);
 
-  // Move all state declarations first
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -28,25 +27,38 @@ const Quiz = () => {
   const [showScore, setShowScore] = useState(false);
   const [timer, setTimer] = useState({ hours: 0, minutes: 30, seconds: 0 });
   const [questionStatus, setQuestionStatus] = useState({});
-  // const [selectedAnswers, setSelectedAnswers] = useState([]);
+  const [selectedAnswers, setSelectedAnswers] = useState([]);
 
-  // Now you can safely access questions
   const currentQuestionData = questions[currentQuestion];
   const isMCQ = currentQuestionData?.questionType === 0;
   const isMSQ = currentQuestionData?.questionType === 1;
+
   const loadSavedAnswers = () => {
-    try {
-      const savedData = localStorage.getItem(STORAGE_KEY);
-      return savedData ? JSON.parse(savedData) : null;
-    } catch (error) {
-      console.error("Failed to load saved answers:", error);
-      return null;
+  try {
+    const savedData = localStorage.getItem(STORAGE_KEY);
+    if (savedData) {
+      const parsed = JSON.parse(savedData);
+      // Ensure answers is an array
+      if (parsed.answers && !Array.isArray(parsed.answers)) {
+        parsed.answers = [];
+      }
+      return parsed;
     }
-  };
+    return null;
+  } catch (error) {
+    console.error("Failed to load saved answers:", error);
+    return null;
+  }
+};
 
   const saveAnswersToStorage = (answers) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(answers));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        answers,
+        questionStatus,
+        quizId: quiz.QuizID,
+        groupId: quiz.group_id
+      }));
     } catch (error) {
       console.error("Failed to save answers:", error);
     }
@@ -65,8 +77,6 @@ const Quiz = () => {
     }
   };
 
-  const [selectedAnswers, setSelectedAnswers] = useState([]);
-
   useEffect(() => {
     if (!quiz?.QuizID) {
       setError("Quiz ID is missing");
@@ -84,7 +94,7 @@ const Quiz = () => {
       fetchQuizQuestions({
         QuizID: quiz.QuizID,
         group_id: quiz.group_id || null,
-        duration: quiz.QuizDuration, // Pass duration if available
+        duration: quiz.QuizDuration,
       });
     }
   }, [quiz, userToken]);
@@ -100,78 +110,11 @@ const Quiz = () => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [STORAGE_KEY]);
 
-  // const fetchQuizQuestions = async () => {
-  //   setLoading(true);
-  //   setError(null);
-
-  //   try {
-
-  //     if (!userToken) {
-  //       throw new Error("Authentication token is missing");
-  //     }
-
-  //     const endpoint = "quiz/getQuizQuestions";
-  //     const method = "POST";
-  //     const headers = {
-  //       "Content-Type": "application/json",
-  //       "auth-token": userToken,
-  //     };
-  //     const body = {
-  //       quizGroupID: quiz.group_id,
-  //       QuizID: quiz.QuizID
-  //     };
-
-  //     const data = await fetchData(endpoint, method, body, headers);
-  //     console.log("ddddaaatttaaa", data);
-
-  //     if (!data) {
-  //       throw new Error("No data received from server");
-  //     }
-
-  //     if (data.success) {
-  //       const transformedQuestions = transformQuestions(data.data.questions);
-  //       setQuestions(transformedQuestions);
-
-  //       const saved = loadSavedAnswers();
-  //       setSelectedAnswers(saved?.answers || Array(transformedQuestions.length).fill(null));
-
-  //       if (transformedQuestions.length > 0) {
-  //         const duration = transformedQuestions[0].duration || 30;
-  //         const hours = Math.floor(duration / 60);
-  //         const minutes = duration % 60;
-  //         setTimer({ hours, minutes, seconds: 0 });
-  //       }
-
-  //       // const initialSelectedAnswers = Array(transformedQuestions.length).fill(null);
-  //       const initialQuestionStatus = transformedQuestions.reduce((acc, _, index) => {
-  //         acc[index + 1] = "not-visited";
-  //         return acc;
-  //       }, {});
-
-  //       // setSelectedAnswers(initialSelectedAnswers);
-  //       setQuestionStatus(initialQuestionStatus);
-  //     } else {
-  //       throw new Error(data.message || "Failed to fetch questions");
-  //     }
-  //   } catch (err) {
-  //     console.error("Error fetching questions:", err);
-  //     setError(err.message || "Something went wrong, please try again.");
-  //     Swal.fire({
-  //       icon: 'error',
-  //       title: 'Error',
-  //       text: err.message || "Failed to load questions",
-  //     });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const fetchQuizQuestions = async (quizData) => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log("Fetching questions with:", quizData);
       let endpoint, requestBody;
 
       if (quizData.group_id && quizData.QuizID) {
@@ -188,14 +131,11 @@ const Quiz = () => {
       } else {
         throw new Error("Insufficient data to fetch questions");
       }
-      console.log("leetttss go", requestBody);
 
       const data = await fetchData(endpoint, "POST", requestBody, {
         "Content-Type": "application/json",
         "auth-token": userToken,
       });
-
-      console.log("API Response:", data);
 
       if (!data) {
         throw new Error("No data received from server");
@@ -206,9 +146,18 @@ const Quiz = () => {
         setQuestions(transformedQuestions);
 
         const saved = loadSavedAnswers();
-        setSelectedAnswers(
-          saved?.answers || Array(transformedQuestions.length).fill(null)
-        );
+        // Ensure selectedAnswers is always an array
+        const initialAnswers = Array.isArray(saved?.answers) 
+          ? saved.answers 
+          : Array(transformedQuestions.length).fill(null);
+        
+        // Make sure the array length matches questions count
+        const paddedAnswers = transformedQuestions.length > initialAnswers.length
+          ? [...initialAnswers, ...Array(transformedQuestions.length - initialAnswers.length).fill(null)]
+          : initialAnswers.slice(0, transformedQuestions.length);
+
+        setSelectedAnswers(paddedAnswers);
+        
         if (transformedQuestions.length > 0) {
           const duration =
             transformedQuestions[0].duration || quizData.duration || 30;
@@ -246,16 +195,15 @@ const Quiz = () => {
     return apiQuestions.map((item) => {
       const optionsWithIds = item.options.map((option, index) => ({
         ...option,
-        id: option.id ? Number(option.id) : index + 1, // Fallback to index if ID is missing
+        id: option.id ? Number(option.id) : index + 1,
       }));
 
-      // Then find correct answers
       const correctAnswers = optionsWithIds
         .filter(
           (option) => option.is_correct === true || option.is_correct === 1
         )
         .map((option) => Number(option.id));
-      const questionType = correctAnswers.length > 1 ? 1 : 0; // 1 for MSQ, 0 for MCQ
+      const questionType = correctAnswers.length > 1 ? 1 : 0;
 
       return {
         id: Number(item.QuestionsID),
@@ -310,18 +258,49 @@ const Quiz = () => {
     handleQuizSubmit();
   };
 
+  useEffect(() => {
+    setQuestionStatus((prev) => {
+      const newStatus = { ...prev };
+
+      selectedAnswers.forEach((answer, index) => {
+        const questionNum = index + 1;
+
+        if (answer !== null) {
+          if (newStatus[questionNum] !== "marked") {
+            newStatus[questionNum] = "answered";
+          }
+        } else if (newStatus[questionNum] === "answered") {
+          newStatus[questionNum] = "not-answered";
+        }
+      });
+
+      return newStatus;
+    });
+  }, [selectedAnswers]);
+
   const handleNavigation = (nextQuestion) => {
-    if (
-      selectedAnswers[currentQuestion] === null &&
-      questionStatus[currentQuestion + 1] === "not-visited"
-    ) {
-      setQuestionStatus((prev) => ({
-        ...prev,
-        [currentQuestion + 1]: "not-answered",
-      }));
-    }
+    setQuestionStatus((prev) => {
+      const newStatus = { ...prev };
+      const currentQNum = currentQuestion + 1;
+
+      if (!newStatus[currentQNum] || newStatus[currentQNum] === "not-visited") {
+        newStatus[currentQNum] =
+          selectedAnswers[currentQuestion] !== null
+            ? "answered"
+            : "not-answered";
+      }
+
+      const nextQNum = nextQuestion + 1;
+      if (newStatus[nextQNum] === "not-visited") {
+        newStatus[nextQNum] = "not-answered";
+      }
+
+      return newStatus;
+    });
+
     setCurrentQuestion(nextQuestion);
   };
+
   const handleAnswerClick = (optionId) => {
     const optionIdNum = Number(optionId);
     const currentQuestionData = questions[currentQuestion];
@@ -332,13 +311,11 @@ const Quiz = () => {
       const currentAnswer = newAnswers[currentQuestion] || {};
 
       if (isMSQ) {
-        // MSQ Logic
         const currentSelections = currentAnswer.selectedOptionIds || [];
         const newSelections = currentSelections.includes(optionIdNum)
           ? currentSelections.filter((id) => id !== optionIdNum)
           : [...currentSelections, optionIdNum];
 
-        // Calculate correctness for MSQ
         const correctSelected = newSelections.filter((id) =>
           currentQuestionData.correctAnswers.includes(id)
         ).length;
@@ -356,7 +333,6 @@ const Quiz = () => {
             : -currentQuestionData.negativeMarks,
         };
       } else {
-        // MCQ Logic (existing)
         const isCorrect =
           currentQuestionData.correctAnswers.includes(optionIdNum);
         newAnswers[currentQuestion] = {
@@ -378,9 +354,25 @@ const Quiz = () => {
 
       return newAnswers;
     });
+
+    setQuestionStatus((prev) => ({
+      ...prev,
+      [currentQuestion + 1]: "answered",
+    }));
+  };
+
+  const handleSave = () => {
+    setQuestionStatus((prev) => ({
+      ...prev,
+      [currentQuestion + 1]: selectedAnswers[currentQuestion] !== null
+        ? "answered"
+        : "not-answered",
+    }));
   };
 
   const handleSaveAndNext = () => {
+    handleSave();
+    
     if (currentQuestion + 1 < questions.length) {
       handleNavigation(currentQuestion + 1);
     } else {
@@ -392,24 +384,26 @@ const Quiz = () => {
     const newAnswers = [...selectedAnswers];
     newAnswers[currentQuestion] = null;
     setSelectedAnswers(newAnswers);
+
     setQuestionStatus((prev) => ({
       ...prev,
       [currentQuestion + 1]: "not-answered",
     }));
+
     clearAnswerFromStorage(currentQuestion);
   };
 
-  const handleSkip = () => {
+  const handleMarkForReview = () => {
+    const currentQuestionNum = currentQuestion + 1;
+
+    setQuestionStatus((prev) => ({
+      ...prev,
+      [currentQuestionNum]: "marked",
+    }));
+
     if (currentQuestion + 1 < questions.length) {
       handleNavigation(currentQuestion + 1);
-    } else {
-      setShowScore(true);
     }
-  };
-
-  const handleMarkForReview = () => {
-    setQuestionStatus((prev) => ({ ...prev, [currentQuestion + 1]: "marked" }));
-    handleSkip();
   };
 
   const handleQuizSubmit = async () => {
@@ -500,8 +494,8 @@ const Quiz = () => {
           };
 
           return answer.selectedOptionIds
-            ? { ...base, selectedOptionIds: answer.selectedOptionIds } // MSQ
-            : { ...base, selectedOptionId: Number(answer.selectedOptionId) }; // MCQ
+            ? { ...base, selectedOptionIds: answer.selectedOptionIds }
+            : { ...base, selectedOptionId: Number(answer.selectedOptionId) };
         });
 
       const body = {
@@ -524,7 +518,7 @@ const Quiz = () => {
       navigate("/quiz-result", {
         state: {
           quiz: quiz,
-          score: data.data?.totalScore || totalScore, // Use server score if available, otherwise use local calculation
+          score: data.data?.totalScore || totalScore,
           totalQuestions: questions.length,
           answers: selectedAnswers.filter((a) => a !== null),
           correctAnswers: correctCount,
@@ -625,7 +619,7 @@ const Quiz = () => {
               <p className="text-lg mb-6">
                 {questions[currentQuestion]?.question_text}
               </p>
-              <div className="flex  font-bold">
+              <div className="flex font-bold">
                 <span
                   className={`px-3 py-1 mb-4 rounded-full text-sm ${
                     isMCQ
@@ -664,13 +658,6 @@ const Quiz = () => {
                         className={isMSQ ? "rounded" : ""}
                       />
                       <span>{option.option_text}</span>
-                      {/* {isSelected && !isMSQ && (
-                        <span className="ml-auto text-blue-600">
-                          {selectedAnswers[currentQuestion]?.isCorrect
-                            ? "✓"
-                            : "✗"}
-                        </span>
-                      )} */}
                     </label>
                   );
                 })}
@@ -700,19 +687,22 @@ const Quiz = () => {
                   Clear
                 </button>
               </div>
-              <button
-                className={`px-6 py-2 text-white rounded transition
-                    ${
-                      currentQuestion + 1 === questions.length
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                onClick={handleSaveAndNext}
-              >
-                {currentQuestion + 1 === questions.length
-                  ? "Submit Quiz"
-                  : "Next"}
-              </button>
+
+              <div className="flex gap-2">
+                
+                <button
+                  className={`px-6 py-2 text-white rounded transition ${
+                    currentQuestion + 1 === questions.length
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                  onClick={handleSaveAndNext}
+                >
+                  {currentQuestion + 1 === questions.length
+                    ? "Submit Quiz"
+                    : "Save & Next"}
+                </button>
+              </div>
             </div>
           </div>
 

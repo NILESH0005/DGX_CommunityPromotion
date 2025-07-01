@@ -44,9 +44,10 @@ const modules = [
     description:
       "Test your knowledge with interactive quizzes and improve your understanding.",
     category: "Quiz",
-    image:
-      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
+    image: "https://images.pexels.com/photos/5428830/pexels-photo-5428830.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
+
     path: "/QuizInterface",
+
   },
 ];
 
@@ -77,12 +78,19 @@ const CommunityHighlights = () => {
   return (
     <div className="w-full min-h-screen bg-gradient-to-b from-[#060a1f] to-[#0a1128] text-white flex flex-col items-center py-16 px-6 overflow-hidden">
       {/* Heading */}
-      <div className="w-full max-w-6xl mb-10 text-center sm:text-left">
-        <h1 className="text-5xl py-3 font-extrabold tracking-tight bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
-          Community Highlights
-        </h1>
-      </div>
-
+    <motion.div
+  initial={{ opacity: 0, y: -50 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 1 }}
+  className="w-full max-w-6xl mb-10 text-center sm:text-left"
+>
+  <h1 className="text-6xl py-4 md:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-transparent bg-clip-text animate-pulse drop-shadow-lg">
+    Community Highlights
+  </h1>
+  <p className="mt-4 text-lg md:text-xl text-gray-300 max-w-2xl mx-auto sm:mx-0">
+    Explore the best parts of our platform — curated just for you!
+  </p>
+</motion.div>
       {/* Scrolling Cards */}
       <motion.div
         ref={scrollRef}

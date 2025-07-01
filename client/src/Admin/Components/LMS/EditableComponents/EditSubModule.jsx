@@ -134,56 +134,6 @@ const EditSubModule = ({ module, onBack }) => {
     }
   };
 
-  //   const handleSaveSubmoduleOrder = async (orderedSubmodules) => {
-  //     try {
-  //       const simplifiedSubmodules = orderedSubmodules.map(
-  //         (submodule, index) => ({
-  //           SubModuleID: submodule.SubModuleID,
-  //           SortingOrder: index + 1,
-  //         })
-  //       );
-  //       console.log("Sending modulesWithOrder:", simplifiedSubmodules);
-
-  //       const response = await fetchData(
-  //         "lmsEdit/updateSubmoduleOrder",
-  //         "POST",
-  //         { submodules: simplifiedSubmodules },
-  //         {
-  //           "Content-Type": "application/json",
-  //           "auth-token": userToken,
-  //         }
-  //       );
-  //       console.log("rrreeesonse ", response);
-
-  //       if (response?.success) {
-  //         const updatedSubmodules = [...submodules]
-  //           .map((submodule) => {
-  //             const updated = simplifiedSubmodules.find(
-  //               (s) => s.SubModuleID === submodule.SubModuleID
-  //             );
-  //             return updated
-  //               ? { ...submodule, SortingOrder: updated.SortingOrder }
-  //               : submodule;
-  //           })
-  //           .sort((a, b) => {
-  //             const orderA = a.SortingOrder || Number.MAX_SAFE_INTEGER;
-  //             const orderB = b.SortingOrder || Number.MAX_SAFE_INTEGER;
-  //             return orderA - orderB || a.SubModuleID - b.SubModuleID;
-  //           });
-
-  //         setSubmodules(updatedSubmodules);
-  //         setShowSubmoduleOrder(false);
-  //         Swal.fire("Success!", "Submodule order updated!", "success");
-  //       } else {
-  //         throw new Error(
-  //           response?.message || "Failed to update submodule order"
-  //         );
-  //       }
-  //     } catch (err) {
-  //       Swal.fire("Error!", err.message, "error");
-  //     }
-  //   };
-
   const handleSaveSubmoduleOrder = async (orderedSubmodules) => {
     try {
       const simplifiedSubmodules = orderedSubmodules.map(
@@ -483,8 +433,6 @@ const EditSubModule = ({ module, onBack }) => {
   };
 
   const navigateToQuizTable = () => {
-    // Implement navigation to quiz table if needed
-    // For now, just go back to submodules list
     handleBackFromQuiz();
   };
 

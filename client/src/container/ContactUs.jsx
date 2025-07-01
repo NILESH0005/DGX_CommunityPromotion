@@ -1,14 +1,114 @@
 import React, { useState, useEffect } from 'react';
 import Map from '../constant/Map.jsx';
-
+import Swal from 'sweetalert2';
+import { useContext } from 'react';
+import ApiContext from '../context/ApiContext.jsx';
 
 const ContactUs = () => {
     const [loading, setLoading] = useState(true);
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        message: ''
+    });
+    const [errors, setErrors] = useState({});
+    const { fetchData, userToken } = useContext(ApiContext);
 
     useEffect(() => {
         const timer = setTimeout(() => setLoading(false), 1500);
         return () => clearTimeout(timer);
     }, []);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        
+        // Clear error when user types
+        if (errors[name]) {
+            setErrors(prev => ({
+                ...prev,
+                [name]: ''
+            }));
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+        
+        if (!formData.name.trim()) {
+            newErrors.name = 'Name is required';
+        }
+        
+        if (!formData.email.trim()) {
+            newErrors.email = 'Email is required';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            newErrors.email = 'Please enter a valid email address';
+        }
+        
+        if (!formData.message.trim()) {
+            newErrors.message = 'Message is required';
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!validateForm()) {
+            return;
+        }
+        
+        setLoading(true);
+        
+        try {
+            const endpoint = "user/sendContactEmail";
+            const method = "POST";
+            const body = {
+                name: formData.name,
+                email: formData.email,
+                message: formData.message
+            };
+            const headers = {
+                "Content-Type": "application/json",
+                "auth-token": userToken || '' // Send empty if no token
+            };
+            
+            const data = await fetchData(endpoint, method, body, headers);
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: "success",
+                    title: "Success!",
+                    text: "Your message has been sent successfully!",
+                });
+                setFormData({
+                    name: '',
+                    email: '',
+                    message: ''
+                });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.message || "Failed to send message",
+                });
+            }
+        } catch (error) {
+            console.error("Error sending message:", error);
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Something went wrong. Please try again.",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="flex justify-center items-center">
@@ -27,29 +127,54 @@ const ContactUs = () => {
                                         <div className="h-10 bg-DGXblue/45 rounded"></div>
                                     </div>
                                 ) : (
-                                    <form>
-                                        {['Name', 'Email address', 'Message'].map((placeholder, idx) => (
-                                            <div className="relative mb-6" key={idx} data-te-input-wrapper-init>
-                                                {placeholder !== 'Message' ? (
-                                                    <input
-                                                        type={placeholder === 'Email address' ? 'email' : 'text'}
-                                                        className="peer w-full rounded border-2 bg-transparent py-2 px-3 outline-none transition-all duration-200 focus:text-primary"
-                                                        placeholder={placeholder}
-                                                    />
+                                    <form onSubmit={handleSubmit}>
+                                        {[
+                                            { name: 'name', type: 'text', placeholder: 'Name' },
+                                            { name: 'email', type: 'email', placeholder: 'Email address' },
+                                            { name: 'message', type: 'textarea', placeholder: 'Message' }
+                                        ].map((field, idx) => (
+                                            <div className="relative mb-6" key={idx}>
+                                                {field.type !== 'textarea' ? (
+                                                    <>
+                                                        <input
+                                                            type={field.type}
+                                                            name={field.name}
+                                                            value={formData[field.name]}
+                                                            onChange={handleChange}
+                                                            className={`peer w-full rounded border-2 bg-transparent py-2 px-3 outline-none transition-all duration-200 focus:text-primary ${
+                                                                errors[field.name] ? 'border-red-500' : 'border-gray-300'
+                                                            }`}
+                                                            placeholder={field.placeholder}
+                                                        />
+                                                        {errors[field.name] && (
+                                                            <p className="mt-1 text-sm text-red-500">{errors[field.name]}</p>
+                                                        )}
+                                                    </>
                                                 ) : (
-                                                    <textarea
-                                                        className="peer w-full rounded border-2 bg-transparent py-2 px-3 outline-none transition-all duration-200 focus:text-primary"
-                                                        rows="3"
-                                                        placeholder={placeholder}
-                                                    ></textarea>
+                                                    <>
+                                                        <textarea
+                                                            name={field.name}
+                                                            value={formData[field.name]}
+                                                            onChange={handleChange}
+                                                            className={`peer w-full rounded border-2 bg-transparent py-2 px-3 outline-none transition-all duration-200 focus:text-primary ${
+                                                                errors[field.name] ? 'border-red-500' : 'border-gray-300'
+                                                            }`}
+                                                            rows="3"
+                                                            placeholder={field.placeholder}
+                                                        ></textarea>
+                                                        {errors[field.name] && (
+                                                            <p className="mt-1 text-sm text-red-500">{errors[field.name]}</p>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         ))}
                                         <button
-                                            type="button"
-                                            className="w-full rounded bg-DGXgreen text-DGXwhite px-6 py-2 font-medium uppercase text-xs"
+                                            type="submit"
+                                            className="w-full rounded bg-DGXgreen text-DGXwhite px-6 py-2 font-medium uppercase text-xs hover:bg-DGXblue transition-colors"
+                                            disabled={loading}
                                         >
-                                            Send
+                                            {loading ? 'Sending...' : 'Send'}
                                         </button>
                                     </form>
                                 )}

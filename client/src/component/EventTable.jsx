@@ -40,11 +40,11 @@ const EventTable = (props) => {
     checkMobileView();
 
     // Add event listener for window resize
-    window.addEventListener('resize', checkMobileView);
+    window.addEventListener("resize", checkMobileView);
 
     // Cleanup function
     return () => {
-      window.removeEventListener('resize', checkMobileView);
+      window.removeEventListener("resize", checkMobileView);
     };
   }, []);
 
@@ -461,8 +461,21 @@ const EventTable = (props) => {
         <DetailsEventModal
           selectedEvent={selectedEvent}
           onClose={() => setSelectedEvent(null)}
-          onEventUpdate={props.setEvents}
-          onEventDelete={props.setEvents}
+          handleEventStatusChange={(eventId, newStatus) => {
+            if (newStatus === "delete") {
+              props.setEvents((prev) =>
+                prev.filter((event) => event.EventID !== eventId)
+              );
+            } else {
+              props.setEvents((prev) =>
+                prev.map((event) =>
+                  event.EventID === eventId
+                    ? { ...event, Status: newStatus }
+                    : event
+                )
+              );
+            }
+          }}
         />
       )}
     </div>

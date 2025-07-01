@@ -9,25 +9,50 @@ const QuizPalette = ({
   timer,
   totalQuestions,
 }) => {
-  const getStatusClass = (status, questionNumber) => {
-    const baseClasses = "w-8 h-8 flex items-center justify-center rounded-full text-sm border-2";
-    
-    if (questionNumber === currentQuestion + 1) {
-      return cn(baseClasses, "border-blue-500 bg-white text-blue-500 font-bold");
-    }
-    
-    switch (status) {
-      case "answered":
-        return cn(baseClasses, "border-green-500 bg-green-100 text-green-700");
-      case "not-answered":
-        return cn(baseClasses, "border-red-500 bg-red-100 text-red-700");
-      case "marked":
-        return cn(baseClasses, "border-purple-500 bg-purple-100 text-purple-700");
-      default:
-        return cn(baseClasses, "border-gray-300 bg-white text-gray-700");
-    }
-  };
 
+  //old code
+  // const getStatusClass = (status, questionNumber) => {
+  //   const baseClasses = "w-8 h-8 flex items-center justify-center rounded-full text-sm border-2";
+    
+  //   if (questionNumber === currentQuestion + 1) {
+  //     return cn(baseClasses, "border-blue-500 bg-white text-blue-500 font-bold");
+  //   }
+    
+  //   switch (status) {
+  //     case "answered":
+  //       return cn(baseClasses, "border-green-500 bg-green-100 text-green-700");
+  //     case "not-answered":
+  //       return cn(baseClasses, "border-red-500 bg-red-100 text-red-700");
+  //     case "marked":
+  //       return cn(baseClasses, "border-purple-500 bg-purple-100 text-purple-700");
+  //     default:
+  //       return cn(baseClasses, "border-gray-300 bg-white text-gray-700");
+  //   }
+  // };
+// Update getStatusClass to better handle marked questions
+//updated code
+const getStatusClass = (status, questionNumber) => {
+  const baseClasses = "w-8 h-8 flex items-center justify-center rounded-full text-sm border-2";
+  
+  if (questionNumber === currentQuestion + 1) {
+    return cn(
+      baseClasses, 
+      "border-blue-500 bg-white text-blue-500 font-bold",
+      status === 'marked' ? "ring-2 ring-purple-300" : ""
+    );
+  }
+  
+  switch (status) {
+    case "answered":
+      return cn(baseClasses, "border-green-500 bg-green-100 text-green-700");
+    case "not-answered":
+      return cn(baseClasses, "border-red-500 bg-red-100 text-red-700");
+    case "marked":
+      return cn(baseClasses, "border-purple-500 bg-purple-100 text-purple-700");
+    default:
+      return cn(baseClasses, "border-gray-300 bg-white text-gray-700");
+  }
+};
   return (
     <div className="lg:col-span-1 bg-white rounded-lg shadow-md p-4 border border-gray-200">
       {/* Timer Section */}

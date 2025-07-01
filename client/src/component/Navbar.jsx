@@ -6,18 +6,18 @@ import { IoMdCloseCircleOutline } from "react-icons/io";
 import clsx from 'clsx';
 import ApiContext from '../context/ApiContext.jsx';
 import Cookies from 'js-cookie';
-import { 
-  faHome, 
-  faComments, 
-  faCalendar, 
-  faBlog, 
-  faEnvelope, 
-  faBook, 
-  faSearch,
-  faUser,
-  faCog,
-  faSignOutAlt,
-  faChalkboardTeacher,
+import {
+    faHome,
+    faComments,
+    faCalendar,
+    faBlog,
+    faEnvelope,
+    faBook,
+    faSearch,
+    faUser,
+    faCog,
+    faSignOutAlt,
+    faChalkboardTeacher,
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { FaBrain } from 'react-icons/fa';
@@ -25,19 +25,19 @@ import { FaBrain } from 'react-icons/fa';
 const Navbar = () => {
     const [isSideMenuOpen, setMenu] = useState(false);
     const { user, userToken, setUserToken, logOut } = useContext(ApiContext);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const navigate = useNavigate();
+    const isLoggedIn = !!(userToken && user);
+
     const location = useLocation();
 
-    useEffect(() => {
-        if (userToken && user) {
-            
-            setIsLoggedIn(true);
-        } else {
-            console.log("User not found");
-            setIsLoggedIn(false);
-        }
-    }, [user, userToken]);
+    // useEffect(() => {
+    //     if (userToken && user) {
+
+    //         setIsLoggedIn(true);
+    //     } else {
+    //         console.log("User not found");
+    //         setIsLoggedIn(false);
+    //     }
+    // }, [user, userToken]);
 
     const [isDropdownOpen, setDropdownOpen] = useState(false);
 
@@ -78,7 +78,7 @@ const Navbar = () => {
 
     const getProfileImage = () => {
         if (user?.ProfilePicture) {
-            
+
             if (!user.ProfilePicture.startsWith('data:image')) {
                 return `${user.ProfilePicture}?${new Date().getTime()}`;
             }
@@ -92,15 +92,15 @@ const Navbar = () => {
             <nav className='flex flex-wrap justify-between items-center py-2 px-4 md:px-6 lg:px-8 bg-DGXblue/10 shadow-lg'>
                 {/* Left section - Logo and mobile menu */}
                 <section className='flex items-center'>
-                    <AiOutlineMenu 
-                        onClick={() => setMenu(true)} 
-                        className='text-3xl cursor-pointer md:hidden mr-2 text-DGXblue' 
+                    <AiOutlineMenu
+                        onClick={() => setMenu(true)}
+                        className='text-3xl cursor-pointer md:hidden mr-2 text-DGXblue'
                     />
                     <Link to="/" className="flex items-center">
-                        <img 
-                            src={images.giventure} 
-                            className="h-10 md:h-10 lg:h-12 xl:h-14" 
-                            alt="gi-venture logo" 
+                        <img
+                            src={images.giventure}
+                            className="h-10 md:h-10 lg:h-12 xl:h-14"
+                            alt="gi-venture logo"
                         />
                     </Link>
                 </section>
@@ -150,32 +150,32 @@ const Navbar = () => {
                             {isDropdownOpen && (
                                 <div className="relative">
                                     <div className='absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-DGXblue transform transition-all duration-300 ease-in-out origin-top-right'>
-                                        <Link 
-                                            to="/UserProfile" 
-                                            className='block px-4 py-2 text-gray-800 hover:bg-DGXblue/10 hover:text-DGXgreen transition-all duration-200 ease-in-out transform hover:translate-x-1' 
+                                        <Link
+                                            to="/UserProfile"
+                                            className='block px-4 py-2 text-gray-800 hover:bg-DGXblue/10 hover:text-DGXgreen transition-all duration-200 ease-in-out transform hover:translate-x-1'
                                             onClick={toggleDropdown}
                                         >
                                             <FontAwesomeIcon icon={faUser} className="mr-2" />
                                             Profile
                                         </Link>
                                         {(user.isAdmin == '1') && (
-                                            <Link 
-                                                to="/AdminDashboard" 
-                                                className='block px-4 py-2 text-gray-800 hover:bg-DGXblue/10 hover:text-DGXgreen transition-all duration-200 ease-in-out transform hover:translate-x-1' 
+                                            <Link
+                                                to="/AdminDashboard"
+                                                className='block px-4 py-2 text-gray-800 hover:bg-DGXblue/10 hover:text-DGXgreen transition-all duration-200 ease-in-out transform hover:translate-x-1'
                                                 onClick={toggleDropdown}
                                             >
                                                 <FontAwesomeIcon icon={faCog} className="mr-2" />
                                                 Admin
                                             </Link>
                                         )}
-                                        <button 
-                                            onClick={handleLogout} 
+                                        <button
+                                            onClick={handleLogout}
                                             className='block w-full text-left px-4 py-2 text-gray-800 hover:bg-DGXblue/10 hover:text-DGXgreen transition-all duration-200 ease-in-out transform hover:translate-x-1'
                                         >
                                             <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" />
                                             Logout
                                         </button>
-                                    </div>  
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -207,7 +207,7 @@ const Navbar = () => {
                                 </div>
                             )}
                         </div>
-                        
+
                         <div className="flex-1 overflow-y-auto">
                             {mobileMenuLinks.map((d, i) => (
                                 <Link
@@ -228,11 +228,11 @@ const Navbar = () => {
                                 </Link>
                             ))}
                         </div>
-                        
+
                         {/* Mobile menu login/logout */}
                         {!isLoggedIn ? (
-                            <Link 
-                                to="/SignInn" 
+                            <Link
+                                to="/SignInn"
                                 className='mt-4 bg-DGXgreen text-white px-4 py-3 rounded-md text-center hover:bg-DGXblue transition duration-300 flex items-center justify-center gap-2'
                                 onClick={() => setMenu(false)}
                             >
@@ -241,8 +241,8 @@ const Navbar = () => {
                             </Link>
                         ) : (
                             <div className='mt-auto'>
-                                <button 
-                                    onClick={handleLogout} 
+                                <button
+                                    onClick={handleLogout}
                                     className='w-full bg-DGXgreen text-white px-4 py-3 rounded-md text-center hover:bg-DGXblue transition duration-300 flex items-center justify-center gap-2'
                                 >
                                     <FontAwesomeIcon icon={faSignOutAlt} />

@@ -670,7 +670,9 @@ const UnitsWithFiles = () => {
                     >
                       <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-2v6H5V5z" />
                     </svg>
-                    Open Link
+                    Open
+                     {/* {selectedFile.FilesName || "Link"}  */}
+                     Link
                   </a>
                 </div>
               </div>

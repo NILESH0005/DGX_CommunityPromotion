@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 import AddUnitModal from "./AddUnitModal";
 import UnitOrder from "./UnitOrder";
 import FilesOrder from "./FilesOrder";
+import { useCallback } from "react";
 import {
   FaEdit,
   FaTrash,
@@ -49,6 +50,25 @@ const ViewContent = ({ submodule, onBack }) => {
   });
 
   const { fetchData, userToken } = useContext(ApiContext);
+
+  const fetchFilesForUnit = useCallback(async (unitId) => {
+    try {
+      const response = await fetchData(
+        `lmsEdit/getFiles?unitId=${unitId}`,
+        "GET",
+        null,
+        { "auth-token": userToken }
+      );
+      if (response?.success) {
+        setFiles(response.data);
+      } else {
+        setFiles([]);
+      }
+    } catch (err) {
+      console.error("Error fetching files:", err);
+      setFiles([]);
+    }
+  }, [fetchData, userToken]);
 
   useEffect(() => {
     const fetchUnits = async () => {
@@ -107,6 +127,7 @@ const ViewContent = ({ submodule, onBack }) => {
       fetchFiles();
     }
   }, [selectedUnit, units, fetchData, userToken]);
+
 
   const handleDeleteMultipleFiles = async (fileIds) => {
     const result = await Swal.fire({
@@ -200,10 +221,10 @@ const ViewContent = ({ submodule, onBack }) => {
             );
             return updatedFile
               ? {
-                  ...file,
-                  SortingOrder: updatedFile.SortingOrder,
-                  Percentage: updatedFile.Percentage,
-                }
+                ...file,
+                SortingOrder: updatedFile.SortingOrder,
+                Percentage: updatedFile.Percentage,
+              }
               : file;
           })
           .sort((a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0));
@@ -274,13 +295,13 @@ const ViewContent = ({ submodule, onBack }) => {
           prevFiles.map((file) =>
             file.FileID === editingFile.FileID
               ? {
-                  ...file,
-                  FilesName: editedFileData.fileName,
-                  Description: editedFileData.description,
-                  ...(editingFile.FileType === "link" && {
-                    FilePath: editedFileData.link,
-                  }),
-                }
+                ...file,
+                FilesName: editedFileData.fileName,
+                Description: editedFileData.description,
+                ...(editingFile.FileType === "link" && {
+                  FilePath: editedFileData.link,
+                }),
+              }
               : file
           )
         );
@@ -515,132 +536,74 @@ const ViewContent = ({ submodule, onBack }) => {
       return;
     }
 
-    const resetForm = () => {
-      setNewFiles([]);
-      setFileLinks([]);
-      setFileLink("");
-      setLinkName("");
-      setLinkDescription("");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    };
-
     setIsUploading(true);
+    const uploadToast = Swal.fire({
+      title: "Uploading...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
     try {
-      const uploadToast = Swal.fire({
-        title: "Uploading...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
+      // Process file uploads and get actual DB responses
+      const uploadResponses = await Promise.all([
+        ...newFiles.map(fileObj => {
+          const formData = new FormData();
+          formData.append("file", fileObj.file);
+          formData.append("unitId", selectedUnit.UnitID);
+          formData.append("fileName", fileObj.customName);
+          formData.append("description", "");
 
-      // Calculate new order positions
-      const currentFileCount = files.length;
-      const newFileCount = newFiles.length + (fileLink.trim() ? 1 : 0);
-      const totalFiles = currentFileCount + newFileCount;
-      const equalPercentage = (100 / totalFiles).toFixed(2);
-
-      // Update existing files' percentages first
-      const updatedExistingFiles = files.map((file) => ({
-        ...file,
-        Percentage: equalPercentage,
-      }));
-
-      // Upload all files
-      const uploadPromises = newFiles.map(async (fileObj, index) => {
-        const formData = new FormData();
-        formData.append("file", fileObj.file);
-        formData.append("unitId", selectedUnit.UnitID);
-        formData.append("percentage", equalPercentage);
-        formData.append("fileName", fileObj.customName);
-        formData.append("description", "");
-        formData.append("sortingOrder", currentFileCount + index + 1);
-
-        try {
-          const response = await fetch(
-            `${import.meta.env.VITE_API_BASEURL}lms/files`,
-            {
-              method: "POST",
-              body: formData,
-              headers: {
-                "auth-token": userToken,
-              },
-            }
-          );
-
-          if (!response.ok) throw new Error("Upload failed");
-          return await response.json();
-        } catch (err) {
-          console.error("File upload error:", err);
-          return { success: false, error: err.message };
-        }
-      });
-
-      if (fileLink.trim()) {
-        uploadPromises.push(
+          return fetch(`${import.meta.env.VITE_API_BASEURL}lms/uploadFile`, {
+            method: "POST",
+            body: formData,
+            headers: { "auth-token": userToken },
+          }).then(res => res.json());
+        }),
+        ...(fileLink.trim() ? [
           fetchData(
-            "lms/files",
+            "lms/uploadLink",
             "POST",
             {
               unitId: selectedUnit.UnitID,
               link: fileLink,
               fileName: linkName || "Link",
               description: linkDescription || "",
-              percentage: equalPercentage,
               fileType: "link",
-              sortingOrder: currentFileCount + newFiles.length + 1,
             },
-            {
-              "Content-Type": "application/json",
-              "auth-token": userToken,
-            }
-          ).catch((err) => {
-            console.error("Link upload error:", err);
-            return { success: false, error: err.message };
-          })
-        );
-      }
+            { "Content-Type": "application/json", "auth-token": userToken }
+          )
+        ] : [])
+      ]);
 
-      // Wait for all uploads to complete
-      const results = await Promise.all(uploadPromises);
-      await uploadToast.close();
-
-      // Process successful uploads
-      const successfulUploads = results.filter((result) => result?.success);
-      const failedUploads = results.filter((result) => !result?.success);
+      // Filter successful uploads
+      const successfulUploads = uploadResponses.filter(r => r?.success);
 
       if (successfulUploads.length > 0) {
-        // Create new file objects with proper sorting
-        const newFileData = successfulUploads.map((result, index) => ({
-          ...result.data,
-          Percentage: equalPercentage,
-          SortingOrder: currentFileCount + index + 1,
-        }));
-
-        // Combine with existing files (already updated with new percentages)
-        const allFiles = [...updatedExistingFiles, ...newFileData].sort(
-          (a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0)
+        // Get fresh list from server with actual DB IDs
+        const updatedFiles = await fetchData(
+          `lmsEdit/getFiles?unitId=${selectedUnit.UnitID}`,
+          "GET",
+          null,
+          { "auth-token": userToken }
         );
 
-        // Update state
-        setFiles(allFiles);
-        resetForm();
-
-        Swal.fire(
-          "Success!",
-          `Uploaded ${successfulUploads.length} items successfully${
-            failedUploads.length > 0 ? ` (${failedUploads.length} failed)` : ""
-          }`,
-          "success"
-        );
+        if (updatedFiles?.success) {
+          setFiles(updatedFiles.data);
+          Swal.fire("Success!", "Files uploaded successfully", "success");
+        } else {
+          throw new Error("Failed to refresh files list");
+        }
       } else {
-        Swal.fire("Error!", "All uploads failed", "error");
+        throw new Error(uploadResponses.find(r => r?.error)?.error || "Upload failed");
       }
+
+      resetForm();
     } catch (err) {
       console.error("Upload error:", err);
-      Swal.fire("Error!", err.message || "Failed to upload content", "error");
+      Swal.fire("Error!", err.message || "Upload failed", "error");
     } finally {
       setIsUploading(false);
+      uploadToast.close();
     }
   };
 
@@ -805,11 +768,10 @@ const ViewContent = ({ submodule, onBack }) => {
                     .map((unit) => (
                       <div
                         key={unit.UnitID}
-                        className={`p-4 cursor-pointer transition-colors duration-200 ${
-                          selectedUnit?.UnitID === unit.UnitID
-                            ? "bg-blue-50 dark:bg-gray-700"
-                            : "hover:bg-gray-50 dark:hover:bg-gray-700"
-                        }`}
+                        className={`p-4 cursor-pointer transition-colors duration-200 ${selectedUnit?.UnitID === unit.UnitID
+                          ? "bg-blue-50 dark:bg-gray-700"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
                         onClick={() => setSelectedUnit(unit)}
                       >
                         <div className="flex justify-between items-start">
@@ -1070,9 +1032,9 @@ const ViewContent = ({ submodule, onBack }) => {
                                         prev.map((f, i) =>
                                           i === index
                                             ? {
-                                                ...f,
-                                                customName: e.target.value,
-                                              }
+                                              ...f,
+                                              customName: e.target.value,
+                                            }
                                             : f
                                         )
                                       )
@@ -1192,11 +1154,10 @@ const ViewContent = ({ submodule, onBack }) => {
                                 <React.Fragment key={file.FileID}>
                                   {/* Normal View Row */}
                                   <tr
-                                    className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                                      editingFile?.FileID === file.FileID
-                                        ? "hidden"
-                                        : ""
-                                    }`}
+                                    className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${editingFile?.FileID === file.FileID
+                                      ? "hidden"
+                                      : ""
+                                      }`}
                                   >
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <input
@@ -1255,7 +1216,7 @@ const ViewContent = ({ submodule, onBack }) => {
 
                                   {/* Edit View Row (only shown when editing this file) */}
                                   {editingFile?.FileID === file.FileID && (
-                                    <tr className="bg-blue-50 dark:bg-gray-700">
+                                    <tr className="bg-blue-50 dark:bg-gray-700" key={`edit-row-${file.FileID}`}>
                                       <td colSpan="5" className="px-6 py-4">
                                         <div className="space-y-4">
                                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

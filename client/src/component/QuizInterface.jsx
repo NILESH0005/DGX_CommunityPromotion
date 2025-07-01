@@ -59,7 +59,7 @@ const QuizInterface = () => {
         ) : (
           <>
             <h1 className="text-6xl font-bold text-white">
-              WELCOME TO <span className="text-blue-600">QUIZZIE</span>
+              WELCOME TO <span className="text-blue-600">QUIZZ</span>
             </h1>
 
             <div className="flex flex-col md:flex-row items-center mt-6 bg-white p-6 rounded-lg shadow-md max-w-4xl w-full">

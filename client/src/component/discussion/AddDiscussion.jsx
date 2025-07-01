@@ -338,9 +338,8 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
           <input
             id="title"
             type="text"
-            className={`w-full px-3 py-2 border rounded-lg ${
-              errors.title ? "border-red-500" : ""
-            }`}
+            className={`w-full px-3 py-2 border rounded-lg ${errors.title ? "border-red-500" : ""
+              }`}
             value={title}
             onChange={(e) => {
               setTitle(e.target.value);
@@ -368,19 +367,24 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
               setContent(value);
               setErrors((prev) => ({ ...prev, content: null }));
             }}
-            className={`border rounded-lg h-48 ${
-              errors.content ? "border-red-500" : ""
-            }`}
+            className={`border rounded-lg h-48 ${errors.content ? "border-red-500" : ""
+              }`}
             modules={{
               toolbar: [
-                [{ header: [1, 2, 3, false] }],
-                ["bold", "italic", "underline", "strike"],
-                ["blockquote", "code-block"],
-                [{ list: "ordered" }, { list: "bullet" }],
-                ["link", "formula"],
-                ["clean"],
-              ],
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                ['code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                ['clean']
+              ]
             }}
+            formats={[
+              'header',
+              'bold', 'italic', 'underline', 'strike',
+              'code-block',
+              'list', 'bullet',
+              'clean'
+            ]}
           />
           {errors.content && (
             <p className="text-red-500 text-sm mt-1">{errors.content}</p>
@@ -393,9 +397,8 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
           </label>
           <input
             type="text"
-            className={`w-full px-3 py-2 border rounded-lg ${
-              errors.tags ? "border-red-500" : ""
-            }`}
+            className={`w-full px-3 py-2 border rounded-lg ${errors.tags ? "border-red-500" : ""
+              }`}
             value={tagInput}
             onChange={handleTagInputChange}
             onKeyPress={handleTagInputKeyPress}
@@ -433,9 +436,8 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
           </label>
           <input
             type="text"
-            className={`w-full px-3 py-2 border rounded-lg ${
-              errors.links ? "border-red-500" : ""
-            }`}
+            className={`w-full px-3 py-2 border rounded-lg ${errors.links ? "border-red-500" : ""
+              }`}
             value={linkInput}
             onChange={handleLinkInputChange}
             onKeyPress={handleLinkInputKeyPress}
@@ -473,9 +475,8 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
             type="file"
             accept="image/*"
             onChange={handleImageChange}
-            className={`border w-full p-2 ${
-              errors.image ? "border-red-500" : ""
-            }`}
+            className={`border w-full p-2 ${errors.image ? "border-red-500" : ""
+              }`}
           />
 
           {errors.image && (
@@ -523,9 +524,8 @@ const AddDiscussion = ({ closeModal, demoDiscussions, setDemoDiscussions }) => {
                 setErrors((prev) => ({ ...prev, privacy: null }));
               }
             }}
-            className={`w-full px-3 py-2 border rounded-lg ${
-              errors.privacy ? "border-red-500" : ""
-            }`}
+            className={`w-full px-3 py-2 border rounded-lg ${errors.privacy ? "border-red-500" : ""
+              }`}
           >
             <option value="">Select Privacy</option>
             {dropdownValues.map((item) => (

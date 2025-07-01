@@ -5,7 +5,7 @@ dotenv.config();
 const pass = process.env.GMAIL_PASSWORD_KEY;
 const user = process.env.GMAIL_USER
 
-export async function mailSender(receiver, message, htmlContent = "thank You") {
+export async function mailSender(receiver, message, htmlContent = "Thank You") {
   var transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {

@@ -123,50 +123,56 @@ const LearningMaterialList = () => {
   //   }
   // };
 
+  const handleModuleUpdated = () => {
+    setReloadKey((prev) => prev + 1); // This will force remount
+  };
+
   const handleSaveModuleOrder = async (orderedModules) => {
-  try {
-    // Prepare modules with their new order positions
-    const modulesWithOrder = orderedModules.map((module, index) => ({
-      ModuleID: module.ModuleID,
-      SortingOrder: index + 1  // 1-based index
-    }));
+    try {
+      // Prepare modules with their new order positions
+      const modulesWithOrder = orderedModules.map((module, index) => ({
+        ModuleID: module.ModuleID,
+        SortingOrder: index + 1, // 1-based index
+      }));
 
-    const response = await fetchData(
-      "lmsEdit/updateModuleOrder",
-      "POST",
-      { modules: modulesWithOrder },
-      {
-        "Content-Type": "application/json",
-        "auth-token": userToken
-      }
-    );
-
-    if (response?.success) {
-      // Update local state with new order
-      const updatedModules = [...modules].map(module => {
-        const updatedModule = modulesWithOrder.find(m => m.ModuleID === module.ModuleID);
-        return updatedModule ? { ...module, SortingOrder: updatedModule.SortingOrder } : module;
-      }).sort((a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0));
-
-      setModules(updatedModules);
-      setShowModuleOrder(false);
-      Swal.fire(
-        'Success!',
-        'Module order has been updated.',
-        'success'
+      const response = await fetchData(
+        "lmsEdit/updateModuleOrder",
+        "POST",
+        { modules: modulesWithOrder },
+        {
+          "Content-Type": "application/json",
+          "auth-token": userToken,
+        }
       );
-    } else {
-      throw new Error(response?.message || "Failed to update module order");
+
+      if (response?.success) {
+        // Update local state with new order
+        const updatedModules = [...modules]
+          .map((module) => {
+            const updatedModule = modulesWithOrder.find(
+              (m) => m.ModuleID === module.ModuleID
+            );
+            return updatedModule
+              ? { ...module, SortingOrder: updatedModule.SortingOrder }
+              : module;
+          })
+          .sort((a, b) => (a.SortingOrder || 0) - (b.SortingOrder || 0));
+
+        setModules(updatedModules);
+        setShowModuleOrder(false);
+        Swal.fire("Success!", "Module order has been updated.", "success");
+      } else {
+        throw new Error(response?.message || "Failed to update module order");
+      }
+    } catch (err) {
+      console.error("Error updating module order:", err);
+      Swal.fire(
+        "Error!",
+        `Failed to update module order: ${err.message}`,
+        "error"
+      );
     }
-  } catch (err) {
-    console.error("Error updating module order:", err);
-    Swal.fire(
-      'Error!',
-      `Failed to update module order: ${err.message}`,
-      'error'
-    );
-  }
-};
+  };
 
   if (loading) {
     return (
@@ -222,6 +228,7 @@ const LearningMaterialList = () => {
               module={module}
               onDelete={handleDeleteModule}
               onViewSubmodules={handleViewSubmodules}
+              onUpdateSuccess={handleModuleUpdated} // Add this new prop
             />
           ))}
         </div>

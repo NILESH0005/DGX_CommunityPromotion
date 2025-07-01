@@ -1,18 +1,22 @@
-import React, { useState, useContext } from 'react';
-import moment from 'moment';
-import Swal from 'sweetalert2';
-import ApiContext from '../../context/ApiContext';
+import React, { useState, useContext } from "react";
+import moment from "moment";
+import Swal from "sweetalert2";
+import ApiContext from "../../context/ApiContext";
 
-const DetailsEventModal = ({ selectedEvent, onClose, handleEventStatusChange }) => {
+const DetailsEventModal = ({
+  selectedEvent,
+  onClose,
+  handleEventStatusChange,
+}) => {
   const { user, userToken, fetchData } = useContext(ApiContext);
-  const [remark, setRemark] = useState('');
+  const [remark, setRemark] = useState("");
 
-  const updateEventStatus = async (eventId, Status, remark = '') => {
+  const updateEventStatus = async (eventId, Status, remark = "") => {
     const endpoint = `eventandworkshop/updateEvent/${eventId}`;
     const method = "POST";
     const headers = {
-      'Content-Type': 'application/json',
-      'auth-token': userToken
+      "Content-Type": "application/json",
+      "auth-token": userToken,
     };
 
     const body = {
@@ -27,7 +31,7 @@ const DetailsEventModal = ({ selectedEvent, onClose, handleEventStatusChange }) 
       if (result.success) {
         Swal.fire({
           title: "Success!",
-          text: `Event ${Status}ed successfully!`,
+          text: `Event ${Status} successfully!`,
           icon: "success",
           confirmButtonText: "OK",
         });
@@ -47,7 +51,7 @@ const DetailsEventModal = ({ selectedEvent, onClose, handleEventStatusChange }) 
     } catch (error) {
       Swal.fire({
         title: "Error!",
-        text: `Error ${Status}ing event`,
+        text: `Error ${Status} event`,
         icon: "error",
         confirmButtonText: "OK",
       });
@@ -69,25 +73,25 @@ const DetailsEventModal = ({ selectedEvent, onClose, handleEventStatusChange }) 
     }
 
     Swal.fire({
-      title: 'Confirmation',
+      title: "Confirmation",
       text: `Are you sure you want to ${Status} this event?`,
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: 'OK',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: "OK",
+      cancelButtonText: "Cancel",
       reverseButtons: true,
-      input: Status === 'reject' ? 'textarea' : null,
-      inputPlaceholder: 'Enter remark',
+      input: Status === "reject" ? "textarea" : null,
+      inputPlaceholder: "Enter remark",
       inputValue: remark,
       preConfirm: (inputValue) => {
-        if (Status === 'reject' && !inputValue) {
-          Swal.showValidationMessage('Remark is required for rejection');
+        if (Status === "reject" && !inputValue) {
+          Swal.showValidationMessage("Remark is required for rejection");
         }
         return inputValue;
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        if (Status === 'reject') {
+        if (Status === "reject") {
           setRemark(result.value);
         }
         handleConfirmAction(Status, result.value);
@@ -95,8 +99,7 @@ const DetailsEventModal = ({ selectedEvent, onClose, handleEventStatusChange }) 
     });
   };
 
-  const handleConfirmAction = async (Status, remark = '') => {
-    console.log("Selected Event:", selectedEvent); 
+  const handleConfirmAction = async (Status, remark = "") => {
     if (!selectedEvent) {
       Swal.fire({
         title: "Error!",
@@ -107,9 +110,14 @@ const DetailsEventModal = ({ selectedEvent, onClose, handleEventStatusChange }) 
       return;
     }
 
-    const success = await updateEventStatus(selectedEvent.EventID, Status, remark);
+    const success = await updateEventStatus(
+      selectedEvent.EventID,
+      Status,
+      remark
+    );
 
     if (success) {
+      // This will trigger the parent to update the state
       handleEventStatusChange(selectedEvent.EventID, Status);
       onClose();
     } else {
@@ -164,7 +172,10 @@ const DetailsEventModal = ({ selectedEvent, onClose, handleEventStatusChange }) 
           <div>
             <strong className="text-xl underline">Date & Time:</strong>
             <div className="mt-1 text-lg">
-              {moment.utc(selectedEvent.StartDate).format("MMMM D, YYYY h:mm A")} -{' '}
+              {moment
+                .utc(selectedEvent.StartDate)
+                .format("MMMM D, YYYY h:mm A")}{" "}
+              -{" "}
               {moment.utc(selectedEvent.EndDate).format("MMMM D, YYYY h:mm A")}
             </div>
           </div>
@@ -179,7 +190,10 @@ const DetailsEventModal = ({ selectedEvent, onClose, handleEventStatusChange }) 
         </div>
         <div className="mb-2">
           <strong className="text-xl underline">Description:</strong>
-          <div className="" dangerouslySetInnerHTML={{ __html: selectedEvent.EventDescription }} />
+          <div
+            className=""
+            dangerouslySetInnerHTML={{ __html: selectedEvent.EventDescription }}
+          />
         </div>
         <div className="mb-4">
           <strong className="text-xl underline">Host:</strong>
@@ -188,43 +202,51 @@ const DetailsEventModal = ({ selectedEvent, onClose, handleEventStatusChange }) 
           </div>
         </div>
         {selectedEvent.EventImage && (
-          <img src={selectedEvent.EventImage} alt="Event Poster" className="mb-4 w-full max-w-3xl object-cover" />
+          <img
+            src={selectedEvent.EventImage}
+            alt="Event Poster"
+            className="mb-4 w-full max-w-3xl object-cover"
+          />
         )}
         <div className="flex justify-center gap-4 mt-4">
-          {(user.isAdmin == '1') && ((selectedEvent.Status === 'Pending') && (
+          {user.isAdmin == "1" && selectedEvent.Status === "Pending" && (
             <>
               <button
-                onClick={() => handleConfirmation('approve')}
+                onClick={() => handleConfirmation("approve")}
                 className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-300"
               >
                 Approve
               </button>
               <button
-                onClick={() => handleConfirmation('reject')}
+                onClick={() => handleConfirmation("reject")}
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300"
               >
                 Reject
               </button>
             </>
-          ))}
-          {(user.isAdmin == '1') && ((selectedEvent.Status === 'Approved' || selectedEvent.Status === 'Rejected') && (
-            <button
-              onClick={() => handleConfirmation('delete')}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300"
-            >
-              Delete
-            </button>
-          ))}
-          {selectedEvent.RegistrationLink && selectedEvent.Status !== 'Pending' && selectedEvent.Status !== 'Rejected' && (
-            <a
-              href={selectedEvent.RegistrationLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300"
-            >
-              Register Here
-            </a>
           )}
+          {user.isAdmin == "1" &&
+            (selectedEvent.Status === "Approved" ||
+              selectedEvent.Status === "Rejected") && (
+              <button
+                onClick={() => handleConfirmation("delete")}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300"
+              >
+                Delete
+              </button>
+            )}
+          {selectedEvent.RegistrationLink &&
+            selectedEvent.Status !== "Pending" &&
+            selectedEvent.Status !== "Rejected" && (
+              <a
+                href={selectedEvent.RegistrationLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300"
+              >
+                Register Here
+              </a>
+            )}
           <button
             onClick={onClose}
             className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-300"

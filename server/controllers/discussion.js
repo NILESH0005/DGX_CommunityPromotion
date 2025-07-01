@@ -141,6 +141,8 @@ export const discussionpost = async (req, res) => {
                 value: visibilityValue[0]?.ddValue || null,
                 id: lastInsertedId[0].Visibility,
               },
+              action: likes !== null ? 'like' : comment !== null ? 'comment' : 'post'
+
             },
             message: infoMessage,
           });
@@ -176,6 +178,205 @@ export const discussionpost = async (req, res) => {
   }
 };
 
+// export const getdiscussion = async (req, res) => {
+//   let success = false;
+//   console.log("user is", req.body);
+
+//   const userId = req.body.user;
+//   console.log("Received request for getdiscussion. User ID:", userId);
+//   const errors = validationResult(req);
+//   if (!errors.isEmpty()) {
+//     const warningMessage = "Data is not in the right format";
+//     console.error(warningMessage, errors.array());
+//     logWarning(warningMessage);
+//     res
+//       .status(400)
+//       .json({ success, data: errors.array(), message: warningMessage });
+//     return;
+//   }
+
+//   try {
+//     connectToDatabase(async (err, conn) => {
+//       if (err) {
+//         const errorMessage = "Failed to connect to database";
+//         logError(err);
+//         res
+//           .status(500)
+//           .json({ success: false, data: err, message: errorMessage });
+//         return;
+//       }
+
+//       try {
+//         let rows = [];
+//         if (userId !== null && userId !== undefined) {
+//           const query = `SELECT UserID, Name FROM Community_User WHERE isnull(delStatus,0) = 0 AND EmailId = ?`;
+//           rows = await queryAsync(conn, query, [userId]);
+//           // console.log("User Query Result:", rows); // Log the result of the user query
+//         }
+
+//         if (rows.length === 0) {
+//           rows.push({ UserID: null });
+//         }
+
+//         const discussionGetQuery = `SELECT 
+//                     d.*,
+//                     r.ddValue AS VisibilityName
+//                 FROM 
+//                     Community_Discussion d
+//                 JOIN 
+//                     tblDDReferences r ON TRY_CAST(d.Visibility AS INT) = r.idCode
+//                 WHERE 
+//                     ISNULL(d.delStatus, 0) = 0
+//                     AND d.Reference = 0
+//                     AND r.ddCategory = 'Privacy'
+//                     AND r.ddValue = 'Public'
+//                     AND TRY_CAST(d.Visibility AS INT) IS NOT NULL
+//                 ORDER BY 
+//                     d.AddOnDt DESC;
+//                     `;
+//         const discussionGet = await queryAsync(conn, discussionGetQuery);
+//         // console.log("Discussion Get Result:", discussionGet); // Log discussionGet
+
+//         const updatedDiscussions = [];
+
+//         for (const item of discussionGet) {
+//           const likeCountQuery = `SELECT DiscussionID, UserID, Likes, AuthAdd as UserName FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND Likes > 0 AND Reference = ?`;
+//           const likeCountResult = await queryAsync(conn, likeCountQuery, [
+//             item.DiscussionID,
+//           ]);
+//           // console.log("Like Count Result for Discussion:", item.DiscussionID, likeCountResult); // Log likeCountResult
+
+//           const commentQuery = `SELECT DiscussionID, UserID, Comment, AuthAdd as UserName, AddOnDt as timestamp FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND  Comment IS NOT NULL AND Reference = ? ORDER BY AddOnDt DESC`;
+//           const commentResult = await queryAsync(conn, commentQuery, [
+//             item.DiscussionID,
+//           ]);
+//           const commentsArray = Array.isArray(commentResult)
+//             ? commentResult
+//             : [];
+//           // console.log("Comments Array for Discussion:", item.DiscussionID, commentsArray); // Log commentsArray
+
+//           const commentsArrayUpdated = [];
+//           let userLike = 0;
+
+//           if (
+//             likeCountResult.some(
+//               (likeItem) =>
+//                 likeItem.UserID === rows[0].UserID && likeItem.Likes === 1
+//             )
+//           ) {
+//             userLike = 1;
+//           }
+
+//           if (commentsArray.length > 0) {
+//             for (const comment of commentsArray) {
+//               const commentsArrayUpdatedSecond = [];
+
+//               const likeCountQuery = `SELECT DiscussionID, UserID, Likes, AuthAdd as UserName FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND Likes > 0 AND Reference = ?`;
+//               const likeCountResult = await queryAsync(conn, likeCountQuery, [
+//                 comment.DiscussionID,
+//               ]);
+//               const likeCount =
+//                 likeCountResult.length > 0 ? likeCountResult.length : 0;
+
+//               const commentQuery = `SELECT DiscussionID, UserID, Comment, AuthAdd as UserName, AddOnDt as timestamp FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND  Comment IS NOT NULL AND Reference = ? ORDER BY AddOnDt DESC`;
+//               const commentResult = await queryAsync(conn, commentQuery, [
+//                 comment.DiscussionID,
+//               ]);
+//               const secondLevelCommentsArray = Array.isArray(commentResult)
+//                 ? commentResult
+//                 : [];
+
+//               let secondLevelUserLike = 0;
+//               if (
+//                 likeCountResult.some(
+//                   (likeItem) =>
+//                     likeItem.UserID === rows[0].UserID && likeItem.Likes === 1
+//                 )
+//               ) {
+//                 secondLevelUserLike = 1;
+//               }
+
+//               if (secondLevelCommentsArray.length > 0) {
+//                 for (const secondLevelComment of secondLevelCommentsArray) {
+//                   const secondLevelLikeCountQuery = `SELECT DiscussionID, UserID, Likes, AuthAdd as UserName, AddOnDt as timestamp FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND Likes > 0 AND Reference = ?`;
+//                   const secondLevelLikeCountResult = await queryAsync(
+//                     conn,
+//                     secondLevelLikeCountQuery,
+//                     [secondLevelComment.DiscussionID]
+//                   );
+//                   const secondLevelLikeCount =
+//                     secondLevelLikeCountResult.length > 0
+//                       ? secondLevelLikeCountResult.length
+//                       : 0;
+
+//                   let secondLevelUserLike = 0;
+//                   if (
+//                     secondLevelLikeCountResult.some(
+//                       (likeItem) =>
+//                         likeItem.UserID === rows[0].UserID &&
+//                         likeItem.Likes === 1
+//                     )
+//                   ) {
+//                     secondLevelUserLike = 1;
+//                   }
+
+//                   commentsArrayUpdatedSecond.push({
+//                     ...secondLevelComment,
+//                     likeCount: secondLevelLikeCount,
+//                     userLike: secondLevelUserLike,
+//                   });
+//                 }
+//               }
+
+//               commentsArrayUpdated.push({
+//                 ...comment,
+//                 likeCount,
+//                 userLike: secondLevelUserLike,
+//                 comment: commentsArrayUpdatedSecond,
+//               });
+//             }
+//           }
+
+//           const likeCount =
+//             likeCountResult.length > 0 ? likeCountResult.length : 0;
+//           updatedDiscussions.push({
+//             ...item,
+//             likeCount,
+//             userLike,
+//             comment: commentsArrayUpdated,
+//           });
+//         }
+
+//         success = true;
+//         // console.log("Updated Discussions Array:", updatedDiscussions); // Log final updatedDiscussions array
+
+//         closeConnection(); // Close the connection after all operations
+//         const infoMessage = "Discussion Get Successfully";
+//         logInfo(infoMessage);
+//         res.status(200).json({
+//           success,
+//           data: { updatedDiscussions },
+//           message: infoMessage,
+//         });
+//       } catch (queryErr) {
+//         logError(queryErr);
+//         closeConnection();
+//         res.status(500).json({
+//           success: false,
+//           data: queryErr,
+//           message: "Something went wrong please try again",
+//         });
+//       }
+//     });
+//   } catch (error) {
+//     logError(error);
+//     res.status(500).json({
+//       success: false,
+//       data: {},
+//       message: "Something went wrong please try again",
+//     });
+//   }
+// };
 export const getdiscussion = async (req, res) => {
   let success = false;
   console.log("user is", req.body);
@@ -209,7 +410,6 @@ export const getdiscussion = async (req, res) => {
         if (userId !== null && userId !== undefined) {
           const query = `SELECT UserID, Name FROM Community_User WHERE isnull(delStatus,0) = 0 AND EmailId = ?`;
           rows = await queryAsync(conn, query, [userId]);
-          // console.log("User Query Result:", rows); // Log the result of the user query
         }
 
         if (rows.length === 0) {
@@ -218,7 +418,8 @@ export const getdiscussion = async (req, res) => {
 
         const discussionGetQuery = `SELECT 
                     d.*,
-                    r.ddValue AS VisibilityName
+                    r.ddValue AS VisibilityName,
+                    d.AuthAdd AS UserName
                 FROM 
                     Community_Discussion d
                 JOIN 
@@ -233,7 +434,6 @@ export const getdiscussion = async (req, res) => {
                     d.AddOnDt DESC;
                     `;
         const discussionGet = await queryAsync(conn, discussionGetQuery);
-        // console.log("Discussion Get Result:", discussionGet); // Log discussionGet
 
         const updatedDiscussions = [];
 
@@ -242,113 +442,27 @@ export const getdiscussion = async (req, res) => {
           const likeCountResult = await queryAsync(conn, likeCountQuery, [
             item.DiscussionID,
           ]);
-          // console.log("Like Count Result for Discussion:", item.DiscussionID, likeCountResult); // Log likeCountResult
 
-          const commentQuery = `SELECT DiscussionID, UserID, Comment, AuthAdd as UserName, AddOnDt as timestamp FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND  Comment IS NOT NULL AND Reference = ? ORDER BY AddOnDt DESC`;
+          const commentQuery = `SELECT DiscussionID, UserID, Comment, AuthAdd as UserName, AddOnDt as timestamp FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND Comment IS NOT NULL AND Reference = ? ORDER BY AddOnDt DESC`;
           const commentResult = await queryAsync(conn, commentQuery, [
             item.DiscussionID,
           ]);
-          const commentsArray = Array.isArray(commentResult)
-            ? commentResult
-            : [];
-          // console.log("Comments Array for Discussion:", item.DiscussionID, commentsArray); // Log commentsArray
+          const commentsArray = Array.isArray(commentResult) ? commentResult : [];
 
-          const commentsArrayUpdated = [];
-          let userLike = 0;
+          // ... rest of your existing code ...
 
-          if (
-            likeCountResult.some(
-              (likeItem) =>
-                likeItem.UserID === rows[0].UserID && likeItem.Likes === 1
-            )
-          ) {
-            userLike = 1;
-          }
-
-          if (commentsArray.length > 0) {
-            for (const comment of commentsArray) {
-              const commentsArrayUpdatedSecond = [];
-
-              const likeCountQuery = `SELECT DiscussionID, UserID, Likes, AuthAdd as UserName FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND Likes > 0 AND Reference = ?`;
-              const likeCountResult = await queryAsync(conn, likeCountQuery, [
-                comment.DiscussionID,
-              ]);
-              const likeCount =
-                likeCountResult.length > 0 ? likeCountResult.length : 0;
-
-              const commentQuery = `SELECT DiscussionID, UserID, Comment, AuthAdd as UserName, AddOnDt as timestamp FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND  Comment IS NOT NULL AND Reference = ? ORDER BY AddOnDt DESC`;
-              const commentResult = await queryAsync(conn, commentQuery, [
-                comment.DiscussionID,
-              ]);
-              const secondLevelCommentsArray = Array.isArray(commentResult)
-                ? commentResult
-                : [];
-
-              let secondLevelUserLike = 0;
-              if (
-                likeCountResult.some(
-                  (likeItem) =>
-                    likeItem.UserID === rows[0].UserID && likeItem.Likes === 1
-                )
-              ) {
-                secondLevelUserLike = 1;
-              }
-
-              if (secondLevelCommentsArray.length > 0) {
-                for (const secondLevelComment of secondLevelCommentsArray) {
-                  const secondLevelLikeCountQuery = `SELECT DiscussionID, UserID, Likes, AuthAdd as UserName, AddOnDt as timestamp FROM Community_Discussion WHERE ISNULL(delStatus, 0) = 0 AND Likes > 0 AND Reference = ?`;
-                  const secondLevelLikeCountResult = await queryAsync(
-                    conn,
-                    secondLevelLikeCountQuery,
-                    [secondLevelComment.DiscussionID]
-                  );
-                  const secondLevelLikeCount =
-                    secondLevelLikeCountResult.length > 0
-                      ? secondLevelLikeCountResult.length
-                      : 0;
-
-                  let secondLevelUserLike = 0;
-                  if (
-                    secondLevelLikeCountResult.some(
-                      (likeItem) =>
-                        likeItem.UserID === rows[0].UserID &&
-                        likeItem.Likes === 1
-                    )
-                  ) {
-                    secondLevelUserLike = 1;
-                  }
-
-                  commentsArrayUpdatedSecond.push({
-                    ...secondLevelComment,
-                    likeCount: secondLevelLikeCount,
-                    userLike: secondLevelUserLike,
-                  });
-                }
-              }
-
-              commentsArrayUpdated.push({
-                ...comment,
-                likeCount,
-                userLike: secondLevelUserLike,
-                comment: commentsArrayUpdatedSecond,
-              });
-            }
-          }
-
-          const likeCount =
-            likeCountResult.length > 0 ? likeCountResult.length : 0;
           updatedDiscussions.push({
             ...item,
-            likeCount,
-            userLike,
-            comment: commentsArrayUpdated,
+            likeCount: likeCountResult.length > 0 ? likeCountResult.length : 0,
+            userLike: likeCountResult.some(
+              (likeItem) => likeItem.UserID === rows[0].UserID && likeItem.Likes === 1
+            ) ? 1 : 0,
+            comment: commentsArray,
           });
         }
 
         success = true;
-        // console.log("Updated Discussions Array:", updatedDiscussions); // Log final updatedDiscussions array
-
-        closeConnection(); // Close the connection after all operations
+        closeConnection();
         const infoMessage = "Discussion Get Successfully";
         logInfo(infoMessage);
         res.status(200).json({

@@ -153,7 +153,6 @@ const HomeAfterLoginComponent = () => {
 
                     <div className="flex items-center justify-center lg:p-10 lg:sticky lg:top-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:overflow-hidden">
                         <div className="relative w-full overflow-hidden">
-                            {/* Image container */}
                             <div
                                 className="flex transition-transform duration-500"
                                 style={{ transform: `translateX(-${currentSlide * 100}%)` }}
@@ -169,7 +168,6 @@ const HomeAfterLoginComponent = () => {
                                 ))}
                             </div>
 
-                            {/* Next and Previous buttons */}
                             <button
                                 onClick={prevSlide}
                                 className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-gray-700 text-white p-2 rounded-full z-10"

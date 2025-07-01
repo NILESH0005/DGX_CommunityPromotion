@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { FaSearch, FaComment, FaWindowClose, FaTrophy } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,8 +7,8 @@ import DiscussionModal from "../component/discussion/DiscussionModal.jsx";
 import { compressImage } from "../utils/compressImage.js";
 import { AiFillLike, AiOutlineLike, AiOutlineComment } from "react-icons/ai";
 import { useCallback } from "react";
-import Skeleton from "react-loading-skeleton"; // Import Skeleton
-import "react-loading-skeleton/dist/skeleton.css"; // Import Skeleton styles
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import Swal from "sweetalert2";
@@ -17,25 +17,28 @@ import { useNavigate } from "react-router-dom";
 const Discussion = () => {
   const navigate = useNavigate();
   const { fetchData, userToken, user } = useContext(ApiContext);
+  const [searchScope, setSearchScope] = useState("all");
   const [demoDiscussions, setDemoDiscussions] = useState([]);
+  const [filteredDiscussions, setFilteredDiscussions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Loading state
+  const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState({
     title: "",
     content: "",
     tags: "",
     links: "",
-    privacy: "", // Add privacy to errors state
+    privacy: "",
   });
+  
   const resetForm = () => {
     setTitle("");
     setContent("");
-    setTags([]); // Reset to empty array
-    setLinks([]); // Reset to empty array
+    setTags([]);
+    setLinks([]);
     setSelectedImage(null);
     setTagInput("");
     setLinkInput("");
-    setPrivacy("private"); // Reset to default value
+    setPrivacy("private");
     setErrors({
       title: "",
       content: "",
@@ -44,17 +47,16 @@ const Discussion = () => {
       privacy: "",
     });
   };
+
   useEffect(() => {
-    // Simulating data fetching
     const loadEvents = async () => {
       setIsLoading(true);
-      // Simulate network delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
       setIsLoading(false);
     };
-
     loadEvents();
   }, []);
+
   const [likeCount, setLikeCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -67,7 +69,6 @@ const Discussion = () => {
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState([]);
   const [links, setLinks] = useState([]);
-
   const [linkInput, setLinkInput] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
   const [discussions, setDiscussions] = useState([]);
@@ -84,6 +85,79 @@ const Discussion = () => {
     return sortedDiscussions.slice(0, 5);
   };
 
+  const getTopUsersByDiscussions = (discussions) => {
+    const userDiscussionCount = {};
+
+    discussions.forEach((discussion) => {
+      const { UserID, UserName } = discussion;
+
+      if (userDiscussionCount[UserID]) {
+        userDiscussionCount[UserID].count++;
+      } else {
+        userDiscussionCount[UserID] = { userName: UserName, count: 1 };
+      }
+    });
+
+    const usersArray = Object.keys(userDiscussionCount).map((UserID) => ({
+      userID: UserID,
+      userName: userDiscussionCount[UserID].userName,
+      count: userDiscussionCount[UserID].count,
+    }));
+
+    return usersArray.sort((a, b) => b.count - a.count).slice(0, 5);
+  };
+
+  const filterDiscussions = (discussions, query, scope) => {
+    if (!query.trim()) return discussions;
+
+    const lowerCaseQuery = query.toLowerCase();
+
+    return discussions.filter((discussion) => {
+      switch (scope) {
+        case "title":
+          return discussion.Title.toLowerCase().includes(lowerCaseQuery);
+        case "content":
+          return discussion.Content.toLowerCase().includes(lowerCaseQuery);
+        case "tags":
+          return typeof discussion.Tag === "string"
+            ? discussion.Tag.toLowerCase().includes(lowerCaseQuery)
+            : discussion.Tag?.some((tag) =>
+                tag.toLowerCase().includes(lowerCaseQuery)
+              );
+        default: // 'all'
+          return (
+            discussion.Title.toLowerCase().includes(lowerCaseQuery) ||
+            discussion.Content.toLowerCase().includes(lowerCaseQuery) ||
+            (typeof discussion.Tag === "string"
+              ? discussion.Tag.toLowerCase().includes(lowerCaseQuery)
+              : discussion.Tag?.some((tag) =>
+                  tag.toLowerCase().includes(lowerCaseQuery)
+                ))
+          );
+      }
+    });
+  };
+
+  const handleSearchChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+
+    if (!query.trim()) {
+      setFilteredDiscussions(demoDiscussions);
+    } else {
+      const filtered = filterDiscussions(demoDiscussions, query, searchScope);
+      setFilteredDiscussions(filtered);
+    }
+  };
+
+  const handleScopeChange = (scope) => {
+    setSearchScope(scope);
+    if (searchQuery.trim()) {
+      const filtered = filterDiscussions(demoDiscussions, searchQuery, scope);
+      setFilteredDiscussions(filtered);
+    }
+  };
+
   const validateForm = () => {
     let valid = true;
     const newErrors = {
@@ -94,7 +168,6 @@ const Discussion = () => {
       privacy: "",
     };
 
-    // Title validation
     if (!title.trim()) {
       newErrors.title = "Title is required";
       valid = false;
@@ -103,7 +176,6 @@ const Discussion = () => {
       valid = false;
     }
 
-    // Content validation
     if (!content.trim() || content === "<p><br></p>") {
       newErrors.content = "Content is required";
       valid = false;
@@ -112,7 +184,6 @@ const Discussion = () => {
       valid = false;
     }
 
-    // Tags validation
     if (tags.length === 0) {
       newErrors.tags = "At least one tag is required";
       valid = false;
@@ -121,12 +192,10 @@ const Discussion = () => {
       valid = false;
     }
 
-    // Links validation
     if (links.length === 0) {
       newErrors.links = "At least one link is required";
       valid = false;
     } else {
-      // Validate each link URL format
       const urlRegex =
         /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
       const invalidLinks = links.filter((link) => !urlRegex.test(link));
@@ -136,7 +205,6 @@ const Discussion = () => {
       }
     }
 
-    // Privacy validation
     if (!privacy) {
       newErrors.privacy = "Please select a privacy option";
       valid = false;
@@ -225,92 +293,40 @@ const Discussion = () => {
     return true;
   };
 
-  const getTopUsersByDiscussions = (discussions) => {
-    const userDiscussionCount = {};
-
-    discussions.forEach((discussion) => {
-      const { UserID, UserName } = discussion;
-
-      if (userDiscussionCount[UserID]) {
-        userDiscussionCount[UserID].count++;
-      } else {
-        userDiscussionCount[UserID] = { userName: UserName, count: 1 };
-      }
-    });
-
-    const usersArray = Object.keys(userDiscussionCount).map((UserID) => ({
-      userID: UserID,
-      userName: userDiscussionCount[UserID].userName,
-      count: userDiscussionCount[UserID].count,
-    }));
-
-    return usersArray.sort((a, b) => b.count - a.count).slice(0, 5);
-  };
-
   useEffect(() => {
-    try {
-      const fetchDiscussionData = (userEmail) => {
-        try {
-          const body = userEmail ? { user: userEmail } : { user: null };
-          const endpoint = "discussion/getdiscussion";
-          const method = "POST";
-          const headers = {
-            "Content-Type": "application/json",
-          };
+    const fetchDiscussionData = async (userEmail) => {
+      try {
+        const body = userEmail ? { user: userEmail } : { user: null };
+        const endpoint = "discussion/getdiscussion";
+        const method = "POST";
+        const headers = {
+          "Content-Type": "application/json",
+        };
 
-          setLoading(true);
+        setLoading(true);
+        const result = await fetchData(endpoint, method, body, headers);
 
-          fetchData(endpoint, method, body, headers)
-            .then((result) => {
-              if (result && result.data) {
-                return result.data;
-              } else {
-                // Only show error if there's actually an error
-                if (result && result.message) {
-                  Swal.fire({
-                    icon: "error",
-                    title: "Error",
-                    text: result.message,
-                  });
-                }
-                return null;
-              }
-            })
-            .then((data) => {
-              if (data && data.updatedDiscussions) {
-                setDemoDiscussions(data.updatedDiscussions);
-                const highlights = getCommunityHighlights(
-                  data.updatedDiscussions
-                );
-                setCommunityHighlights(highlights);
-                const users = getTopUsersByDiscussions(data.updatedDiscussions);
-                setTopUsers(users);
-              }
-              setLoading(false);
-            })
-            .catch((error) => {
-              setLoading(false);
-              // Only show error if it's not the default "Invalid data format" error
-              if (error.message !== "Invalid data format") {
-                Swal.fire({
-                  icon: "error",
-                  title: "Error",
-                  text: `Something went wrong: ${error.message}`,
-                });
-              }
-            });
-        } catch (error) {
-          setLoading(false);
-          // console.log(error);
+        if (result?.data?.updatedDiscussions) {
+          setDemoDiscussions(result.data.updatedDiscussions);
+          setFilteredDiscussions(result.data.updatedDiscussions);
+          const highlights = getCommunityHighlights(
+            result.data.updatedDiscussions
+          );
+          setCommunityHighlights(highlights);
+          const users = getTopUsersByDiscussions(result.data.updatedDiscussions);
+          setTopUsers(users);
         }
-      };
-      if (userToken && user) {
-        fetchDiscussionData(user.EmailId);
-      } else {
-        fetchDiscussionData(null);
+        setLoading(false);
+      } catch (error) {
+        setLoading(false);
+        console.error("Error fetching discussions:", error);
       }
-    } catch (error) {
-      // console.log(error);
+    };
+
+    if (userToken && user) {
+      fetchDiscussionData(user.EmailId);
+    } else {
+      fetchDiscussionData(null);
     }
   }, [user, userToken, fetchData]);
 
@@ -329,8 +345,8 @@ const Discussion = () => {
 
         if (result && result.data && result.data.updatedDiscussions) {
           setDemoDiscussions(result.data.updatedDiscussions);
+          setFilteredDiscussions(result.data.updatedDiscussions);
         } else {
-          // Only show error if there's actually an error message
           if (result && result.message) {
             Swal.fire({
               icon: "error",
@@ -342,7 +358,6 @@ const Discussion = () => {
         setLoading(false);
       } catch (error) {
         setLoading(false);
-        // Only show error if it's meaningful
         if (error.message && !error.message.includes("Invalid data format")) {
           Swal.fire({
             icon: "error",
@@ -377,7 +392,6 @@ const Discussion = () => {
       "auth-token": userToken,
     };
 
-    // Toggle like state (1 → 0 or 0 → 1)
     const newLikeState = currentUserLike === 1 ? 0 : 1;
 
     const body = {
@@ -393,11 +407,9 @@ const Discussion = () => {
         return;
       }
 
-      // Update the discussion in state
       setDemoDiscussions((prevDiscussions) =>
         prevDiscussions.map((discussion) => {
           if (discussion.DiscussionID === id) {
-            // Calculate new like count
             const currentLikes = Number(discussion.likeCount) || 0;
             const newLikeCount =
               newLikeState === 1
@@ -456,14 +468,6 @@ const Discussion = () => {
     },
   ];
 
-  // const topUsers = [
-  //   { name: "User 1", points: 1200 },
-  //   { name: "User 2", points: 1100 },
-  //   { name: "User 3", points: 1050 },
-  //   { name: "User 4", points: 1020 },
-  //   { name: "User 5", points: 980 }
-  // ];
-
   const toggleNav = () => setIsNavOpen(!isNavOpen);
   const handleLike = () => setLikeCount(likeCount + 1);
 
@@ -488,9 +492,9 @@ const Discussion = () => {
   const handleTagInputKeyPress = (e) => {
     if (e.key === "Enter" && tagInput.trim() !== "") {
       e.preventDefault();
-      setTags([...tags, tagInput.trim()]); // Add to array
+      setTags([...tags, tagInput.trim()]);
       setTagInput("");
-      setErrors({ ...errors, tags: "" }); // Clear error when adding tag
+      setErrors({ ...errors, tags: "" });
     }
   };
 
@@ -517,9 +521,9 @@ const Discussion = () => {
   const handleLinkInputKeyPress = (e) => {
     if (e.key === "Enter" && linkInput.trim() !== "") {
       e.preventDefault();
-      setLinks([...links, linkInput.trim()]); // Add to array
+      setLinks([...links, linkInput.trim()]);
       setLinkInput("");
-      setErrors({ ...errors, links: "" }); // Clear error when adding link
+      setErrors({ ...errors, links: "" });
     }
   };
 
@@ -534,7 +538,6 @@ const Discussion = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate all fields before submission
     const isTitleValid = validateTitle();
     const isContentValid = validateContent();
     const isTagsValid = validateTags();
@@ -589,7 +592,6 @@ const Discussion = () => {
       } else if (data.success) {
         setLoading(false);
 
-        // Show success message
         await Swal.fire({
           title: "Success!",
           text:
@@ -605,11 +607,9 @@ const Discussion = () => {
         });
         window.location.reload();
 
-        // Reset form and close
         resetForm();
         setIsFormOpen(false);
 
-        // Update discussions if public
         if (privacy === "public") {
           const newDiscussion = {
             DiscussionID: data.postID,
@@ -622,6 +622,7 @@ const Discussion = () => {
             comment: [],
           };
           setDemoDiscussions([newDiscussion, ...demoDiscussions]);
+          setFilteredDiscussions([newDiscussion, ...filteredDiscussions]);
         }
       }
     } catch (error) {
@@ -636,15 +637,10 @@ const Discussion = () => {
     }
   };
 
-  // console.log(demoDiscussions);
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
   const handleKeyDown = async (e) => {
     if (e.key === "Enter") {
-      e.preventDefault(); // Prevent default form submission
-      await searchDiscussion(searchQuery); // Trigger the search
+      e.preventDefault();
+      await searchDiscussion(searchQuery, user?.EmailId || null);
     }
   };
 
@@ -673,50 +669,38 @@ const Discussion = () => {
                   className="w-full py-2 pl-10 pr-4 bg-white border border-gray-200 rounded-lg shadow-sm text-gray-800 focus:border-DGXgreen focus:ring-DGXgreen"
                   placeholder="Search..."
                   value={searchQuery}
-                  onChange={handleSearchChange} // Call this directly without the arrow function
+                  onChange={handleSearchChange}
                   onKeyDown={handleKeyDown}
                 />
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <FaSearch className="text-gray-400" />
                 </div>
+                <div className="absolute right-0 top-0 h-full flex items-center pr-2">
+                  <select
+                    value={searchScope}
+                    onChange={(e) => handleScopeChange(e.target.value)}
+                    className="text-xs border rounded p-1 bg-white"
+                  >
+                    <option value="all">All</option>
+                    <option value="title">Title</option>
+                    <option value="content">Content</option>
+                    <option value="tags">Tags</option>
+                  </select>
+                </div>
               </div>
             )}
           </div>
 
-          {/* <div className="sm:order-3 flex items-center gap-x-2">
-            <button
-              type="button"
-              className="sm:hidden hs-collapse-toggle p-2.5 inline-flex justify-center items-center gap-x-2 rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
-              aria-controls="navbar-alignment"
-              aria-label="Toggle navigation"
-              onClick={toggleNav}
-            >
-              <svg className={`${isNavOpen ? 'hidden' : 'block'} flex-shrink-0 size-4`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="3" x2="21" y1="6" y2="6" />
-                <line x1="3" x2="21" y1="12" y2="12" />
-                <line x1="3" x2="21" y1="18" y2="18" />
-              </svg>
-              <svg className={`${isNavOpen ? 'block' : 'hidden'} flex-shrink-0 size-4`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
-          </div> */}
           <div
             id="navbar-alignment"
             className={`${
               isNavOpen ? "block" : "hidden"
             } hs-collapse overflow-hidden transition-all duration-300 basis-full grow sm:grow-0 sm:basis-auto sm:block sm:order-2`}
           >
-            {/* <div className="flex flex-col gap-6 mt-5 sm:flex-row sm:items-center sm:mt-0 sm:ps-5">
-              <a className="text-lg font-bold text-DGXwhite cursor-pointer" onClick={() => setSelectedSection('all')} aria-current="page">All</a>
-              <a className="text-lg font-bold text-DGXwhite cursor-pointer" onClick={() => setSelectedSection('top')}>Top Discussions</a>
-              <a className="text-lg font-bold text-DGXwhite cursor-pointer" onClick={() => setSelectedSection('recent')}>Recent Discussions</a>
-            </div> */}
           </div>
           {isLoading ? (
             <Skeleton
-              height={35} // Adjusted to match the height of the input element
+              height={35}
               width={150}
               className="w-full xs:w-full sm:w-64 bg-lime-500 rounded-lg mb-1 sm:mt-4"
             />
@@ -756,7 +740,7 @@ const Discussion = () => {
           discussion={selectedDiscussion}
           setDiscussions={setDiscussions}
           discussions={discussions}
-          setDemoDiscussion={setDemoDiscussions} // Make sure this matches your state setter
+          setDemoDiscussion={setDemoDiscussions}
         />
       )}
       <div className="flex flex-col lg:flex-row w-full mx-auto bg-white rounded-md border border-gray-200 shadow-md mt-4 mb-4 p-4">
@@ -769,16 +753,14 @@ const Discussion = () => {
 
             <div className="space-y-4">
               {isLoading
-                ? // Display Skeleton loaders in place of the actual content
-                  Array.from({ length: 5 }).map((_, index) => (
+                ? Array.from({ length: 5 }).map((_, index) => (
                     <Skeleton
                       key={index}
-                      height="8.5rem" // Adjust height as needed to mimic the card's height
+                      height="8.5rem"
                       className="w-full bg-gray-300 rounded-lg mb-4"
                     />
                   ))
-                : // Display actual content when loading is complete
-                  communityHighlights.map((topic) => (
+                : communityHighlights.map((topic) => (
                     <div
                       key={topic.DiscussionID}
                       className="rounded-lg shadow-lg p-4 border hover:bg-DGXgreen/50 border-DGXblack transition-transform transform hover:scale-105 hover:shadow-xl"
@@ -830,7 +812,6 @@ const Discussion = () => {
         </aside>
 
         <section className="w-full lg:w-2/3 px-4">
-          {/* All Discussions */}
           <h2 className="sm:text-sm md:text-base lg:text-lg font-bold mb-4">
             {selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1)}{" "}
             Discussions
@@ -845,7 +826,6 @@ const Discussion = () => {
                   Start a New Discussion
                 </h3>
 
-                {/* Title Field */}
                 <div className="mb-4">
                   <label
                     className="block text-gray-700 font-bold mb-2"
@@ -880,7 +860,6 @@ const Discussion = () => {
                   </div>
                 </div>
 
-                {/* Content Field */}
                 <div className="mb-4">
                   <label
                     className="block text-gray-700 font-bold mb-2"
@@ -923,7 +902,6 @@ const Discussion = () => {
                   </div>
                 </div>
 
-                {/* Tags Field */}
                 <div className="mb-4">
                   <label className="block text-gray-700 font-bold mb-2">
                     Tags <span className="text-red-500">*</span>
@@ -985,7 +963,6 @@ const Discussion = () => {
                   </div>
                 </div>
 
-                {/* Links Field */}
                 <div className="mb-4">
                   <label className="block text-gray-700 font-bold mb-2">
                     Links <span className="text-red-500">*</span>
@@ -1044,7 +1021,6 @@ const Discussion = () => {
                   </div>
                 </div>
 
-                {/* Image Field */}
                 <div className="mb-4">
                   <label className="block text-gray-700 font-bold mb-2">
                     Image
@@ -1072,7 +1048,6 @@ const Discussion = () => {
                   )}
                 </div>
 
-                {/* Privacy Field */}
                 <div className="mb-4">
                   <label className="block text-gray-700 font-bold mb-2">
                     Privacy <span className="text-red-500">*</span>
@@ -1099,7 +1074,6 @@ const Discussion = () => {
                   )}
                 </div>
 
-                {/* Form Buttons */}
                 <div className="flex justify-end space-x-2">
                   <button
                     type="button"
@@ -1148,8 +1122,7 @@ const Discussion = () => {
             )}
             <div className="two-h-screen scrollbar scrollbar-thin  overflow-y-auto px-6">
               {isLoading
-                ? // Display a skeleton for each item based on the length of demoDiscussions
-                  demoDiscussions.map((_, index) => (
+                ? demoDiscussions.map((_, index) => (
                     <div
                       key={index}
                       className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl bg-gray-200 animate-pulse"
@@ -1169,15 +1142,15 @@ const Discussion = () => {
                       <div className="mt-4 h-8 bg-gray-300 rounded w-52"></div>
                     </div>
                   ))
-                : demoDiscussions.map((discussion, i) => (
+                : filteredDiscussions.map((discussion, i) => (
                     <div
+                      key={i}
                       className="relative shadow my-4 border border-gray-300 rounded-lg p-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl xl:max-w-screen-2xl transition-transform transform hover:scale-105 hover:shadow-lg hover:bg-gray-100 cursor-pointer focus-within:z-10 hover:z-10"
                       onClick={(e) => {
-                        // Don't open modal if clicking on interactive elements
                         if (
                           !e.target.closest("a") &&
                           !e.target.closest("button") &&
-                          !e.target.classList.contains("text-blue-700") // "see more" text
+                          !e.target.classList.contains("text-blue-700")
                         ) {
                           openModal(discussion);
                         }
@@ -1315,6 +1288,20 @@ const Discussion = () => {
                       </div>
                     </div>
                   ))}
+              {!isLoading && filteredDiscussions.length === 0 && searchQuery && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No discussions found matching your search.</p>
+                  <button 
+                    onClick={() => {
+                      setSearchQuery('');
+                      setFilteredDiscussions(demoDiscussions);
+                    }}
+                    className="mt-2 text-DGXgreen hover:underline"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </section>

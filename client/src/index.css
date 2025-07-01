@@ -20,3 +20,15 @@
   
 
   .hljs-keyword{color: green !important;}
+
+
+.ql-blockquote{
+    display: none !important;
+}
+
+.ql-formula{
+    display: none !important;
+}
+.ql-clean{
+    display: none !important;
+}

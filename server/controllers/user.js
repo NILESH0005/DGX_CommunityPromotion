@@ -27,7 +27,8 @@ export const databaseUserVerification = async (req, res) => {
   // Validate request body
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const warningMessage = "The data format is incorrect. Please ensure it meets the required format and try again.";
+    const warningMessage =
+      "The data format is incorrect. Please ensure it meets the required format and try again.";
     logWarning(warningMessage); // Log the warning
     res
       .status(400)
@@ -235,7 +236,8 @@ export const registration = async (req, res) => {
   // Validate request body
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const warningMessage = "The data format is incorrect. Please ensure it meets the required format and try again.";
+    const warningMessage =
+      "The data format is incorrect. Please ensure it meets the required format and try again.";
 
     logWarning(warningMessage); // Log the warning
     return res
@@ -279,7 +281,8 @@ export const registration = async (req, res) => {
 
         if (existingUsers[0].userEmailCount > 0) {
           // User with this email already exists
-          const warningMessage = "An account with this email address already exists. Please log in or use a different email to register.";
+          const warningMessage =
+            "An account with this email address already exists. Please log in or use a different email to register.";
 
           logWarning(warningMessage);
           closeConnection();
@@ -360,7 +363,8 @@ export const registration = async (req, res) => {
             }
           } while (!success);
         } else {
-          const warningMessage = "This referral code has no remaining credits. Please try again with a different referral code.";
+          const warningMessage =
+            "This referral code has no remaining credits. Please try again with a different referral code.";
 
           logWarning(warningMessage);
           closeConnection();
@@ -394,9 +398,12 @@ export const login = async (req, res) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const warningMessage = "The data format is incorrect. Please ensure it meets the required format and try again.";
+    const warningMessage =
+      "The data format is incorrect. Please ensure it meets the required format and try again.";
     logWarning(warningMessage);
-    return res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    return res
+      .status(400)
+      .json({ success, data: errors.array(), message: warningMessage });
   }
 
   const { email, password } = req.body;
@@ -431,22 +438,29 @@ export const login = async (req, res) => {
           const warningMessage = "Please try to login with correct credentials";
           logWarning(warningMessage);
           closeConnection();
-          return res.status(200).json({ success: false, data: {}, message: warningMessage });
+          return res
+            .status(200)
+            .json({ success: false, data: {}, message: warningMessage });
         }
 
-        const passwordCompare = await bcrypt.compare(password, result[0].Password);
+        const passwordCompare = await bcrypt.compare(
+          password,
+          result[0].Password
+        );
         if (!passwordCompare) {
           const warningMessage = "Please try to login with correct credentials";
           logWarning(warningMessage);
           closeConnection();
-          return res.status(200).json({ success: false, data: {}, message: warningMessage });
+          return res
+            .status(200)
+            .json({ success: false, data: {}, message: warningMessage });
         }
 
         const data = {
           user: {
             id: result[0].EmailId,
             isAdmin: result[0].isAdmin,
-            uniqueId: result[0].UserID
+            uniqueId: result[0].UserID,
           },
         };
         const authtoken = jwt.sign(data, JWT_SECRET);
@@ -485,13 +499,13 @@ export const login = async (req, res) => {
   }
 };
 
-
 export const changePassword = async (req, res) => {
   let success = false;
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const warningMessage = "The data format is incorrect. Please ensure it meets the required format and try again.";
+    const warningMessage =
+      "The data format is incorrect. Please ensure it meets the required format and try again.";
 
     logWarning(warningMessage); // Log the warning
     return res
@@ -592,7 +606,6 @@ export const changePassword = async (req, res) => {
   }
 };
 
-
 export const getuser = async (req, res) => {
   let success = false;
 
@@ -676,7 +689,7 @@ export const getAllUser = async (req, res) => {
         }
 
         try {
-           const deleteQuery = '';//`DELETE FROM Community_User WHERE UserID = ?`;
+          const deleteQuery = ""; //`DELETE FROM Community_User WHERE UserID = ?`;
           const result = await queryAsync(conn, deleteQuery, [userId]);
 
           closeConnection();
@@ -769,14 +782,13 @@ WHERE delStatus = 0 OR delStatus IS NULL;`;
   }
 };
 
-
 export const sendInvite = async (req, res) => {
   let success = false;
 
-  // Validate request body
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const warningMessage = "The data format is incorrect. Please ensure it meets the required format and try again.";
+    const warningMessage =
+      "The data format is incorrect. Please ensure it meets the required format and try again.";
 
     logWarning(warningMessage); // Log the warning
     return res
@@ -852,7 +864,6 @@ export const sendInvite = async (req, res) => {
           </body>
           </html>`;
 
-
           closeConnection();
           const mailsent = await mailSender(
             req.body.email,
@@ -907,14 +918,14 @@ export const sendInvite = async (req, res) => {
   }
 };
 
-
 export const passwordRecovery = async (req, res) => {
   let success = false;
 
   // Validate request body
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const warningMessage = "The data format is incorrect. Please ensure it meets the required format and try again.";
+    const warningMessage =
+      "The data format is incorrect. Please ensure it meets the required format and try again.";
 
     logWarning(warningMessage); // Log the warning
     return res
@@ -965,7 +976,6 @@ export const passwordRecovery = async (req, res) => {
               Thank you,
               The DGX Community Team`;
 
-
             const htmlContent = `<!DOCTYPE html>
               <html>
               <head>
@@ -998,7 +1008,6 @@ export const passwordRecovery = async (req, res) => {
                   </div>
               </body>
               </html>`;
-
 
             closeConnection();
             const mailsent = await mailSender(
@@ -1069,7 +1078,8 @@ export const resetPassword = async (req, res) => {
   // Validate request body
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const warningMessage = "The data format is incorrect. Please ensure it meets the required format and try again.";
+    const warningMessage =
+      "The data format is incorrect. Please ensure it meets the required format and try again.";
 
     logWarning(warningMessage); // Log the warning
     return res
@@ -1183,7 +1193,10 @@ export const deleteUser = (req, res) => {
         } else {
           try {
             const updateQuery = `UPDATE Community_User SET delStatus = 1, delOnDt = GETDATE(), AuthDel = ? OUTPUT inserted.UserID, inserted.delStatus, inserted.delOnDt, inserted.AuthDel WHERE UserID = ? AND (delStatus IS NULL OR delStatus = 0)`;
-            const rows = await queryAsync(conn, updateQuery, [adminName, userId]);
+            const rows = await queryAsync(conn, updateQuery, [
+              adminName,
+              userId,
+            ]);
             if (rows.length > 0) {
               success = true;
               logInfo("User deleted successfully");
@@ -1193,7 +1206,7 @@ export const deleteUser = (req, res) => {
                   userId: rows[0].UserID,
                   AuthDel: rows[0].AuthDel,
                   delOnDt: rows[0].delOnDt,
-                  delStatus: rows[0].delStatus
+                  delStatus: rows[0].delStatus,
                 },
                 message: "User deleted successfully.",
               });
@@ -1229,7 +1242,6 @@ export const deleteUser = (req, res) => {
   }
 };
 
-
 export const addUser = async (req, res) => {
   let success = false;
   // const userId = req.user.id;
@@ -1238,12 +1250,16 @@ export const addUser = async (req, res) => {
   // Validate request body
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const warningMessage = "Invalid input format. Please check your details and try again.";
+    const warningMessage =
+      "Invalid input format. Please check your details and try again.";
     logWarning(warningMessage);
-    return res.status(400).json({ success, data: errors.array(), message: warningMessage });
+    return res
+      .status(400)
+      .json({ success, data: errors.array(), message: warningMessage });
   }
 
-  const { Name, EmailId, CollegeName, MobileNumber, Category, Designation } = req.body;
+  const { Name, EmailId, CollegeName, MobileNumber, Category, Designation } =
+    req.body;
   const referalNumberCount = Category === "F" ? 10 : 2;
   const FlagPasswordChange = 0;
 
@@ -1251,19 +1267,29 @@ export const addUser = async (req, res) => {
     connectToDatabase(async (err, conn) => {
       if (err) {
         logError(err);
-        return res.status(500).json({ success: false, message: "Database connection failed", data: err });
+        return res
+          .status(500)
+          .json({
+            success: false,
+            message: "Database connection failed",
+            data: err,
+          });
       }
 
       try {
         // Check if the email is already registered
         const existingUserQuery = `SELECT COUNT(UserID) AS userEmailCount FROM Community_User WHERE ISNULL(delStatus,0)=0 AND EmailId = ?`;
-        const existingUsers = await queryAsync(conn, existingUserQuery, [EmailId]);
+        const existingUsers = await queryAsync(conn, existingUserQuery, [
+          EmailId,
+        ]);
 
         if (existingUsers[0].userEmailCount > 0) {
           const warningMessage = "User with this email already exists.";
           logWarning(warningMessage);
           closeConnection();
-          return res.status(200).json({ success: false, message: warningMessage, data: {} });
+          return res
+            .status(200)
+            .json({ success: false, message: warningMessage, data: {} });
         }
 
         // Generate a random password
@@ -1299,24 +1325,121 @@ export const addUser = async (req, res) => {
               hashedPassword,
               FlagPasswordChange,
               Name,
-              0
+              0,
             ]);
 
             success = true;
             const infoMessage = "User added successfully.";
             logInfo(`User added: ${EmailId}`);
             closeConnection();
-            return res.status(200).json({ success, message: infoMessage, data: { EmailId } });
+            return res
+              .status(200)
+              .json({ success, message: infoMessage, data: { EmailId } });
           }
         } while (!success);
       } catch (error) {
         logError(error);
         closeConnection();
-        return res.status(500).json({ success: false, message: "Error processing request", data: error });
+        return res
+          .status(500)
+          .json({
+            success: false,
+            message: "Error processing request",
+            data: error,
+          });
       }
     });
   } catch (error) {
     logError(error);
-    return res.status(500).json({ success: false, message: "Internal server error", data: {} });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error", data: {} });
+  }
+};
+
+export const sendContactEmail = async (req, res) => {
+  let success = false;
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success,
+      data: errors.array(),
+      message: "Invalid form data",
+    });
+  }
+
+  try {
+    const { name, email, message } = req.body;
+
+    // Create email content
+    const emailMessage = `New Contact Form Submission:
+    
+    Name: ${name}
+    Email: ${email}
+    Message: ${message}
+    
+    Received at: ${new Date().toLocaleString()}`;
+
+    const htmlContent = `<!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; }
+            .details { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+            .label { font-weight: bold; color: #333; }
+        </style>
+    </head>
+    <body>
+        <h2>New Contact Form Submission</h2>
+        <div class="details">
+            <p><span class="label">Name:</span> ${name}</p>
+            <p><span class="label">Email:</span> ${email}</p>
+            <p><span class="label">Message:</span><br>${message.replace(
+              /\n/g,
+              "<br>"
+            )}</p>
+        </div>
+        <p>Received at: ${new Date().toLocaleString()}</p>
+    </body>
+    </html>`;
+
+    // Send email to your admin
+    const adminEmail = "nilesh.thakur@giindia.com";
+    const mailSent = await mailSender(adminEmail, emailMessage, htmlContent);
+
+    if (mailSent.success) {
+      // Optional: Send confirmation email to the user
+      const userMessage = `Thank you for contacting us, ${name}!\n\nWe have received your message and will get back to you soon.\n\nYour message:\n${message}`;
+
+      const userHtml = `<!DOCTYPE html>
+      <html>
+      <body>
+          <p>Thank you for contacting us, ${name}!</p>
+          <p>We have received your message and will get back to you soon.</p>
+          <p>Your message:</p>
+          <blockquote>${message.replace(/\n/g, "<br>")}</blockquote>
+          <p>Best regards,<br>The DGX Team</p>
+      </body>
+      </html>`;
+
+      await mailSender(email, userMessage, userHtml);
+
+      return res.status(200).json({
+        success: true,
+        message: "Your message has been sent successfully",
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send email",
+      });
+    }
+  } catch (error) {
+    console.error("Error in sendContactEmail:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
