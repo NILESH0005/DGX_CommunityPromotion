@@ -539,28 +539,93 @@ const ViewContent = ({ submodule, onBack }) => {
     setIsUploading(true);
     const uploadToast = Swal.fire({
       title: "Uploading...",
+      html: `
+      <div class="text-left">
+        <div>Preparing to upload ${newFiles.length} file(s)...</div>
+        <div class="mt-2 w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+          <div id="upload-progress" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+        </div>
+        <div id="upload-status" class="text-sm mt-1">Starting upload...</div>
+      </div>
+    `,
       allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
+      showConfirmButton: false,
     });
 
     try {
-      // Process file uploads and get actual DB responses
-      const uploadResponses = await Promise.all([
-        ...newFiles.map(fileObj => {
-          const formData = new FormData();
-          formData.append("file", fileObj.file);
-          formData.append("unitId", selectedUnit.UnitID);
-          formData.append("fileName", fileObj.customName);
-          formData.append("description", "");
+      const successfulUploads = [];
+      const failedUploads = [];
 
-          return fetch(`${import.meta.env.VITE_API_BASEURL}lms/uploadFile`, {
-            method: "POST",
+      // Update progress function
+      const updateProgress = (progress, message) => {
+        const progressBar = document.getElementById('upload-progress');
+        const statusText = document.getElementById('upload-status');
+        if (progressBar) progressBar.style.width = `${progress}%`;
+        if (statusText) statusText.textContent = message;
+      };
+
+      // Upload files sequentially with progress
+      for (let i = 0; i < newFiles.length; i++) {
+        const fileObj = newFiles[i];
+        try {
+          updateProgress(
+            Math.floor((i / newFiles.length) * 100),
+            `Uploading ${i + 1}/${newFiles.length}: ${fileObj.name}...`
+          );
+
+          const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf',
+            '.doc', '.docx', '.ppt', '.pptx', '.mp4',
+            '.mov', '.ipynb', '.py'];
+          const fileExt = fileObj.file.name.split('.').pop().toLowerCase();
+
+          if (!allowedExtensions.includes(`.${fileExt}`)) {
+            throw new Error(`File type .${fileExt} not allowed`);
+          }
+
+          const formData = new FormData();
+          formData.append('file', fileObj.file);
+          formData.append('moduleId', submodule.ModuleID);
+          formData.append('subModuleId', submodule.SubModuleID);
+          formData.append('unitId', selectedUnit.UnitID);
+          formData.append('customFileName', fileObj.customName || fileObj.file.name);
+
+          const response = await fetch(`${import.meta.env.VITE_API_BASEURL}lms/upload-learning-material-update`, {
+            method: 'POST',
             body: formData,
-            headers: { "auth-token": userToken },
-          }).then(res => res.json());
-        }),
-        ...(fileLink.trim() ? [
-          fetchData(
+            headers: {
+              'auth-token': userToken
+            }
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Upload failed');
+          }
+
+          const result = await response.json();
+          if (result.success) {
+            successfulUploads.push({
+              name: fileObj.name,
+              response: result
+            });
+          } else {
+            throw new Error(result.message || 'Upload failed');
+          }
+        } catch (fileError) {
+          console.error(`Error uploading file ${fileObj.name}:`, fileError);
+          failedUploads.push({
+            name: fileObj.name,
+            error: fileError.message
+          });
+        }
+      }
+
+      // Handle link upload if exists
+      if (fileLink.trim()) {
+        try {
+          updateProgress(95, "Uploading link...");
+
+          const linkResponse = await fetchData(
             "lms/uploadLink",
             "POST",
             {
@@ -571,42 +636,74 @@ const ViewContent = ({ submodule, onBack }) => {
               fileType: "link",
             },
             { "Content-Type": "application/json", "auth-token": userToken }
-          )
-        ] : [])
-      ]);
+          );
 
-      // Filter successful uploads
-      const successfulUploads = uploadResponses.filter(r => r?.success);
-
-      if (successfulUploads.length > 0) {
-        // Get fresh list from server with actual DB IDs
-        const updatedFiles = await fetchData(
-          `lmsEdit/getFiles?unitId=${selectedUnit.UnitID}`,
-          "GET",
-          null,
-          { "auth-token": userToken }
-        );
-
-        if (updatedFiles?.success) {
-          setFiles(updatedFiles.data);
-          Swal.fire("Success!", "Files uploaded successfully", "success");
-        } else {
-          throw new Error("Failed to refresh files list");
+          if (linkResponse?.success) {
+            successfulUploads.push({
+              name: linkName || "Link",
+              response: linkResponse
+            });
+          } else {
+            throw new Error(linkResponse?.message || 'Link upload failed');
+          }
+        } catch (linkError) {
+          console.error("Error uploading link:", linkError);
+          failedUploads.push({
+            name: linkName || "Link",
+            error: linkError.message
+          });
         }
-      } else {
-        throw new Error(uploadResponses.find(r => r?.error)?.error || "Upload failed");
       }
 
-      resetForm();
+      updateProgress(100, "Finalizing...");
+
+      // Refresh files list
+      await fetchFilesForUnit(selectedUnit.UnitID);
+
+      // Prepare result message
+      let resultMessage = '';
+      if (successfulUploads.length > 0) {
+        resultMessage += `<div class="text-green-600 mb-2">
+        <strong>Successfully uploaded ${successfulUploads.length} item(s):</strong>
+        <ul class="list-disc pl-5 mt-1">
+          ${successfulUploads.map(f => `<li>${f.name}</li>`).join('')}
+        </ul>
+      </div>`;
+      }
+
+      if (failedUploads.length > 0) {
+        resultMessage += `<div class="text-red-600 mt-3">
+        <strong>Failed to upload ${failedUploads.length} item(s):</strong>
+        <ul class="list-disc pl-5 mt-1">
+          ${failedUploads.map(f => `<li>${f.name}: ${f.error}</li>`).join('')}
+        </ul>
+      </div>`;
+      }
+
+      Swal.fire({
+        title: 'Upload Complete',
+        html: resultMessage,
+        icon: failedUploads.length === 0 ? 'success' :
+          successfulUploads.length === 0 ? 'error' : 'warning',
+        confirmButtonText: 'OK'
+      });
+
+      // Reset form if all uploads succeeded
+      if (failedUploads.length === 0) {
+        resetForm();
+      }
     } catch (err) {
       console.error("Upload error:", err);
-      Swal.fire("Error!", err.message || "Upload failed", "error");
+      Swal.fire(
+        "Error!",
+        err.message || "Upload failed",
+        "error"
+      );
     } finally {
       setIsUploading(false);
       uploadToast.close();
     }
   };
-
   const resetForm = () => {
     setNewFiles([]);
     setFileLinks([]);
@@ -753,7 +850,6 @@ const ViewContent = ({ submodule, onBack }) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Units List */}
           <div className="md:col-span-1">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -813,8 +909,6 @@ const ViewContent = ({ submodule, onBack }) => {
               </div>
             </div>
           </div>
-
-          {/* Unit Details and Files */}
           <div className="md:col-span-2">
             {selectedUnit ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -942,7 +1036,7 @@ const ViewContent = ({ submodule, onBack }) => {
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Upload File
+                              Upload Files
                             </label>
                             <div
                               onClick={() => fileInputRef.current.click()}
@@ -955,17 +1049,20 @@ const ViewContent = ({ submodule, onBack }) => {
                               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                 Supported formats: PDF, DOCX, JPG, PNG, etc.
                               </p>
+                              {newFiles.length > 0 && (
+                                <p className="text-xs text-green-500 mt-2">
+                                  {newFiles.length} file(s) selected
+                                </p>
+                              )}
                             </div>
                             <input
                               type="file"
                               ref={fileInputRef}
                               onChange={handleFileChange}
                               className="hidden"
-                              multiple // Add this attribute
+                              multiple
                             />
                           </div>
-
-                          {/* Link Input Section */}
                           <div className="space-y-3">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                               Or Add Link
@@ -1000,50 +1097,72 @@ const ViewContent = ({ submodule, onBack }) => {
                             </div>
                           </div>
 
-                          {/* Selected File Preview */}
                           {newFiles.length > 0 && (
-                            <div className="space-y-2">
-                              {newFiles.map((fileObj, index) => (
-                                <div
-                                  key={index}
-                                  className="flex flex-col bg-gray-50 dark:bg-gray-700 p-2 rounded"
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-800 dark:text-gray-200 flex items-center">
-                                      <FaFile className="mr-2" />
-                                      {fileObj.name}
-                                    </span>
-                                    <button
-                                      onClick={() =>
-                                        setNewFiles((prev) =>
-                                          prev.filter((_, i) => i !== index)
-                                        )
-                                      }
-                                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                                    >
-                                      <FaTimes />
-                                    </button>
+                            <div className="space-y-2 mt-4">
+                              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Files to upload:
+                              </h4>
+                              <div className="max-h-60 overflow-y-auto border rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+                                {newFiles.map((fileObj, index) => (
+                                  <div
+                                    key={`${fileObj.name}-${index}`}
+                                    className="flex flex-col bg-gray-50 dark:bg-gray-700 p-3"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center min-w-0">
+                                        <FaFile className="mr-2 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                                        <span className="text-sm text-gray-800 dark:text-gray-200 truncate">
+                                          {fileObj.name}
+                                        </span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                          ({(fileObj.file.size / 1024).toFixed(2)} KB)
+                                        </span>
+                                      </div>
+                                      <button
+                                        onClick={() =>
+                                          setNewFiles((prev) => prev.filter((_, i) => i !== index))
+                                        }
+                                        className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 ml-2"
+                                        title="Remove file"
+                                      >
+                                        <FaTimes />
+                                      </button>
+                                    </div>
+                                    <div className="mt-2 flex items-center">
+                                      <label className="text-xs text-gray-500 dark:text-gray-400 mr-2 whitespace-nowrap">
+                                        Display name:
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={fileObj.customName}
+                                        onChange={(e) =>
+                                          setNewFiles((prev) =>
+                                            prev.map((f, i) =>
+                                              i === index
+                                                ? { ...f, customName: e.target.value }
+                                                : f
+                                            )
+                                          )
+                                        }
+                                        className="flex-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-1 rounded-md"
+                                        placeholder="Custom name (optional)"
+                                      />
+                                    </div>
                                   </div>
-                                  <input
-                                    type="text"
-                                    value={fileObj.customName}
-                                    onChange={(e) =>
-                                      setNewFiles((prev) =>
-                                        prev.map((f, i) =>
-                                          i === index
-                                            ? {
-                                              ...f,
-                                              customName: e.target.value,
-                                            }
-                                            : f
-                                        )
-                                      )
-                                    }
-                                    placeholder="Custom file name"
-                                    className="mt-2 w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded-md"
-                                  />
-                                </div>
-                              ))}
+                                ))}
+                              </div>
+                              <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                                <span>
+                                  Total: {newFiles.length} file(s),{' '}
+                                  {(newFiles.reduce((acc, file) => acc + file.file.size, 0) / 1024 / 1024).toFixed(2)} MB
+                                </span>
+                                <button
+                                  onClick={() => setNewFiles([])}
+                                  className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs flex items-center"
+                                >
+                                  <FaTrash className="mr-1" /> Clear all
+                                </button>
+                              </div>
                             </div>
                           )}
                           <button

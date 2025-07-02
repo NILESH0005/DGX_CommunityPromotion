@@ -385,4 +385,124 @@ export class LMS {
       if (conn) conn.release?.();
     }
   }
+
+  static async uploadUpdatedFile(req, res) {
+    let success = false;
+    const userId = req.user.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({
+        success,
+        message: "No file uploaded",
+        data: {},
+      });
+    }
+
+    const { unitId, description, sortingOrder } = req.body;
+
+    try {
+      connectToDatabase(async (err, conn) => {
+        if (err) {
+          logError(err);
+          return res.status(500).json({
+            success,
+            message: "Failed to connect to database",
+            data: err,
+          });
+        }
+
+        try {
+          // Get uploader name
+          const userQuery = `SELECT UserID, Name FROM Community_User WHERE ISNULL(delStatus, 0) = 0 AND EmailId = ?`;
+          const userResult = await queryAsync(conn, userQuery, [userId]);
+
+          if (userResult.length === 0) {
+            closeConnection();
+            return res.status(401).json({
+              success,
+              message: "User not found. Please login.",
+              data: {},
+            });
+          }
+
+          const uploaderName = userResult[0].Name;
+
+          // Step 1: Insert new file
+          const insertQuery = `
+            INSERT INTO FilesDetails (
+              FilesName, FilePath, FileType, UnitID,
+              AuthAdd, AddOnDt, delStatus, Description,
+              SortingOrder
+            ) VALUES (?, ?, ?, ?, ?, GETDATE(), ?, ?, ?)
+          `;
+
+          await queryAsync(conn, insertQuery, [
+            file.originalname,
+            `/uploads/${file.filename}`,
+            file.mimetype,
+            unitId,
+            uploaderName,
+            0,
+            description || '',
+            sortingOrder || 0,
+          ]);
+
+          // Step 2: Get all file IDs for this UnitID
+          const filesQuery = `
+            SELECT FileID FROM FilesDetails
+            WHERE ISNULL(delStatus, 0) = 0 AND UnitID = ?
+          `;
+          const fileRows = await queryAsync(conn, filesQuery, [unitId]);
+
+          const totalFiles = fileRows.length;
+          const calculatedPercentage = parseFloat((100 / totalFiles).toFixed(2));
+
+          // Step 3: Update percentage for all files under the unit
+          const updateQuery = `
+            UPDATE FilesDetails
+            SET Percentage = ?
+            WHERE FileID = ?
+          `;
+
+          for (const row of fileRows) {
+            await queryAsync(conn, updateQuery, [calculatedPercentage, row.FileID]);
+          }
+
+          closeConnection();
+
+          success = true;
+          const message = "File uploaded and percentage updated for all unit files";
+          logInfo(message);
+
+          return res.status(201).json({
+            success,
+            message,
+            data: {
+              name: file.originalname,
+              unitId,
+              percentage: calculatedPercentage,
+              uploadedBy: uploaderName,
+            },
+          });
+
+        } catch (queryErr) {
+          closeConnection();
+          logError(queryErr);
+          return res.status(500).json({
+            success,
+            message: "File uploaded, but percentage update failed",
+            data: queryErr,
+          });
+        }
+      });
+    } catch (error) {
+      logError(error);
+      return res.status(500).json({
+        success: false,
+        message: "Unexpected error",
+        data: error,
+      });
+    }
+  }
 }

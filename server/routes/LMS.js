@@ -11,6 +11,12 @@ router.post('/upload-learning-material',
   LMS.uploadFile            
 );
 
+router.post('/upload-learning-material-update',
+  fetchUser,
+  LMS.upload.single('file'), 
+  LMS.uploadUpdatedFile          
+);
+
 router.get('/sub-modules',
   fetchUser,
   LMS.getSubModules
