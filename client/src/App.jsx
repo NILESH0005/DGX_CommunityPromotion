@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Home from "./container/Home.jsx";
-import Navbar from "./component/Navbar.jsx";
+// import Navbar from "./component/Navbar.jsx";
 import VerifyEmail from "./component/VerifyEmail.jsx";
 import Register from "./component/Register.jsx";
 import SignInn from "./component/SignInn";
@@ -127,7 +127,7 @@ function App() {
       />
 
       <div className="min-h-screen flex flex-col">
-        <Navbar />
+        {/* <Navbar /> */}
         <div className="flex-grow ">
           <Routes>
             <Route path="/" element={<Home />} />
