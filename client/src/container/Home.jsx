@@ -9,6 +9,7 @@ import ContentSection from "../component/ContentSection";
 import CommunityHighlights from "../component/CommunityHighlights";
 import LogoMarquee from "../component/LogoMarquee";
 import { TextParallax } from "../component/TextParallax.jsx";
+import AboutCompany from "../component/AboutCompany.jsx";
 import Swal from "sweetalert2";
 
 const Home = () => {
@@ -141,8 +142,9 @@ const Home = () => {
   return (
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-black to-blue-500">
       <ParallaxSection data={homeData?.parallax} />
-      <ContentSection data={homeData?.content} />
       <CommunityHighlights />
+      <ContentSection data={homeData?.content} />
+      <AboutCompany/>
     </div>
   );
 };

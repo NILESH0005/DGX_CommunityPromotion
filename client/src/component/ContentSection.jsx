@@ -1,42 +1,75 @@
-import React, { useState } from "react";
-import Swal from "sweetalert2";
-import { QRCodeSVG } from "qrcode.react";
+import React, { useState, useEffect } from "react";
 
 const ContentSection = () => {
-  // Dummy data for demonstration
+  // Updated content with FDP information
   const dummyData = [
     {
       id: 1,
-      Title: "Transform Your Learning Experience",
-      Content: `Discover a new way to learn with our cutting-edge platform that combines AI-powered recommendations with interactive content.
+      Title: "Faculty Development Program",
+      Subtitle: "AI Model Development with NVIDIA Infrastructure",
+      Content: `Elevate your teaching and research capabilities with cutting-edge AI technologies. Our comprehensive FDP is designed to empower educators with practical AI skills.
 
-• Personalized learning paths tailored to your goals
-• Real-time progress tracking and analytics
-• Collaborative features to learn with peers
-• Access to exclusive resources and expert mentors
+• Master AI model development fundamentals
+• Learn deployment strategies using NVIDIA infrastructure
+• Build real-world AI applications from scratch
+• Integrate AI concepts into your curriculum effectively
 
-Join thousands of students who have already transformed their educational journey with us.`,
-      Image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1471&q=80",
-      formLink: "https://forms.example.com/learning-experience"
+Transform your academic approach with industry-leading AI expertise and hands-on experience.`,
+      Image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
+      formLink: "https://forms.example.com/fdp-registration",
+      highlight: "NVIDIA Certified",
+      duration: "5 Days Intensive"
     },
     {
       id: 2,
-      Title: "Master Skills with Project-Based Learning",
-      Content: `Our project-based approach ensures you don't just learn theory but apply knowledge in real-world scenarios.
+      Title: "FDP Outcomes",
+      Subtitle: "What You'll Achieve",
+      Content: `Our Faculty Development Program delivers tangible outcomes that will transform your academic and research capabilities.
 
-• Build portfolio projects as you learn
-• Receive feedback from industry professionals
-• Participate in hackathons and coding challenges
-• Showcase your skills to potential employers
+• Understand the fundamentals of AI model development and deployment using NVIDIA infrastructure
+• Gain practical exposure to building AI applications, such as multi-agent systems, voice assistants, and recommendation models
+• Acquire the ability to translate AI concepts into classroom teaching, research projects, and industry-focused applications
 
-Start building your future today with hands-on experience that matters.`,
-      Image: "https://images.unsplash.com/photo-1559028012-481c04fa702d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1336&q=80",
-      formLink: "https://forms.example.com/project-learning"
+Join leading educators who are shaping the future of AI education.`,
+      Image: "https://images.unsplash.com/photo-1559028012-481c04fa702d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1336&q=80",
+      formLink: "https://forms.example.com/fdp-outcomes",
+      highlight: "Industry Ready",
+      duration: "Lifetime Access"
+    },
+    {
+      id: 3,
+      Title: "Hands-On AI Applications",
+      Subtitle: "Build Real-World Solutions",
+      Content: `Experience practical AI development through hands-on projects that you can immediately apply in your academic environment.
+
+• Multi-agent systems for collaborative problem-solving
+• Voice assistants with natural language processing
+• Recommendation models for personalized learning
+• Research-oriented AI project development
+
+Bridge the gap between theoretical knowledge and practical implementation with expert guidance.`,
+      Image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
+      formLink: "https://forms.example.com/fdp-applications",
+      highlight: "Hands-On Learning",
+      duration: "Project-Based"
     }
   ];
 
   const [currentContentIndex, setCurrentContentIndex] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [hoveredFeature, setHoveredFeature] = useState(null);
   const content = dummyData[currentContentIndex];
+
+  // Auto-advance content every 5 seconds
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+    
+    const interval = setInterval(() => {
+      setCurrentContentIndex((prev) => (prev + 1) % dummyData.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, dummyData.length]);
 
   const handleNext = () => {
     setCurrentContentIndex((prev) => (prev + 1) % dummyData.length);
@@ -46,186 +79,255 @@ Start building your future today with hands-on experience that matters.`,
     setCurrentContentIndex((prev) => (prev - 1 + dummyData.length) % dummyData.length);
   };
 
-  const handleDownloadQR = () => {
-    Swal.fire({
-      title: 'QR Code Downloaded!',
-      text: 'Scan this code to access our exclusive form.',
-      icon: 'success',
-      confirmButtonText: 'OK',
-      confirmButtonColor: '#3b82f6',
-    });
+  const handleFormLinkClick = () => {
+    window.open(content.formLink, '_blank');
   };
 
-  const handleFormLinkClick = () => {
-    Swal.fire({
-      title: 'Redirecting to Form',
-      text: 'You are being redirected to our registration form.',
-      icon: 'info',
-      showCancelButton: true,
-      confirmButtonText: 'Continue',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#3b82f6',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        window.open(content.formLink, '_blank');
-      }
-    });
-  };
+  const features = [
+    { icon: "🤖", title: "AI Models", desc: "Build & Deploy" },
+    { icon: "🎯", title: "Multi-Agent", desc: "Systems" },
+    { icon: "🎤", title: "Voice AI", desc: "Assistants" },
+    { icon: "📊", title: "ML Models", desc: "Recommendations" }
+  ];
 
   return (
-    <div className="w-full bg-gradient-to-br from-[#0a0f1c] to-[#1a1f2c] py-16 px-4 md:px-16">
-      <div className="max-w-7xl mx-auto rounded-2xl border border-blue-800/50 shadow-[0_0_30px_#1e40af55] bg-gradient-to-br from-[#0f172acc] to-[#1e293bcc] backdrop-blur-md transition-all duration-500 hover:shadow-[0_0_40px_#3b82f655] overflow-hidden">
+    <div className="w-full bg-gradient-to-br from-[#0a0f1c] via-[#1a1f2c] to-[#2a1f3c] py-16 px-4 md:px-16 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-32 h-32 bg-green-500/10 rounded-full blur-xl animate-pulse" />
+        <div className="absolute bottom-10 right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 w-24 h-24 bg-purple-500/10 rounded-full blur-xl animate-pulse delay-2000" />
         
-        {/* Content Navigation */}
-        <div className="flex justify-between items-center p-4 bg-blue-900/20 border-b border-blue-700/30">
-          <div className="flex space-x-2">
-            {dummyData.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentContentIndex(index)}
-                className={`w-3 h-3 rounded-full transition-all ${index === currentContentIndex ? 'bg-blue-400 scale-110' : 'bg-blue-800'}`}
-                aria-label={`Go to content ${index + 1}`}
-              />
-            ))}
+        {/* Floating particles */}
+        {[...Array(15)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 bg-gradient-to-r from-green-400 to-blue-400 rounded-full animate-bounce opacity-30"
+            style={{
+              top: Math.random() * 100 + "%",
+              left: Math.random() * 100 + "%",
+              animationDelay: Math.random() * 3 + "s",
+              animationDuration: (Math.random() * 2 + 3) + "s"
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="text-center mb-12 relative z-10">
+          <div className="inline-block px-6 py-2 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-full border border-green-400/30 mb-4">
+            <span className="text-green-400 font-semibold text-sm">🚀 NVIDIA Certified Program</span>
           </div>
-          
-          <div className="flex space-x-3">
-            <button
-              onClick={handlePrevious}
-              className="p-2 rounded-full bg-blue-800/50 hover:bg-blue-700 transition-all"
-              aria-label="Previous content"
-            >
-              <svg className="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            
-            <button
-              onClick={handleNext}
-              className="p-2 rounded-full bg-blue-800/50 hover:bg-blue-700 transition-all"
-              aria-label="Next content"
-            >
-              <svg className="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+          <h1 className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-green-300 via-blue-400 to-purple-400 text-transparent bg-clip-text mb-4">
+            Faculty Development Program
+          </h1>
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            Master AI technologies and transform your academic impact
+          </p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 p-8 group">
-          {/* Text Content */}
-          <div className="md:w-2/3 flex flex-col justify-center space-y-6">
-            <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent transition-all duration-500 group-hover:from-blue-400 group-hover:to-purple-400">
-              {content.Title}
-            </h2>
-            
-            <div className="text-gray-300 whitespace-pre-wrap break-words max-w-none leading-relaxed space-y-4">
-              {content.Content.split("\n").map((para, i) => {
-                if (para.trim() === '') return null;
-                
-                if (para.startsWith('•')) {
-                  return (
-                    <div key={i} className="flex items-start">
-                      <span className="text-blue-400 mr-2 mt-1">•</span>
-                      <p className="hover:text-white transition duration-300">{para.substring(1).trim()}</p>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <p key={i} className="hover:text-white transition duration-300">
-                    {para}
-                  </p>
-                );
-              })}
+        {/* Main Content Card */}
+        <div 
+          className="rounded-3xl border border-green-500/30 shadow-[0_0_50px_rgba(34,197,94,0.2)] bg-gradient-to-br from-[#0f172a]/90 to-[#1e293b]/90 backdrop-blur-xl transition-all duration-700 hover:shadow-[0_0_80px_rgba(34,197,94,0.3)] hover:border-green-400/50 overflow-hidden group"
+          onMouseEnter={() => setIsAutoPlaying(false)}
+          onMouseLeave={() => setIsAutoPlaying(true)}
+        >
+          
+          {/* Content Navigation */}
+          <div className="flex justify-between items-center p-6 bg-gradient-to-r from-green-900/20 to-blue-900/20 border-b border-green-700/30">
+            <div className="flex space-x-3">
+              {dummyData.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentContentIndex(index)}
+                  className={`relative overflow-hidden transition-all duration-500 ${
+                    index === currentContentIndex 
+                      ? 'w-12 h-4 bg-gradient-to-r from-green-400 to-blue-400' 
+                      : 'w-4 h-4 bg-gray-600/50 hover:bg-green-400/50'
+                  } rounded-full group`}
+                  aria-label={`Go to content ${index + 1}`}
+                >
+                  {index === currentContentIndex && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-300 to-blue-300 rounded-full animate-pulse" />
+                  )}
+                </button>
+              ))}
             </div>
             
-            <div className="flex flex-wrap gap-4 mt-6">
-              <button 
-                onClick={handleFormLinkClick}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Register Now
-              </button>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 text-green-400 text-sm">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span>Live Program</span>
+              </div>
+              
+              <div className="flex space-x-2">
+                <button
+                  onClick={handlePrevious}
+                  className="p-3 rounded-full bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all duration-300 hover:scale-110"
+                  aria-label="Previous content"
+                >
+                  <svg className="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                <button
+                  onClick={handleNext}
+                  className="p-3 rounded-full bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 transition-all duration-300 hover:scale-110"
+                  aria-label="Next content"
+                >
+                  <svg className="w-5 h-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Image and QR Code Section */}
-          <div className="md:w-1/3 flex flex-col items-center justify-center space-y-6">
-            {content.Image ? (
-              <div className="relative w-full group/image-container">
+          <div className="flex flex-col lg:flex-row gap-8 p-8">
+            {/* Text Content */}
+            <div className="lg:w-2/3 flex flex-col justify-center space-y-8">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4 mb-4">
+                  <span className="px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white text-sm font-bold rounded-full">
+                    {content.highlight}
+                  </span>
+                  <span className="px-4 py-2 bg-gray-700/50 text-gray-300 text-sm font-medium rounded-full">
+                    {content.duration}
+                  </span>
+                </div>
+
+                <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-2 transition-all duration-500 group-hover:scale-105">
+                  {content.Title}
+                </h2>
+                
+                <h3 className="text-xl md:text-2xl font-medium bg-gradient-to-r from-green-300 to-blue-300 text-transparent bg-clip-text">
+                  {content.Subtitle}
+                </h3>
+              </div>
+              
+              <div className="text-gray-300 whitespace-pre-wrap break-words leading-relaxed space-y-4">
+                {content.Content.split("\n").map((para, i) => {
+                  if (para.trim() === '') return null;
+                  
+                  if (para.startsWith('•')) {
+                    return (
+                      <div key={i} className="flex items-start group/item hover:bg-green-500/5 p-2 rounded-lg transition-all duration-300">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-400 to-blue-400 flex items-center justify-center mr-3 mt-1 group-hover/item:scale-110 transition-transform duration-300">
+                          <span className="text-white text-sm font-bold">✓</span>
+                        </div>
+                        <p className="group-hover/item:text-white transition duration-300 flex-1">
+                          {para.substring(1).trim()}
+                        </p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <p key={i} className="text-lg hover:text-white transition duration-300 leading-relaxed">
+                      {para}
+                    </p>
+                  );
+                })}
+              </div>
+              
+              <div className="flex flex-wrap gap-4 pt-4">
+                {/* <button 
+                  onClick={handleFormLinkClick}
+                  className="group relative bg-gradient-to-r from-green-500 to-blue-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="relative flex items-center">
+                    <svg className="w-6 h-6 mr-3 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Register Now
+                  </div>
+                </button> */}
+
+                {/* <button className="bg-gray-700/30 text-gray-300 font-semibold py-4 px-8 rounded-xl border border-gray-600/50 hover:bg-gray-600/30 hover:text-white transition-all duration-300">
+                  Learn More
+                </button> */}
+              </div>
+            </div>
+
+            {/* Image and Features Section */}
+            <div className="lg:w-1/3 flex flex-col space-y-6">
+              {/* Enhanced Image */}
+              <div className="relative group/image overflow-hidden rounded-2xl">
+                <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 via-transparent to-blue-900/40 z-10" />
                 <img
                   src={content.Image}
-                  alt="Content Visual"
-                  className="w-full h-56 object-cover rounded-xl border-2 border-blue-600/50 shadow-lg transition duration-500 group-hover/image-container:scale-105"
+                  alt="FDP Content Visual"
+                  className="w-full h-64 object-cover transition-transform duration-700 group-hover/image:scale-110"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-blue-900/60 to-transparent rounded-xl flex items-end justify-center p-4 opacity-0 group-hover/image-container:opacity-100 transition-opacity duration-500">
-                  <button 
-                    onClick={handleFormLinkClick}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
-                  >
-                    Learn More
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="h-56 w-full flex items-center justify-center border-2 border-dashed border-blue-600/50 bg-white/5 text-blue-200 rounded-xl">
-                No image available
-              </div>
-            )}
-            
-            {/* Permanent QR Code Section */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-2xl shadow-2xl border border-blue-200/50 w-full transform transition-all duration-500 hover:scale-105 hover:shadow-[0_10px_30px_rgba(59,130,246,0.3)]">
-              <div className="text-center mb-3">
-                <h3 className="text-lg font-bold text-gray-800 mb-1">Scan to Register</h3>
-                <p className="text-xs text-gray-600">to our Faculty Development Program(FDP)</p>
-              </div>
-              
-              <div className="flex justify-center mb-3">
-                <div className="p-2 bg-white rounded-lg shadow-inner border border-gray-200">
-                  <QRCodeSVG 
-                    value={content.formLink}
-                    size={140}
-                    level="H"
-                    includeMargin
-                    className="mx-auto"
-                    imageSettings={{
-                      src: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTkuNjY2NjcgMTUuMTY2N0M5LjY2NjY3IDE0LjI1IDEwLjQxNjcgMTMuNSAxMS4zMzMzIDEzLjVIMTIuNjY2N0MxMy41ODMzIDEzLjUgMTQuMzMzMyAxNC4yNSAxNC4zMzMzIDE1LjE2NjdWMTguODMzM0MxNC4zMzMzIDE5Ljc1IDEzLjU4MzMgMjAuNSAxMi42NjY3IDIwLjVIMTEuMzMzM0MxMC40MTY3IDIwLjUgOS42NjY2NyAxOS43NSA5LjY2NjY3IDE4LjgzMzNWMTUuMTY2N1oiIGZpbGw9IiMzQjgyRjYiLz4KPHBhdGggZD0iTTkuNjY2NjcgNS4xNjY2N0M5LjY2NjY3IDQuMjUgMTAuNDE2NyAzLjUgMTEuMzMzMyAzLjVIMTIuNjY2N0MxMy41ODMzIDMuNSAxNC4zMzMzIDQuMjUgMTQuMzMzMyA1LjE2NjY3VjguODMzMzNDMTQuMzMzMyA5Ljc1IDEzLjU4MzMgMTAuNSAxMi42NjY3IDEwLjVIMTEuMzMzM0MxMC40MTY3IDEwLjUgOS42NjY2NyA5Ljc1IDkuNjY2NjcgOC44MzMzM1Y1LjE2NjY3WiIgZmlsbD0iIzNCNzBGOCIvPgo8cGF0aCBkPSJNMy41IDExLjMzMzNDMy41IDEwLjQxNjcgNC4yNSA5LjY2NjY3IDUuMTY2NjcgOS42NjY2N0g4LjgzMzMzQzkuNzUgOS42NjY2NyAxMC41IDEwLjQxNjcgMTAuNSA5LjY2NjY3VjExLjMzMzNDMTAuNSAxMi4yNSA5Ljc1IDEzIDguODMzMzMgMTNINS4xNjY2N0M0LjI1IDEzIDMuNSAxMi4yNSAzLjUgMTEuMzMzM1oiIGZpbGw9IiM4QjQ0RDEiLz4KPHBhdGggZD0iTTEzLjUgMTEuMzMzM0MxMy41IDEwLjQxNjcgMTQuMjUgOS42NjY2NyAxNS4xNjY3IDkuNjY2NjdIMTguODMzM0MxOS43NSA5LjY2NjY3IDIwLjUgMTAuNDE2NyAyMC41IDExLjMzMzNDMjAuNSAxMi4yNSAxOS43NSAxMyAxOC44MzMzIDEzSDE1LjE2NjdDMTQuMjUgMTMgMTMuNSAxMi4yNSAxMy41IDExLjMzMzNaIiBmaWxsPSIjOEI0NEQxIi8+Cjwvc3ZnPgo=",
-                      height: 24,
-                      width: 24,
-                      excavate: true,
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex flex-col space-y-2">
-                <button 
-                  onClick={handleFormLinkClick}
-                  className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  Open Form
-                </button>
                 
-                <button 
-                  onClick={handleDownloadQR}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium py-1 flex items-center justify-center"
-                >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download QR Code
-                </button>
+                {/* Overlay content */}
+                <div className="absolute inset-0 z-20 flex flex-col justify-end p-6 opacity-0 group-hover/image:opacity-100 transition-opacity duration-500">
+                  <h4 className="text-white font-bold text-lg mb-2">AI-Powered Learning</h4>
+                  <p className="text-gray-200 text-sm">Experience cutting-edge technology firsthand</p>
+                </div>
+
+                {/* Corner badge */}
+                <div className="absolute top-4 right-4 z-30 bg-gradient-to-r from-green-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                  Premium
+                </div>
               </div>
+              
+              {/* Interactive Features Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {features.map((feature, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-xl border transition-all duration-300 cursor-pointer ${
+                      hoveredFeature === index
+                        ? 'bg-gradient-to-br from-green-500/20 to-blue-500/20 border-green-400/50 scale-105'
+                        : 'bg-gray-800/30 border-gray-600/30 hover:border-green-500/30'
+                    }`}
+                    onMouseEnter={() => setHoveredFeature(index)}
+                    onMouseLeave={() => setHoveredFeature(null)}
+                  >
+                    <div className="text-center space-y-2">
+                      <div className={`text-2xl transition-transform duration-300 ${hoveredFeature === index ? 'scale-125' : ''}`}>
+                        {feature.icon}
+                      </div>
+                      <div className="text-white font-semibold text-sm">{feature.title}</div>
+                      <div className="text-gray-400 text-xs">{feature.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Call to Action Box */}
+              {/* <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-400/30 rounded-xl p-6 text-center">
+                <div className="text-green-400 font-bold text-lg mb-2">Limited Seats!</div>
+                <div className="text-gray-300 text-sm mb-4">Join 500+ educators already enrolled</div>
+                <div className="flex justify-center space-x-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{animationDelay: `${i * 0.2}s`}} />
+                  ))}
+                </div>
+              </div> */}
             </div>
           </div>
         </div>
+
+        {/* Bottom Stats */}
+        {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-12">
+          {[
+            { number: "500+", label: "Faculty Trained", icon: "👨‍🏫" },
+            { number: "50+", label: "Universities", icon: "🏛️" },
+            { number: "98%", label: "Success Rate", icon: "📈" },
+            { number: "24/7", label: "Support", icon: "🛟" }
+          ].map((stat, index) => (
+            <div key={index} className="text-center p-6 bg-gradient-to-br from-gray-800/30 to-gray-900/30 rounded-xl border border-gray-600/30 hover:border-green-400/30 transition-all duration-300 hover:scale-105">
+              <div className="text-3xl mb-2">{stat.icon}</div>
+              <div className="text-3xl font-bold text-green-400 mb-1">{stat.number}</div>
+              <div className="text-gray-400 text-sm">{stat.label}</div>
+            </div>
+          ))}
+        </div> */}
       </div>
     </div>
   );
