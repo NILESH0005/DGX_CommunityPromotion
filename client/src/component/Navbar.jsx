@@ -52,29 +52,29 @@ const Navbar = () => {
         navigate('/');
     };
 
-    const navLinks = [
-        { label: 'Home', to: "/", icon: faHome },
-        { label: 'Discussions', to: '/Discussion', icon: faComments },
-        { label: 'Event and Workshop', to: '/EventWorkshopPage', icon: faCalendar },
-        { label: 'Blog', to: '/Blog', icon: faBlog },
-        { label: 'Quiz', to: '/QuizInterface', icon: FaBrain },
-        // { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher },
-        { label: 'LMS', to: '/LearningPath', icon: faChalkboardTeacher },
-        { label: 'Contact Us', to: '/ContactUs', icon: faEnvelope },
-        { label: 'Community Guidelines', to: '/CommunityGuidelines', icon: faBook }
-    ];
+    // const navLinks = [
+    //     { label: 'Home', to: "/", icon: faHome },
+    //     { label: 'Discussions', to: '/Discussion', icon: faComments },
+    //     { label: 'Event and Workshop', to: '/EventWorkshopPage', icon: faCalendar },
+    //     { label: 'Blog', to: '/Blog', icon: faBlog },
+    //     { label: 'Quiz', to: '/QuizInterface', icon: FaBrain },
+    //     // { label: 'OUR LEARN HUB', to: '/Lms', icon: faChalkboardTeacher },
+    //     { label: 'LMS', to: '/LearningPath', icon: faChalkboardTeacher },
+    //     { label: 'Contact Us', to: '/ContactUs', icon: faEnvelope },
+    //     { label: 'Community Guidelines', to: '/CommunityGuidelines', icon: faBook }
+    // ];
 
-    const mobileMenuLinks = [
-        { label: 'Home', to: "/", icon: faHome },
-        { label: 'Discussions', to: '/Discussion', icon: faComments },
-        { label: 'Events', to: '/EventWorkshopPage', icon: faCalendar },
-        { label: 'Blog', to: '/Blog', icon: faBlog },
-        { label: 'Quiz', to: '/QuizInterface', icon: FaBrain },
-        { label: 'Contact', to: '/ContactUs', icon: faEnvelope },
-        { label: 'Guidelines', to: '/CommunityGuidelines', icon: faBook },
-        // { label: 'Learn Hub', to: '/Lms', icon: faChalkboardTeacher },
-        { label: 'Learn Hub', to: '/LmsManager', icon: faChalkboardTeacher }
-    ];
+    // const  = [
+    //     { label: 'Home', to: "/", icon: faHome },
+    //     { label: 'Discussions', to: '/Discussion', icon: faComments },
+    //     { label: 'Events', to: '/EventWorkshopPage', icon: faCalendar },
+    //     { label: 'Blog', to: '/Blog', icon: faBlog },
+    //     { label: 'Quiz', to: '/QuizInterface', icon: FaBrain },
+    //     { label: 'Contact', to: '/ContactUs', icon: faEnvelope },
+    //     { label: 'Guidelines', to: '/CommunityGuidelines', icon: faBook },
+    //     // { label: 'Learn Hub', to: '/Lms', icon: faChalkboardTeacher },
+    //     { label: 'Learn Hub', to: '/LmsManager', icon: faChalkboardTeacher }
+    // ];
 
     const getProfileImage = () => {
         if (user?.ProfilePicture) {
@@ -106,7 +106,7 @@ const Navbar = () => {
                 </section>
 
                 {/* Center section - Navigation links */}
-                <div className="hidden md:flex items-center justify-center font-bold space-x-2 lg:space-x-4 xl:space-x-6">
+                {/* <div className="hidden md:flex items-center justify-center font-bold space-x-2 lg:space-x-4 xl:space-x-6">
                     {navLinks.map((d, i) => (
                         <Link
                             key={i}
@@ -122,7 +122,7 @@ const Navbar = () => {
                             {d.label}
                         </Link>
                     ))}
-                </div>
+                </div> */}
 
                 {/* Right section - Login/User profile */}
                 <section className='flex items-center justify-center gap-2 md:gap-4 lg:gap-6'>
@@ -132,7 +132,7 @@ const Navbar = () => {
                                 type="button"
                                 className="text-white bg-DGXgreen focus:ring-4 flex items-center justify-center focus:outline-none focus:ring-DGXgreen font-medium rounded-md text-sm md:text-base px-3 py-1 md:px-4 md:py-2 lg:px-6 lg:py-2 hover:bg-DGXblue transition duration-300"
                             >
-                                Login
+                                Register 
                             </button>
                         </Link>
                     ) : (
@@ -208,7 +208,7 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        <div className="flex-1 overflow-y-auto">
+                        {/* <div className="flex-1 overflow-y-auto">
                             {mobileMenuLinks.map((d, i) => (
                                 <Link
                                     key={i}
@@ -227,7 +227,7 @@ const Navbar = () => {
                                     <span className="text-sm font-medium">{d.label}</span>
                                 </Link>
                             ))}
-                        </div>
+                        </div> */}
 
                         {/* Mobile menu login/logout */}
                         {!isLoggedIn ? (
