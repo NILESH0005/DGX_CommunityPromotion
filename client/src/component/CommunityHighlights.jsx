@@ -11,7 +11,7 @@ const modules = [
       "https://images.unsplash.com/photo-1596495577886-d920f1fb7238?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "📚",
     stats: "500+ Courses",
-    color: "from-blue-500 to-cyan-400"
+    color: "from-DGXblue to-DGXgreen"
   },
   {
     title: "Discussions Forum",
@@ -22,7 +22,7 @@ const modules = [
       "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "💬",
     stats: "10k+ Members",
-    color: "from-purple-500 to-pink-400"
+    color: "from-DGXblue to-DGXgreen"
   },
   {
     title: "Insightful Blogs",
@@ -33,7 +33,7 @@ const modules = [
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "📝",
     stats: "200+ Articles",
-    color: "from-green-500 to-emerald-400"
+    color: "from-DGXblue to-DGXgreen"
   },
   {
     title: "Events & Workshops",
@@ -44,7 +44,7 @@ const modules = [
       "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-4.0.3&auto=format&fit=crop&w=1412&q=80",
     icon: "🎪",
     stats: "50+ Events",
-    color: "from-orange-500 to-red-400"
+    color: "from-DGXblue to-DGXgreen"
   },
   {
     title: "Interactive Quizzes",
@@ -52,10 +52,10 @@ const modules = [
       "Test your knowledge with engaging quizzes and track your learning progress.",
     category: "Assessment",
     image:
-      "https://images.pexels.com/photos/5428830/pexels-photo-5428830.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
+      "https://images.pexels.com/photos-5428830/pexels-photo-5428830.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
     icon: "🧠",
     stats: "100+ Quizzes",
-    color: "from-indigo-500 to-blue-400"
+    color: "from-DGXblue to-DGXgreen"
   },
   {
     title: "Smart Recommendations",
@@ -66,7 +66,7 @@ const modules = [
       "https://images.unsplash.com/photo-1534723328310-e82dad3ee43f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1476&q=80",
     icon: "✨",
     stats: "AI-Driven",
-    color: "from-violet-500 to-purple-400"
+    color: "from-DGXblue to-DGXgreen"
   },
   {
     title: "Leaderboard Rankings",
@@ -77,7 +77,7 @@ const modules = [
       "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "🏆",
     stats: "Global Rankings",
-    color: "from-yellow-500 to-orange-400"
+    color: "from-DGXblue to-DGXgreen"
   },
   {
     title: "Project Showcase",
@@ -88,7 +88,7 @@ const modules = [
       "https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1670&q=80",
     icon: "🚀",
     stats: "1000+ Projects",
-    color: "from-teal-500 to-cyan-400"
+    color: "from-DGXblue to-DGXgreen"
   },
 ];
 
@@ -135,24 +135,31 @@ const CommunityHighlights = () => {
   // Desktop view - grid layout
   if (!isMobile) {
     return (
-      <div className="w-full min-h-screen bg-gradient-to-br from-[#0a0f2e] via-[#1a1f3a] to-[#0f1629] text-white flex flex-col items-center py-16 px-6 relative overflow-hidden">
+      <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-green-50 text-DGXblue flex flex-col items-center py-16 px-6 relative overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
-          <div className="absolute top-3/4 left-1/2 w-64 h-64 bg-cyan-500/20 rounded-full blur-3xl animate-pulse delay-2000" />
+          <motion.div
+            className="absolute top-0 left-0 w-72 h-72 bg-green-200 rounded-full opacity-30 mix-blend-multiply filter blur-3xl"
+            animate={{ y: [0, 50, 0] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute bottom-10 right-10 w-64 h-64 bg-blue-200 rounded-full opacity-25 mix-blend-multiply filter blur-3xl"
+            animate={{ y: [0, -40, 0] }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          />
         </div>
 
         {/* Heading */}
         <div className="w-full max-w-7xl mb-16 text-center relative z-10">
-          <h1 className="text-6xl sm:text-7xl py-4 md:text-8xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-500 text-transparent bg-clip-text drop-shadow-2xl mb-6">
+          <h1 className="text-5xl md:text-7xl font-extrabold text-DGXblue mb-6">
             Community Highlights
           </h1>
           <div className="relative">
-            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-DGXgreen max-w-3xl mx-auto leading-relaxed">
               Discover the powerful features that make our platform exceptional
             </p>
-            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full" />
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-DGXblue to-DGXgreen rounded-full" />
           </div>
         </div>
 
@@ -164,10 +171,10 @@ const CommunityHighlights = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300"
+              className="bg-white rounded-3xl shadow-lg p-6 flex flex-col items-center text-center relative border border-green-200 hover:shadow-green-300/50 transition-all duration-300 h-full"
             >
-              <div className="relative h-48 overflow-hidden">
-                <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10`} />
+              <div className="relative h-48 w-full overflow-hidden rounded-xl mb-5">
+                <div className={`absolute inset-0 bg-gradient-to-t from-DGXblue/80 via-DGXblue/20 to-transparent z-10`} />
                 <div className={`absolute inset-0 bg-gradient-to-br ${module.color} opacity-20 z-5`} />
                 
                 <img
@@ -179,7 +186,7 @@ const CommunityHighlights = () => {
                 
                 <div className="absolute top-4 left-4 z-20 flex items-center space-x-3">
                   <span className="text-2xl drop-shadow-lg">{module.icon}</span>
-                  <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full border border-white/30 shadow-lg">
+                  <span className="bg-white/80 backdrop-blur-sm text-DGXblue text-xs font-bold px-3 py-1 rounded-full border border-DGXblue/30 shadow-lg">
                     {module.category}
                   </span>
                 </div>
@@ -191,11 +198,11 @@ const CommunityHighlights = () => {
                 </div>
               </div>
 
-              <div className="p-5 space-y-3">
-                <h3 className="text-lg font-bold text-white">
+              <div className="space-y-3 flex-1 flex flex-col">
+                <h3 className="text-xl font-bold text-DGXblue">
                   {module.title}
                 </h3>
-                <p className="text-gray-300 text-sm leading-relaxed">
+                <p className="text-DGXgreen text-sm leading-relaxed flex-1">
                   {module.description}
                 </p>
               </div>
@@ -205,7 +212,7 @@ const CommunityHighlights = () => {
 
         {/* Call to Action */}
         <div className="mt-16 text-center z-10">
-          <button className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300 text-white font-bold text-lg">
+          <button className="px-8 py-3 bg-gradient-to-r from-DGXblue to-DGXgreen rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 text-white font-bold text-lg">
             Join Our Community Today!
           </button>
         </div>
@@ -215,19 +222,27 @@ const CommunityHighlights = () => {
 
   // Mobile view - carousel layout
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-[#0a0f2e] via-[#1a1f3a] to-[#0f1629] text-white flex flex-col items-center p-3 px-4 relative overflow-hidden">
+    <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-green-50 text-DGXblue flex flex-col items-center p-3 px-4 relative overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-60 h-60 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+        <motion.div
+          className="absolute top-0 left-0 w-64 h-64 bg-green-200 rounded-full opacity-30 mix-blend-multiply filter blur-3xl"
+          animate={{ y: [0, 40, 0] }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-10 right-10 w-56 h-56 bg-blue-200 rounded-full opacity-25 mix-blend-multiply filter blur-3xl"
+          animate={{ y: [0, -30, 0] }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        />
       </div>
 
       {/* Heading */}
       <div className="w-full mb-10 text-center relative z-10">
-        <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-500 text-transparent bg-clip-text drop-shadow-xl mb-4">
+        <h1 className="text-4xl font-extrabold text-DGXblue mb-4">
           Community Highlights
         </h1>
-        <p className="text-lg text-gray-300 max-w-md mx-auto">
+        <p className="text-lg text-DGXgreen max-w-md mx-auto">
           Discover the powerful features that make our platform exceptional
         </p>
       </div>
@@ -241,20 +256,20 @@ const CommunityHighlights = () => {
         {/* Navigation Buttons */}
         <button 
           onClick={prevCard}
-          className="absolute left-2 z-20 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-2 transition-all duration-300"
+          className="absolute left-2 z-20 bg-white/80 hover:bg-white backdrop-blur-sm rounded-full p-2 transition-all duration-300 shadow-md border border-DGXblue/20"
           aria-label="Previous card"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-DGXblue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         
         <button 
           onClick={nextCard}
-          className="absolute right-2 z-20 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-2 transition-all duration-300"
+          className="absolute right-2 z-20 bg-white/80 hover:bg-white backdrop-blur-sm rounded-full p-2 transition-all duration-300 shadow-md border border-DGXblue/20"
           aria-label="Next card"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-DGXblue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -269,9 +284,9 @@ const CommunityHighlights = () => {
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="absolute w-full h-full"
           >
-            <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl h-full">
-              <div className="relative h-48 overflow-hidden">
-                <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10`} />
+            <div className="bg-white rounded-3xl shadow-lg p-6 flex flex-col items-center text-center relative border border-green-200 h-full">
+              <div className="relative h-48 w-full overflow-hidden rounded-xl mb-5">
+                <div className={`absolute inset-0 bg-gradient-to-t from-DGXblue/80 via-DGXblue/20 to-transparent z-10`} />
                 <div className={`absolute inset-0 bg-gradient-to-br ${modules[activeIndex].color} opacity-20 z-5`} />
                 
                 <img
@@ -283,7 +298,7 @@ const CommunityHighlights = () => {
                 
                 <div className="absolute top-4 left-4 z-20 flex items-center space-x-3">
                   <span className="text-2xl drop-shadow-lg">{modules[activeIndex].icon}</span>
-                  <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full border border-white/30 shadow-lg">
+                  <span className="bg-white/80 backdrop-blur-sm text-DGXblue text-xs font-bold px-3 py-1 rounded-full border border-DGXblue/30 shadow-lg">
                     {modules[activeIndex].category}
                   </span>
                 </div>
@@ -295,11 +310,11 @@ const CommunityHighlights = () => {
                 </div>
               </div>
 
-              <div className="p-5 space-y-3">
-                <h3 className="text-lg font-bold text-white">
+              <div className="space-y-3">
+                <h3 className="text-lg font-bold text-DGXblue">
                   {modules[activeIndex].title}
                 </h3>
-                <p className="text-gray-300 text-sm">
+                <p className="text-DGXgreen text-sm">
                   {modules[activeIndex].description}
                 </p>
               </div>
@@ -316,8 +331,8 @@ const CommunityHighlights = () => {
             onClick={() => setActiveIndex(index)}
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
               activeIndex === index 
-                ? "bg-white scale-125" 
-                : "bg-gray-500"
+                ? "bg-DGXblue scale-125" 
+                : "bg-DGXgreen/30"
             }`}
             aria-label={`Go to card ${index + 1}`}
           />
@@ -326,7 +341,7 @@ const CommunityHighlights = () => {
 
       {/* Call to Action */}
       <div className="text-center z-10">
-        <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-xl transform hover:scale-105 transition-all duration-300 text-white font-bold">
+        <button className="px-6 py-3 bg-gradient-to-r from-DGXblue to-DGXgreen rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 text-white font-bold">
           Join Our Community Today!
         </button>
       </div>

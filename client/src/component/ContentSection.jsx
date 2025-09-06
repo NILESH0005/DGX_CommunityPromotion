@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
 const ContentSection = () => {
   // Updated content with FDP information
@@ -78,108 +79,99 @@ Join leading educators who are shaping the future of AI education.`,
   ];
 
   return (
-    <div className="w-full bg-gradient-to-br from-[#0a0f1c] via-[#1a1f2c] to-[#2a1f3c] py-16 px-4 md:px-16 relative overflow-hidden">
-      {/* Animated Background Elements */}
+    <div className="w-full bg-gradient-to-br from-blue-50 via-blue-100 to-green-50 text-DGXblue py-16 px-4 md:px-16 relative overflow-hidden">
+      {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-green-500/10 rounded-full blur-xl animate-pulse" />
-        <div className="absolute bottom-10 right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 w-24 h-24 bg-purple-500/10 rounded-full blur-xl animate-pulse delay-2000" />
-
-        {/* Floating particles */}
-        {[...Array(15)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 bg-gradient-to-r from-green-400 to-blue-400 rounded-full animate-bounce opacity-30"
-            style={{
-              top: Math.random() * 100 + "%",
-              left: Math.random() * 100 + "%",
-              animationDelay: Math.random() * 3 + "s",
-              animationDuration: Math.random() * 2 + 3 + "s",
-            }}
-          />
-        ))}
+        <motion.div
+          className="absolute top-0 left-0 w-72 h-72 bg-green-200 rounded-full opacity-30 mix-blend-multiply filter blur-3xl"
+          animate={{ y: [0, 50, 0] }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-10 right-10 w-64 h-64 bg-blue-200 rounded-full opacity-25 mix-blend-multiply filter blur-3xl"
+          animate={{ y: [0, -40, 0] }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        />
       </div>
 
-      <div className="max-w-8xl mx-auto">
+      <div className="max-w-8xl mx-auto relative z-10">
         {/* Header Section */}
-        <div className="text-center mb-12 relative z-10">
-          <h1 className="text-5xl md:text-6xl py-2 font-extrabold bg-gradient-to-r from-green-300 via-blue-400 to-purple-400 text-transparent bg-clip-text mb-4">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-DGXblue mb-4">
             Faculty Development Program
           </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+          <p className="text-xl text-DGXgreen max-w-3xl mx-auto">
             Master AI technologies and transform your academic impact
           </p>
         </div>
 
         {/* Main Content Card */}
         <div
-          className="rounded-3xl border border-green-500/30 shadow-[0_0_50px_rgba(34,197,94,0.2)] bg-gradient-to-br from-[#0f172a]/90 to-[#1e293b]/90 backdrop-blur-xl transition-all duration-700 hover:shadow-[0_0_80px_rgba(34,197,94,0.3)] hover:border-green-400/50 overflow-hidden group"
+          className="rounded-3xl border border-DGXgreen/30 bg-white shadow-lg overflow-hidden group transition-all duration-300 hover:shadow-xl"
           onMouseEnter={() => setIsAutoPlaying(false)}
           onMouseLeave={() => setIsAutoPlaying(true)}
         >
           {/* Content Navigation */}
-          <div className="flex justify-between items-center p-6 bg-gradient-to-r from-green-900/20 to-blue-900/20 border-b border-green-700/30">
+          <div className="flex justify-between items-center p-6 bg-gradient-to-r from-DGXblue/5 to-DGXgreen/5 border-b border-DGXgreen/20">
             <div className="flex space-x-3">
               {dummyData.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentContentIndex(index)}
-                  className={`relative overflow-hidden transition-all duration-500 ${
+                  className={`relative overflow-hidden transition-all duration-300 ${
                     index === currentContentIndex
-                      ? "w-12 h-4 bg-gradient-to-r from-green-400 to-blue-400"
-                      : "w-4 h-4 bg-gray-600/50 hover:bg-green-400/50"
+                      ? "w-12 h-4 bg-gradient-to-r from-DGXblue to-DGXgreen"
+                      : "w-4 h-4 bg-gray-300 hover:bg-DGXgreen/50"
                   } rounded-full group`}
                   aria-label={`Go to content ${index + 1}`}
                 >
                   {index === currentContentIndex && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-300 to-blue-300 rounded-full animate-pulse" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-DGXblue to-DGXgreen rounded-full" />
                   )}
                 </button>
               ))}
             </div>
 
-            <div className="flex items-center space-x-">
-              <div className="flex space-x-2">
-                <button
-                  onClick={handlePrevious}
-                  className="p-3 rounded-full bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all duration-300 hover:scale-110"
-                  aria-label="Previous content"
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handlePrevious}
+                className="p-3 rounded-full bg-DGXblue/10 hover:bg-DGXblue/20 border border-DGXblue/20 transition-all duration-300 hover:scale-110"
+                aria-label="Previous content"
+              >
+                <svg
+                  className="w-5 h-5 text-DGXblue"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    className="w-5 h-5 text-green-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                </button>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
 
-                <button
-                  onClick={handleNext}
-                  className="p-3 rounded-full bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 transition-all duration-300 hover:scale-110"
-                  aria-label="Next content"
+              <button
+                onClick={handleNext}
+                className="p-3 rounded-full bg-DGXgreen/10 hover:bg-DGXgreen/20 border border-DGXgreen/20 transition-all duration-300 hover:scale-110"
+                aria-label="Next content"
+              >
+                <svg
+                  className="w-5 h-5 text-DGXgreen"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    className="w-5 h-5 text-blue-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-              </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -188,24 +180,24 @@ Join leading educators who are shaping the future of AI education.`,
             <div className="lg:w-2/3 flex flex-col justify-center space-y-8">
               <div className="space-y-4">
                 <div className="flex items-center space-x-4 mb-4">
-                  <span className="px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white text-sm font-bold rounded-full">
+                  <span className="px-4 py-2 bg-gradient-to-r from-DGXblue to-DGXgreen text-white text-sm font-bold rounded-full">
                     {content.highlight}
                   </span>
-                  <span className="px-4 py-2 bg-gray-700/50 text-gray-300 text-sm font-medium rounded-full">
+                  <span className="px-4 py-2 bg-gray-200 text-DGXblue text-sm font-medium rounded-full">
                     {content.duration}
                   </span>
                 </div>
 
-                <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-2 transition-all duration-500 group-hover:scale-105">
+                <h2 className="text-4xl md:text-5xl font-bold text-DGXblue tracking-tight mb-2 transition-all duration-500">
                   {content.Title}
                 </h2>
 
-                <h3 className="text-xl md:text-2xl font-medium bg-gradient-to-r from-green-300 to-blue-300 text-transparent bg-clip-text">
+                <h3 className="text-xl md:text-2xl font-medium text-DGXgreen">
                   {content.Subtitle}
                 </h3>
               </div>
 
-              <div className="text-gray-300 whitespace-pre-wrap break-words leading-relaxed space-y-4">
+              <div className="text-DGXblue whitespace-pre-wrap break-words leading-relaxed space-y-4">
                 {content.Content.split("\n").map((para, i) => {
                   if (para.trim() === "") return null;
 
@@ -213,14 +205,14 @@ Join leading educators who are shaping the future of AI education.`,
                     return (
                       <div
                         key={i}
-                        className="flex items-start group/item hover:bg-green-500/5 p-2 rounded-lg transition-all duration-300"
+                        className="flex items-start group/item hover:bg-DGXgreen/5 p-2 rounded-lg transition-all duration-300"
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-400 to-blue-400 flex items-center justify-center mr-3 mt-1 group-hover/item:scale-110 transition-transform duration-300">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-DGXblue to-DGXgreen flex items-center justify-center mr-3 mt-1 group-hover/item:scale-110 transition-transform duration-300">
                           <span className="text-white text-sm font-bold">
                             ✓
                           </span>
                         </div>
-                        <p className="group-hover/item:text-white transition duration-300 flex-1">
+                        <p className="group-hover/item:text-DGXgreen transition duration-300 flex-1">
                           {para.substring(1).trim()}
                         </p>
                       </div>
@@ -230,7 +222,7 @@ Join leading educators who are shaping the future of AI education.`,
                   return (
                     <p
                       key={i}
-                      className="text-lg hover:text-white transition duration-300 leading-relaxed"
+                      className="text-lg leading-relaxed"
                     >
                       {para}
                     </p>
@@ -243,7 +235,7 @@ Join leading educators who are shaping the future of AI education.`,
             <div className="lg:w-1/3 flex flex-col space-y-6">
               {/* Enhanced Image */}
               <div className="relative group/image overflow-hidden rounded-2xl">
-                <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 via-transparent to-blue-900/40 z-10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-DGXblue/40 via-transparent to-DGXgreen/30 z-10" />
                 <img
                   src={content.Image}
                   alt="FDP Content Visual"
@@ -256,12 +248,12 @@ Join leading educators who are shaping the future of AI education.`,
                     AI-Powered Learning
                   </h4>
                   <p className="text-gray-200 text-sm">
-                    Experience cutting-edge technology firsthandw-full bg-gradient-to-br from-[#0a0f1c] via-[#1a1f2c] to-[#2a1f3c] py-16 px-4 md:px-16 relative overflow-hidden
+                    Experience cutting-edge technology firsthand
                   </p>
                 </div>
 
                 {/* Corner badge */}
-                <div className="absolute top-4 right-4 z-30 bg-gradient-to-r from-green-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                <div className="absolute top-4 right-4 z-30 bg-gradient-to-r from-DGXblue to-DGXgreen text-white text-xs font-bold px-3 py-1 rounded-full">
                   Premium
                 </div>
               </div>
@@ -273,8 +265,8 @@ Join leading educators who are shaping the future of AI education.`,
                     key={index}
                     className={`p-4 rounded-xl border transition-all duration-300 cursor-pointer ${
                       hoveredFeature === index
-                        ? "bg-gradient-to-br from-green-500/20 to-blue-500/20 border-green-400/50 scale-105"
-                        : "bg-gray-800/30 border-gray-600/30 hover:border-green-500/30"
+                        ? "bg-gradient-to-br from-DGXblue/10 to-DGXgreen/10 border-DGXblue/50 scale-105"
+                        : "bg-gray-100 border-gray-200 hover:border-DGXblue/30"
                     }`}
                     onMouseEnter={() => setHoveredFeature(index)}
                     onMouseLeave={() => setHoveredFeature(null)}
@@ -287,10 +279,10 @@ Join leading educators who are shaping the future of AI education.`,
                       >
                         {feature.icon}
                       </div>
-                      <div className="text-white font-semibold text-sm">
+                      <div className="text-DGXblue font-semibold text-sm">
                         {feature.title}
                       </div>
-                      <div className="text-gray-400 text-xs">
+                      <div className="text-DGXgreen text-xs">
                         {feature.desc}
                       </div>
                     </div>
@@ -298,35 +290,32 @@ Join leading educators who are shaping the future of AI education.`,
                 ))}
               </div>
 
-              {/* Call to Action Box */}
-              {/* <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-400/30 rounded-xl p-6 text-center">
-                <div className="text-green-400 font-bold text-lg mb-2">Limited Seats!</div>
-                <div className="text-gray-300 text-sm mb-4">Join 500+ educators already enrolled</div>
-                <div className="flex justify-center space-x-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{animationDelay: `${i * 0.2}s`}} />
-                  ))}
-                </div>
-              </div> */}
+              {/* Call to Action Button */}
+              <button 
+                onClick={handleFormLinkClick}
+                className="px-6 py-3 bg-gradient-to-r from-DGXblue to-DGXgreen rounded-xl shadow-md transform hover:scale-105 transition-all duration-300 text-white font-bold text-center"
+              >
+                Register Now
+              </button>
             </div>
           </div>
         </div>
 
         {/* Bottom Stats */}
-        {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-12">
           {[
             { number: "500+", label: "Faculty Trained", icon: "👨‍🏫" },
             { number: "50+", label: "Universities", icon: "🏛️" },
             { number: "98%", label: "Success Rate", icon: "📈" },
             { number: "24/7", label: "Support", icon: "🛟" }
           ].map((stat, index) => (
-            <div key={index} className="text-center p-6 bg-gradient-to-br from-gray-800/30 to-gray-900/30 rounded-xl border border-gray-600/30 hover:border-green-400/30 transition-all duration-300 hover:scale-105">
+            <div key={index} className="text-center p-6 bg-white rounded-xl border border-gray-200 hover:border-DGXgreen/30 transition-all duration-300 hover:scale-105">
               <div className="text-3xl mb-2">{stat.icon}</div>
-              <div className="text-3xl font-bold text-green-400 mb-1">{stat.number}</div>
-              <div className="text-gray-400 text-sm">{stat.label}</div>
+              <div className="text-3xl font-bold text-DGXblue mb-1">{stat.number}</div>
+              <div className="text-DGXgreen text-sm">{stat.label}</div>
             </div>
           ))}
-        </div> */}
+        </div>
       </div>
     </div>
   );

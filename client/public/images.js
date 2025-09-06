@@ -52,6 +52,16 @@ import teachingKit from '../public/LMS/Teaching Kit/teachingkit.jpg'
 import blog from '../public/blog.jpg'
 import LMS from '../public/LMS.jpg'
 import Discussion from '../public/Discussion.png'
+import screenshot1 from '../public/screenshot1.png'
+import screenshot2 from '../public/screenshot2.png'
+import screenshot3 from '../public/Screenshot3.png'
+
+import screenshot4 from '../public/screenshot4.png'
+import screenshot5 from '../public/screenshot5.png'
+import screenshot6 from '../public/screenshot6.png'
+import QR from '../public/QR.jpeg'
+
+
 
 
 
@@ -124,5 +134,14 @@ export default {
     //home
     blog,
     LMS,
-    Discussion
+    Discussion,
+    screenshot1,
+    screenshot2,
+    screenshot3,
+    screenshot4,
+    screenshot5,
+    screenshot6,
+    QR
+
+    
 }   
