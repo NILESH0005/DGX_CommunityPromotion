@@ -118,11 +118,7 @@ const GlobalInfoventuresShowcase = () => {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
           }`}
         >
-          <div className="inline-block px-6 py-3 bg-gradient-to-r from-DGXblue/20 to-DGXgreen/20 rounded-full border border-DGXgreen/30 mb-8">
-            <span className="text-DGXgreen font-bold text-lg">
-              🚀 Since 2000 • Premier NVIDIA Academic Partner
-            </span>
-          </div>
+        
 
           <h1 className="text-5xl md:text-7xl font-extrabold mb-6 text-DGXblue leading-tight">
             Global Infoventures
@@ -235,69 +231,9 @@ const GlobalInfoventuresShowcase = () => {
           </div>
         </div>
 
-        {/* Services Section */}
-        <div className="mb-20">
-          <h2 className="text-4xl font-bold text-center text-DGXblue mb-12">
-            Our Services
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {services.map((service, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-DGXgreen/50 transition-all duration-300 hover:shadow-lg"
-              >
-                <div className="w-16 h-16 bg-gradient-to-r from-DGXblue to-DGXgreen rounded-full flex items-center justify-center text-2xl text-white mb-4">
-                  {service.icon}
-                </div>
-                <h3 className="text-xl font-bold text-DGXblue mb-3">
-                  {service.title}
-                </h3>
-                <p className="text-DGXblue/80 mb-4">{service.description}</p>
-                <ul className="space-y-2">
-                  {service.features.map((feature, i) => (
-                    <li key={i} className="flex items-center text-DGXblue">
-                      <span className="w-2 h-2 bg-DGXgreen rounded-full mr-2"></span>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
+   
 
-        {/* Timeline Section */}
-        <div>
-          <h2 className="text-4xl font-bold text-center text-DGXblue mb-12">
-            Our Journey
-          </h2>
-          <div className="relative">
-            {/* Timeline line */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-DGXblue to-DGXgreen"></div>
-            
-            {milestones.map((milestone, index) => (
-              <div
-                key={index}
-                className={`relative flex items-center mb-12 ${
-                  index % 2 === 0 ? "flex-row" : "flex-row-reverse"
-                }`}
-              >
-                <div className="w-1/2 p-4">
-                  <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                    <h3 className="text-2xl font-bold text-DGXblue mb-2">
-                      {milestone.event}
-                    </h3>
-                    <p className="text-DGXblue/80">{milestone.desc}</p>
-                  </div>
-                </div>
-                <div className="absolute left-1/2 transform -translate-x-1/2 w-8 h-8 bg-gradient-to-r from-DGXblue to-DGXgreen rounded-full flex items-center justify-center text-white font-bold z-10">
-                  {milestone.year}
-                </div>
-                <div className="w-1/2"></div>
-              </div>
-            ))}
-          </div>
-        </div>
+        
       </div>
     </div>
   );

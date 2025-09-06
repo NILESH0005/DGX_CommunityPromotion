@@ -220,10 +220,7 @@ Join leading educators who are shaping the future of AI education.`,
                   }
 
                   return (
-                    <p
-                      key={i}
-                      className="text-lg leading-relaxed"
-                    >
+                    <p key={i} className="text-lg leading-relaxed">
                       {para}
                     </p>
                   );
@@ -289,32 +286,8 @@ Join leading educators who are shaping the future of AI education.`,
                   </div>
                 ))}
               </div>
-
-              {/* Call to Action Button */}
-              <button 
-                onClick={handleFormLinkClick}
-                className="px-6 py-3 bg-gradient-to-r from-DGXblue to-DGXgreen rounded-xl shadow-md transform hover:scale-105 transition-all duration-300 text-white font-bold text-center"
-              >
-                Register Now
-              </button>
             </div>
           </div>
-        </div>
-
-        {/* Bottom Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-12">
-          {[
-            { number: "500+", label: "Faculty Trained", icon: "👨‍🏫" },
-            { number: "50+", label: "Universities", icon: "🏛️" },
-            { number: "98%", label: "Success Rate", icon: "📈" },
-            { number: "24/7", label: "Support", icon: "🛟" }
-          ].map((stat, index) => (
-            <div key={index} className="text-center p-6 bg-white rounded-xl border border-gray-200 hover:border-DGXgreen/30 transition-all duration-300 hover:scale-105">
-              <div className="text-3xl mb-2">{stat.icon}</div>
-              <div className="text-3xl font-bold text-DGXblue mb-1">{stat.number}</div>
-              <div className="text-DGXgreen text-sm">{stat.label}</div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

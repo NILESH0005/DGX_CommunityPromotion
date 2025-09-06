@@ -9,8 +9,7 @@ const promotionalData = [
     title: "Welcome to DGX Community",
     description:
       "India's fastest growing tech community where innovation meets collaboration.",
-    icon: "🚀",
-    screenshots: [images.screenshot1, images.screenshot3, images.screenshot4],
+   screenshots: [images.screenshot1, images.screenshot3, images.screenshot4],
   },
   {
     id: 2,
@@ -54,7 +53,7 @@ const ParallaxSection = () => {
           transition={{ duration: 1 }}
           className="text-5xl md:text-7xl font-extrabold text-center mb-4 text-DGXblue p-3"
         >
-          🚀 DGX Community
+           DGX Community
         </motion.h1>
 
         {/* Sub-heading */}

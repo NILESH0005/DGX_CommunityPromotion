@@ -11,7 +11,7 @@ const modules = [
       "https://images.unsplash.com/photo-1596495577886-d920f1fb7238?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "📚",
     stats: "500+ Courses",
-    color: "from-DGXblue to-DGXgreen"
+    color: "from-DGXblue to-DGXgreen",
   },
   {
     title: "Discussions Forum",
@@ -22,7 +22,7 @@ const modules = [
       "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "💬",
     stats: "10k+ Members",
-    color: "from-DGXblue to-DGXgreen"
+    color: "from-DGXblue to-DGXgreen",
   },
   {
     title: "Insightful Blogs",
@@ -33,7 +33,7 @@ const modules = [
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "📝",
     stats: "200+ Articles",
-    color: "from-DGXblue to-DGXgreen"
+    color: "from-DGXblue to-DGXgreen",
   },
   {
     title: "Events & Workshops",
@@ -44,7 +44,7 @@ const modules = [
       "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-4.0.3&auto=format&fit=crop&w=1412&q=80",
     icon: "🎪",
     stats: "50+ Events",
-    color: "from-DGXblue to-DGXgreen"
+    color: "from-DGXblue to-DGXgreen",
   },
   {
     title: "Interactive Quizzes",
@@ -52,10 +52,10 @@ const modules = [
       "Test your knowledge with engaging quizzes and track your learning progress.",
     category: "Assessment",
     image:
-      "https://images.pexels.com/photos-5428830/pexels-photo-5428830.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
+      "https://images.pexels.com/photos/5428830/pexels-photo-5428830.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
     icon: "🧠",
     stats: "100+ Quizzes",
-    color: "from-DGXblue to-DGXgreen"
+    color: "from-DGXblue to-DGXgreen",
   },
   {
     title: "Smart Recommendations",
@@ -66,7 +66,7 @@ const modules = [
       "https://images.unsplash.com/photo-1534723328310-e82dad3ee43f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1476&q=80",
     icon: "✨",
     stats: "AI-Driven",
-    color: "from-DGXblue to-DGXgreen"
+    color: "from-DGXblue to-DGXgreen",
   },
   {
     title: "Leaderboard Rankings",
@@ -77,7 +77,7 @@ const modules = [
       "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "🏆",
     stats: "Global Rankings",
-    color: "from-DGXblue to-DGXgreen"
+    color: "from-DGXblue to-DGXgreen",
   },
   {
     title: "Project Showcase",
@@ -88,7 +88,7 @@ const modules = [
       "https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1670&q=80",
     icon: "🚀",
     stats: "1000+ Projects",
-    color: "from-DGXblue to-DGXgreen"
+    color: "from-DGXblue to-DGXgreen",
   },
 ];
 
@@ -102,25 +102,25 @@ const CommunityHighlights = () => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
+
     // Initial check
     checkScreenSize();
-    
+
     // Add event listener
-    window.addEventListener('resize', checkScreenSize);
-    
+    window.addEventListener("resize", checkScreenSize);
+
     // Clean up
-    return () => window.removeEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
   // Auto switch highlight every 3 seconds for mobile view
   useEffect(() => {
     if (!isMobile || isPaused) return;
-    
+
     const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % modules.length);
     }, 3000);
-    
+
     return () => clearInterval(interval);
   }, [isMobile, isPaused]);
 
@@ -174,16 +174,20 @@ const CommunityHighlights = () => {
               className="bg-white rounded-3xl shadow-lg p-6 flex flex-col items-center text-center relative border border-green-200 hover:shadow-green-300/50 transition-all duration-300 h-full"
             >
               <div className="relative h-48 w-full overflow-hidden rounded-xl mb-5">
-                <div className={`absolute inset-0 bg-gradient-to-t from-DGXblue/80 via-DGXblue/20 to-transparent z-10`} />
-                <div className={`absolute inset-0 bg-gradient-to-br ${module.color} opacity-20 z-5`} />
-                
+                <div
+                  className={`absolute inset-0 bg-gradient-to-t from-DGXblue/80 via-DGXblue/20 to-transparent z-10`}
+                />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${module.color} opacity-20 z-5`}
+                />
+
                 <img
                   src={module.image}
                   alt={module.title}
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
-                
+
                 <div className="absolute top-4 left-4 z-20 flex items-center space-x-3">
                   <span className="text-2xl drop-shadow-lg">{module.icon}</span>
                   <span className="bg-white/80 backdrop-blur-sm text-DGXblue text-xs font-bold px-3 py-1 rounded-full border border-DGXblue/30 shadow-lg">
@@ -192,7 +196,9 @@ const CommunityHighlights = () => {
                 </div>
 
                 <div className="absolute top-4 right-4 z-20">
-                  <span className={`bg-gradient-to-r ${module.color} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg`}>
+                  <span
+                    className={`bg-gradient-to-r ${module.color} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg`}
+                  >
                     {module.stats}
                   </span>
                 </div>
@@ -208,13 +214,6 @@ const CommunityHighlights = () => {
               </div>
             </motion.div>
           ))}
-        </div>
-
-        {/* Call to Action */}
-        <div className="mt-16 text-center z-10">
-          <button className="px-8 py-3 bg-gradient-to-r from-DGXblue to-DGXgreen rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 text-white font-bold text-lg">
-            Join Our Community Today!
-          </button>
         </div>
       </div>
     );
@@ -248,29 +247,51 @@ const CommunityHighlights = () => {
       </div>
 
       {/* Carousel Container */}
-      <div 
+      <div
         className="relative w-full max-w-md h-96 flex items-center justify-center mb-8"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
         {/* Navigation Buttons */}
-        <button 
+        <button
           onClick={prevCard}
           className="absolute left-2 z-20 bg-white/80 hover:bg-white backdrop-blur-sm rounded-full p-2 transition-all duration-300 shadow-md border border-DGXblue/20"
           aria-label="Previous card"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-DGXblue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 text-DGXblue"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
-        
-        <button 
+
+        <button
           onClick={nextCard}
           className="absolute right-2 z-20 bg-white/80 hover:bg-white backdrop-blur-sm rounded-full p-2 transition-all duration-300 shadow-md border border-DGXblue/20"
           aria-label="Next card"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-DGXblue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 text-DGXblue"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
 
@@ -286,25 +307,33 @@ const CommunityHighlights = () => {
           >
             <div className="bg-white rounded-3xl shadow-lg p-6 flex flex-col items-center text-center relative border border-green-200 h-full">
               <div className="relative h-48 w-full overflow-hidden rounded-xl mb-5">
-                <div className={`absolute inset-0 bg-gradient-to-t from-DGXblue/80 via-DGXblue/20 to-transparent z-10`} />
-                <div className={`absolute inset-0 bg-gradient-to-br ${modules[activeIndex].color} opacity-20 z-5`} />
-                
+                <div
+                  className={`absolute inset-0 bg-gradient-to-t from-DGXblue/80 via-DGXblue/20 to-transparent z-10`}
+                />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${modules[activeIndex].color} opacity-20 z-5`}
+                />
+
                 <img
                   src={modules[activeIndex].image}
                   alt={modules[activeIndex].title}
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
-                
+
                 <div className="absolute top-4 left-4 z-20 flex items-center space-x-3">
-                  <span className="text-2xl drop-shadow-lg">{modules[activeIndex].icon}</span>
+                  <span className="text-2xl drop-shadow-lg">
+                    {modules[activeIndex].icon}
+                  </span>
                   <span className="bg-white/80 backdrop-blur-sm text-DGXblue text-xs font-bold px-3 py-1 rounded-full border border-DGXblue/30 shadow-lg">
                     {modules[activeIndex].category}
                   </span>
                 </div>
 
                 <div className="absolute top-4 right-4 z-20">
-                  <span className={`bg-gradient-to-r ${modules[activeIndex].color} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg`}>
+                  <span
+                    className={`bg-gradient-to-r ${modules[activeIndex].color} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg`}
+                  >
                     {modules[activeIndex].stats}
                   </span>
                 </div>
@@ -330,9 +359,7 @@ const CommunityHighlights = () => {
             key={index}
             onClick={() => setActiveIndex(index)}
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              activeIndex === index 
-                ? "bg-DGXblue scale-125" 
-                : "bg-DGXgreen/30"
+              activeIndex === index ? "bg-DGXblue scale-125" : "bg-DGXgreen/30"
             }`}
             aria-label={`Go to card ${index + 1}`}
           />
