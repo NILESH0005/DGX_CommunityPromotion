@@ -60,7 +60,7 @@ import screenshot4 from '../public/screenshot4.png'
 import screenshot5 from '../public/screenshot5.png'
 import screenshot6 from '../public/screenshot6.png'
 import QR from '../public/QR.jpeg'
-
+import giventure1 from '../public/giventure1.jpg'
 
 
 
@@ -70,6 +70,7 @@ import QR from '../public/QR.jpeg'
 
 
 export default {
+    giventure1,
     nvidiaPP,
     giventure,
     verifyImg,

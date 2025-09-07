@@ -6,41 +6,20 @@ const ContentSection = () => {
   const dummyData = [
     {
       id: 1,
-      Title: "Faculty Development Program",
-      Subtitle: "AI Model Development with NVIDIA Infrastructure",
-      Content: `Elevate your teaching and research capabilities with cutting-edge AI technologies. Our comprehensive FDP is designed to empower educators with practical AI skills.
-
-• Master AI model development fundamentals
-• Learn deployment strategies using NVIDIA infrastructure
-• Build real-world AI applications from scratch
-• Integrate AI concepts into your curriculum effectively
-
-Transform your academic approach with industry-leading AI expertise and hands-on experience.`,
-      Image:
-        "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
-      formLink: "https://forms.example.com/fdp-registration",
-      highlight: "NVIDIA Certified",
-      duration: "5 Days Intensive",
-    },
-    {
-      id: 2,
       Title: "FDP Outcomes",
       Subtitle: "What You'll Achieve",
       Content: `Our Faculty Development Program delivers tangible outcomes that will transform your academic and research capabilities.
 
 • Understand the fundamentals of AI model development and deployment using NVIDIA infrastructure
-• Gain practical exposure to building AI applications, such as multi-agent systems, voice assistants, and recommendation models
+• Gain practical exposure to building AI applications.
 • Acquire the ability to translate AI concepts into classroom teaching, research projects, and industry-focused applications
 
 Join leading educators who are shaping the future of AI education.`,
       Image:
         "https://images.unsplash.com/photo-1559028012-481c04fa702d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1336&q=80",
       formLink: "https://forms.example.com/fdp-outcomes",
-      highlight: "Industry Ready",
-      duration: "Lifetime Access",
     },
   ];
-
   const [currentContentIndex, setCurrentContentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [hoveredFeature, setHoveredFeature] = useState(null);
@@ -131,63 +110,12 @@ Join leading educators who are shaping the future of AI education.`,
                 </button>
               ))}
             </div>
-
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handlePrevious}
-                className="p-3 rounded-full bg-DGXblue/10 hover:bg-DGXblue/20 border border-DGXblue/20 transition-all duration-300 hover:scale-110"
-                aria-label="Previous content"
-              >
-                <svg
-                  className="w-5 h-5 text-DGXblue"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-
-              <button
-                onClick={handleNext}
-                className="p-3 rounded-full bg-DGXgreen/10 hover:bg-DGXgreen/20 border border-DGXgreen/20 transition-all duration-300 hover:scale-110"
-                aria-label="Next content"
-              >
-                <svg
-                  className="w-5 h-5 text-DGXgreen"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </div>
           </div>
 
           <div className="flex flex-col lg:flex-row gap-8 p-8">
             {/* Text Content */}
             <div className="lg:w-2/3 flex flex-col justify-center space-y-8">
               <div className="space-y-4">
-                <div className="flex items-center space-x-4 mb-4">
-                  <span className="px-4 py-2 bg-gradient-to-r from-DGXblue to-DGXgreen text-white text-sm font-bold rounded-full">
-                    {content.highlight}
-                  </span>
-                  <span className="px-4 py-2 bg-gray-200 text-DGXblue text-sm font-medium rounded-full">
-                    {content.duration}
-                  </span>
-                </div>
-
                 <h2 className="text-4xl md:text-5xl font-bold text-DGXblue tracking-tight mb-2 transition-all duration-500">
                   {content.Title}
                 </h2>
@@ -247,11 +175,6 @@ Join leading educators who are shaping the future of AI education.`,
                   <p className="text-gray-200 text-sm">
                     Experience cutting-edge technology firsthand
                   </p>
-                </div>
-
-                {/* Corner badge */}
-                <div className="absolute top-4 right-4 z-30 bg-gradient-to-r from-DGXblue to-DGXgreen text-white text-xs font-bold px-3 py-1 rounded-full">
-                  Premium
                 </div>
               </div>
 

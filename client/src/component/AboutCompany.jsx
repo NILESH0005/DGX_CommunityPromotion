@@ -20,10 +20,10 @@ const GlobalInfoventuresShowcase = () => {
       color: "from-DGXblue to-DGXgreen",
     },
     {
-      number: "#1",
-      label: "NVIDIA Academic Partner",
-      icon: "🥇",
-      color: "from-DGXblue to-DGXgreen",
+      number: "Future",
+      label: "AI Research & Innovation Hub",
+      icon: "🧠",
+      color: "from-purple-500 to-pink-500",
     },
   ];
 
@@ -118,8 +118,6 @@ const GlobalInfoventuresShowcase = () => {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
           }`}
         >
-        
-
           <h1 className="text-5xl md:text-7xl font-extrabold mb-6 text-DGXblue leading-tight">
             Global Infoventures
           </h1>
@@ -230,10 +228,6 @@ const GlobalInfoventuresShowcase = () => {
             </div>
           </div>
         </div>
-
-   
-
-        
       </div>
     </div>
   );

@@ -10,7 +10,6 @@ const modules = [
     image:
       "https://images.unsplash.com/photo-1596495577886-d920f1fb7238?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "📚",
-    stats: "500+ Courses",
     color: "from-DGXblue to-DGXgreen",
   },
   {
@@ -21,7 +20,6 @@ const modules = [
     image:
       "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "💬",
-    stats: "10k+ Members",
     color: "from-DGXblue to-DGXgreen",
   },
   {
@@ -32,7 +30,6 @@ const modules = [
     image:
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "📝",
-    stats: "200+ Articles",
     color: "from-DGXblue to-DGXgreen",
   },
   {
@@ -43,7 +40,6 @@ const modules = [
     image:
       "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-4.0.3&auto=format&fit=crop&w=1412&q=80",
     icon: "🎪",
-    stats: "50+ Events",
     color: "from-DGXblue to-DGXgreen",
   },
   {
@@ -65,7 +61,6 @@ const modules = [
     image:
       "https://images.unsplash.com/photo-1534723328310-e82dad3ee43f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1476&q=80",
     icon: "✨",
-    stats: "AI-Driven",
     color: "from-DGXblue to-DGXgreen",
   },
   {
@@ -76,7 +71,6 @@ const modules = [
     image:
       "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
     icon: "🏆",
-    stats: "Global Rankings",
     color: "from-DGXblue to-DGXgreen",
   },
   {
@@ -87,7 +81,6 @@ const modules = [
     image:
       "https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1670&q=80",
     icon: "🚀",
-    stats: "1000+ Projects",
     color: "from-DGXblue to-DGXgreen",
   },
 ];
@@ -195,13 +188,7 @@ const CommunityHighlights = () => {
                   </span>
                 </div>
 
-                <div className="absolute top-4 right-4 z-20">
-                  <span
-                    className={`bg-gradient-to-r ${module.color} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg`}
-                  >
-                    {module.stats}
-                  </span>
-                </div>
+                
               </div>
 
               <div className="space-y-3 flex-1 flex flex-col">
@@ -330,13 +317,7 @@ const CommunityHighlights = () => {
                   </span>
                 </div>
 
-                <div className="absolute top-4 right-4 z-20">
-                  <span
-                    className={`bg-gradient-to-r ${modules[activeIndex].color} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg`}
-                  >
-                    {modules[activeIndex].stats}
-                  </span>
-                </div>
+               
               </div>
 
               <div className="space-y-3">

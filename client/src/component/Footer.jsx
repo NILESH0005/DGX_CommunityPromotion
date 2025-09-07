@@ -29,11 +29,7 @@ const Footer = () => {
                   label: "Instagram",
                   url: "https://www.instagram.com/global_infoventures/",
                 },
-                {
-                  icon: <FaYoutube className="w-5 h-5" />,
-                  label: "YouTube",
-                  url: "https://www.youtube.com/channel/UCMaOjTQeyBNt0wKycTVcrjg/",
-                },
+                
                 {
                   icon: <FaGlobe className="w-5 h-5" />,
                   label: "Website",

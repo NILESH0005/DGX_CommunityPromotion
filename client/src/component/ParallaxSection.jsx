@@ -9,15 +9,19 @@ const promotionalData = [
     title: "Welcome to DGX Community",
     description:
       "India's fastest growing tech community where innovation meets collaboration.",
-   screenshots: [images.screenshot1, images.screenshot3, images.screenshot4],
+    screenshots: [images.screenshot1, images.screenshot3, images.screenshot4],
   },
   {
     id: 2,
-    title: "Faculty Development Programs",
+    title: "DGX Community",
     description:
-      "Empowering educators with cutting-edge training and certifications.",
-    icon: "🎓",
+      "A hub for AI enthusiasts and technocrats to explore NVIDIA frameworks, real-time insights, and collaborative projects.",
+    icon: "🤖",
     qr: "https://ngevent.servergi.com:8071/FDPevent/home/?urlData=",
+    button: {
+      label: "Register Now", // updated label
+      link: "https://ngevent.servergi.com:8071/FDPevent/home/?urlData=",
+    },
   },
   {
     id: 3,
@@ -25,7 +29,7 @@ const promotionalData = [
     description:
       "Exclusive workshops, hackathons, and networking opportunities await you.",
     icon: "💡",
-    screenshots: [images.screenshot2, images.screenshot5, images.screenshot],
+    screenshots: [images.screenshot2, images.screenshot5, images.screenshot6],
   },
 ];
 
@@ -53,7 +57,7 @@ const ParallaxSection = () => {
           transition={{ duration: 1 }}
           className="text-5xl md:text-7xl font-extrabold text-center mb-4 text-DGXblue p-3"
         >
-           DGX Community
+          DGX Community
         </motion.h1>
 
         {/* Sub-heading */}
@@ -76,14 +80,22 @@ const ParallaxSection = () => {
               className="bg-green-50 rounded-3xl shadow-lg p-8 flex flex-col items-center text-center relative border border-green-200 hover:shadow-green-300/50 overflow-hidden h-[600px]"
             >
               <div className="text-6xl mb-5">{item.icon}</div>
-              <h2 className="text-3xl md:text-4xl font-bold text-DGXblue mb-4">{item.title}</h2>
-              <p className="text-DGXblue text-lg md:text-xl mb-6 leading-relaxed">{item.description}</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-DGXblue mb-4">
+                {item.title}
+              </h2>
+              <p className="text-DGXblue text-lg md:text-xl mb-6 leading-relaxed">
+                {item.description}
+              </p>
 
               {item.screenshots && (
                 <div className="h-[280px] w-[240px] overflow-hidden relative mb-6 rounded-xl">
                   <motion.div
                     animate={{ y: ["0%", "-100%"] }}
-                    transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 10,
+                      ease: "linear",
+                    }}
                     className="flex flex-col gap-5"
                   >
                     {item.screenshots.map((src, i) => (
@@ -108,16 +120,25 @@ const ParallaxSection = () => {
                   initial={{ opacity: 0, scale: 0.85 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.5 }}
-                  className="bg-green-50 p-6 rounded-xl shadow-md border-2 border-green-300"
+                  className="bg-green-50 p-6 rounded-xl shadow-md border-2 border-green-300 flex flex-col items-center"
                 >
+                  {/* QR Code */}
                   <QRCodeCanvas value={item.qr} size={140} />
+
+                  {/* Centered Button */}
+                  <a
+                    href={item.qr}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 px-6 py-2 bg-DGXblue text-white rounded-lg font-medium hover:bg-DGXgreen transition text-center"
+                  >
+                    Register Here
+                  </a>
                 </motion.div>
               )}
-
             </motion.div>
           ))}
         </div>
-
       </div>
     </section>
   );
